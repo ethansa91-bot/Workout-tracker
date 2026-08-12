@@ -1,0 +1,17 @@
+# Secrets
+Secrets.xcconfig
+
+# Xcode
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+DerivedData/
+*.moved-aside
+*.xcuserstate
+
+# Swift Package Manager
+.swiftpm/
+.build/
+
+# macOS
+.DS_Store
