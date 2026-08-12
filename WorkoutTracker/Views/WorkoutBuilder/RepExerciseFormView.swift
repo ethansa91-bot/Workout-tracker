@@ -11,6 +11,8 @@ struct RepExerciseFormView: View {
     @State private var selectedExercise: Exercise?
     @State private var targetSets: Int
     @State private var restSeconds: Int
+    @State private var trackingMode: RepExerciseTrackingMode
+    @State private var headStartSeconds: Int
     @State private var showingExercisePicker = false
     @State private var errorMessage: String?
 
@@ -20,6 +22,8 @@ struct RepExerciseFormView: View {
         _selectedExercise = State(initialValue: editingEntry?.exercise)
         _targetSets = State(initialValue: editingEntry?.targetSets ?? 3)
         _restSeconds = State(initialValue: editingEntry?.customRestSeconds ?? AppSettings.defaultRestSeconds)
+        _trackingMode = State(initialValue: editingEntry?.trackingMode ?? .repsWeight)
+        _headStartSeconds = State(initialValue: editingEntry?.headStartSeconds ?? 3)
     }
 
     var body: some View {
@@ -38,6 +42,16 @@ struct RepExerciseFormView: View {
                 Stepper("Sets: \(targetSets)", value: $targetSets, in: 1...20)
 
                 Stepper("Rest: \(restSeconds)s", value: $restSeconds, in: 0...600, step: 15)
+
+                Picker("Track by", selection: $trackingMode) {
+                    Text("Reps & Weight").tag(RepExerciseTrackingMode.repsWeight)
+                    Text("Max Hold Time").tag(RepExerciseTrackingMode.maxHoldTime)
+                }
+                .pickerStyle(.segmented)
+
+                if trackingMode == .maxHoldTime {
+                    Stepper("Head start: \(headStartSeconds)s", value: $headStartSeconds, in: 0...30)
+                }
             }
             .themedListBackground()
             .navigationTitle(editingEntry == nil ? "Add Exercise" : "Edit Exercise")
@@ -76,6 +90,8 @@ struct RepExerciseFormView: View {
                 editingEntry.exercise = selectedExercise
                 editingEntry.targetSets = targetSets
                 editingEntry.customRestSeconds = rest
+                editingEntry.trackingMode = trackingMode
+                editingEntry.headStartSeconds = headStartSeconds
                 editingEntry.markDirty()
                 try context.save()
             } else {
@@ -84,6 +100,8 @@ struct RepExerciseFormView: View {
                     exercise: selectedExercise,
                     targetSets: targetSets,
                     customRestSeconds: rest,
+                    trackingMode: trackingMode,
+                    headStartSeconds: headStartSeconds,
                     context: context
                 )
             }

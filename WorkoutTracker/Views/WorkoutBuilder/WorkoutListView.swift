@@ -23,47 +23,51 @@ struct WorkoutListView: View {
                     )
                 } else {
                     List {
-                        ForEach(workouts) { workout in
-                            NavigationLink {
-                                SessionRecapView(workout: workout)
-                            } label: {
-                                workoutRow(workout)
-                            }
-                            .swipeActions(edge: .leading) {
-                                Button {
-                                    cloneWorkout(workout)
+                        Section {
+                            ForEach(workouts) { workout in
+                                NavigationLink {
+                                    SessionRecapView(workout: workout)
                                 } label: {
-                                    Label("Clone", systemImage: "doc.on.doc")
+                                    workoutRow(workout)
                                 }
-                                .tint(.blue)
+                                .swipeActions(edge: .leading) {
+                                    Button {
+                                        cloneWorkout(workout)
+                                    } label: {
+                                        Label("Clone", systemImage: "doc.on.doc")
+                                    }
+                                    .tint(.blue)
+                                }
+                                .swipeActions(edge: .trailing) {
+                                    Button {
+                                        archiveWorkout(workout)
+                                    } label: {
+                                        Label("Archive", systemImage: "archivebox")
+                                    }
+                                    .tint(.orange)
+                                }
+                                .contextMenu {
+                                    Button {
+                                        cloneWorkout(workout)
+                                    } label: {
+                                        Label("Clone", systemImage: "doc.on.doc")
+                                    }
+                                    Button {
+                                        archiveWorkout(workout)
+                                    } label: {
+                                        Label("Archive", systemImage: "archivebox")
+                                    }
+                                }
                             }
-                            .swipeActions(edge: .trailing) {
-                                Button {
-                                    archiveWorkout(workout)
-                                } label: {
-                                    Label("Archive", systemImage: "archivebox")
-                                }
-                                .tint(.orange)
-                            }
-                            .contextMenu {
-                                Button {
-                                    cloneWorkout(workout)
-                                } label: {
-                                    Label("Clone", systemImage: "doc.on.doc")
-                                }
-                                Button {
-                                    archiveWorkout(workout)
-                                } label: {
-                                    Label("Archive", systemImage: "archivebox")
-                                }
-                            }
+                        } footer: {
+                            Text("A lock means that workout has already been used and can't be edited or deleted. Swipe right on a workout to clone it, or left to archive it.")
                         }
                     }
                     .themedListBackground()
                 }
             }
             .background(Color.appBackground)
-            .navigationTitle("Workouts")
+            .navigationTitle("My Workouts")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     NavigationLink {
@@ -86,7 +90,7 @@ struct WorkoutListView: View {
             .navigationDestination(item: $newWorkoutDestination) { destination in
                 switch destination {
                 case .workout(let workout):
-                    WorkoutEditorView(workout: workout)
+                    SessionRecapView(workout: workout)
                 case .block(let block):
                     BlockEditorView(block: block)
                 }
@@ -99,7 +103,7 @@ struct WorkoutListView: View {
             IconBadge(systemName: workoutTypeIcon(workout))
             VStack(alignment: .leading, spacing: 3) {
                 Text(workout.name)
-                StatusPill(text: workout.displayType.rawValue.capitalized, tint: .accentColor)
+                StatusPill(text: workout.listTypeLabel, tint: .accentColor)
             }
             Spacer()
             if workout.isLocked {

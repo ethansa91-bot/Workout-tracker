@@ -25,6 +25,7 @@ struct WorkoutTrackerApp: App {
             WorkoutSession.self,
             StepLog.self,
             SetLog.self,
+            PersonalRecord.self,
         ])
         // cloudKitDatabase: .none is required, not optional — SwiftData otherwise tries to
         // prepare the store for CloudKit sync, which rejects @Attribute(.unique) fields

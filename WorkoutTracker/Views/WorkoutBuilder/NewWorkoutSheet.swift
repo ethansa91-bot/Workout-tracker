@@ -16,7 +16,7 @@ struct NewWorkoutSheet: View {
                 Section("Type") {
                     Picker("Type", selection: $kind) {
                         Text("Personalized").tag(WorkoutKind.personalized)
-                        Text("By Time").tag(WorkoutKind.byTime)
+                        Text("Follow Along").tag(WorkoutKind.byTime)
                         Text("By Reps").tag(WorkoutKind.byRep)
                     }
                     .pickerStyle(.inline)

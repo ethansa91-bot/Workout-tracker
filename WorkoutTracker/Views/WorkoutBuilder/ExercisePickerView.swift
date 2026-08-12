@@ -1,9 +1,11 @@
 import SwiftUI
 import SwiftData
 
-/// Single-exercise picker reusing the same search/filter facets as the Library's
-/// exercise browser (muscle, muscle category, exercise category, equipment).
+/// Single-exercise picker with inline quick filters (favorites, exercise category,
+/// muscle category/muscle) via `ExerciseQuickFilterView`; equipment filtering is
+/// only available from the Library's own exercise browser.
 struct ExercisePickerView: View {
+    var excluding: Set<UUID> = []
     let onSelect: (Exercise) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -11,11 +13,11 @@ struct ExercisePickerView: View {
 
     @State private var searchText = ""
     @State private var filter = ExerciseFilter()
-    @State private var showingFilters = false
 
     private var filtered: [Exercise] {
         allExercises.filter { exercise in
             exercise.deletedAt == nil
+                && !excluding.contains(exercise.id)
                 && (searchText.isEmpty || exercise.name.localizedCaseInsensitiveContains(searchText))
                 && filter.matches(exercise)
         }
@@ -23,43 +25,42 @@ struct ExercisePickerView: View {
 
     var body: some View {
         NavigationStack {
-            List(filtered) { exercise in
-                Button {
-                    onSelect(exercise)
-                    dismiss()
-                } label: {
-                    HStack {
-                        Image(systemName: exercise.iconSymbolName)
-                            .foregroundStyle(.tint)
-                            .frame(width: 28)
-                        VStack(alignment: .leading) {
-                            Text(exercise.name)
-                            if let equipmentName = exercise.equipment?.name {
-                                Text(equipmentName).font(.caption).foregroundStyle(.secondary)
+            VStack(spacing: 0) {
+                ExerciseQuickFilterView(filter: $filter)
+
+                List(filtered) { exercise in
+                    Button {
+                        onSelect(exercise)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Image(systemName: exercise.iconSymbolName)
+                                .foregroundStyle(.tint)
+                                .frame(width: 28)
+                            VStack(alignment: .leading) {
+                                Text(exercise.name)
+                                if let equipmentName = exercise.equipment?.name {
+                                    Text(equipmentName).font(.caption).foregroundStyle(.secondary)
+                                }
                             }
                         }
+                        .foregroundStyle(.primary)
                     }
-                    .foregroundStyle(.primary)
                 }
+                .themedListBackground()
             }
-            .themedListBackground()
+            .background(Color.appBackground)
             .searchable(text: $searchText, prompt: "Search exercises")
             .navigationTitle("Choose Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button {
-                        showingFilters = true
+                        dismiss()
                     } label: {
-                        Label("Filter", systemImage: filter.isEmpty ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+                        Image(systemName: "xmark")
                     }
                 }
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-            }
-            .sheet(isPresented: $showingFilters) {
-                ExerciseFilterView(filter: $filter)
             }
         }
     }

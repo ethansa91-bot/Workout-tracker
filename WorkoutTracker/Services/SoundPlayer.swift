@@ -48,6 +48,13 @@ enum SoundPlayer {
         }
     }
 
+    /// One short tick per head-start second, before a max-hold-time stopwatch
+    /// starts counting up. `playTimerComplete()` doubles as the "go" cue once the
+    /// head start reaches zero.
+    static func playHeadStartTick() {
+        play(tone(duration: warningBeepDuration))
+    }
+
     private static func playTripleBeep() {
         let beep = tone(duration: warningBeepDuration)
         for i in 0..<3 {

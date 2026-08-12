@@ -21,6 +21,12 @@ struct BlockEditorView: View {
 
     private var displayName: String {
         if let name = block.name, !name.isEmpty { return name }
-        return block.blockType == .time ? "Time Block" : "Rep Block"
+        // A By Time/By Reps workout's single block *is* the workout — its name is
+        // more meaningful here than a generic block-type label. Personalized
+        // workouts can have several blocks, so they keep the block-type fallback.
+        if let workout = block.workout, workout.kind != .personalized {
+            return workout.name
+        }
+        return block.blockType == .time ? "Follow Along Block" : "Rep Block"
     }
 }

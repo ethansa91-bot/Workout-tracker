@@ -16,7 +16,6 @@ struct MultiExercisePickerView: View {
 
     @State private var searchText = ""
     @State private var filter = ExerciseFilter()
-    @State private var showingFilters = false
     @State private var selectedExercises: [Exercise] = []
 
     private var filtered: [Exercise] {
@@ -29,34 +28,35 @@ struct MultiExercisePickerView: View {
 
     var body: some View {
         NavigationStack {
-            List(filtered) { exercise in
-                row(exercise)
+            VStack(spacing: 0) {
+                ExerciseQuickFilterView(filter: $filter)
+
+                List(filtered) { exercise in
+                    row(exercise)
+                }
+                .themedListBackground()
             }
-            .themedListBackground()
+            .background(Color.appBackground)
             .searchable(text: $searchText, prompt: "Search exercises")
             .navigationTitle("Add Exercises")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button {
-                        showingFilters = true
+                        dismiss()
                     } label: {
-                        Label("Filter", systemImage: filter.isEmpty ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+                        Image(systemName: "xmark")
                     }
                 }
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button {
                         onDone(selectedExercises)
                         dismiss()
+                    } label: {
+                        Image(systemName: "checkmark")
                     }
                     .disabled(selectedExercises.isEmpty)
                 }
-            }
-            .sheet(isPresented: $showingFilters) {
-                ExerciseFilterView(filter: $filter)
             }
         }
     }

@@ -32,6 +32,9 @@ struct SessionHistoryDetailView: View {
                             Spacer()
                             if log.isCancelled {
                                 Text("Cancelled").font(.caption).foregroundStyle(.secondary)
+                            } else if let holdSeconds = log.holdSeconds {
+                                Text("Held \(holdSeconds)s")
+                                    .font(.subheadline)
                             } else {
                                 Text("\(log.reps) × \(formattedWeight(log.weight, unit: log.weightUnit))")
                                     .font(.subheadline)

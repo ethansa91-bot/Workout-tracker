@@ -54,7 +54,7 @@ struct ArchivedWorkoutsView: View {
             IconBadge(systemName: workoutTypeIcon(workout))
             VStack(alignment: .leading, spacing: 3) {
                 Text(workout.name)
-                StatusPill(text: workout.displayType.rawValue.capitalized, tint: .accentColor)
+                StatusPill(text: workout.listTypeLabel, tint: .accentColor)
             }
             Spacer()
             if workout.isLocked {

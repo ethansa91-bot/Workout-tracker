@@ -20,6 +20,9 @@ struct ContentView: View {
             SessionHistoryListView()
                 .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
 
+            RecordsListView()
+                .tabItem { Label("Records", systemImage: "trophy.fill") }
+
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape") }
         }

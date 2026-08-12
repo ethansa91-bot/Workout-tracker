@@ -3,6 +3,12 @@ import SwiftData
 
 enum WorkoutDisplayType: String {
     case empty, time, rep, mixed
+
+    /// User-facing label — "time" reads as "Follow Along" everywhere in the UI,
+    /// matching the `byTime` workout kind's renamed label.
+    var label: String {
+        self == .time ? "Follow Along" : rawValue.capitalized
+    }
 }
 
 /// The kind chosen at creation time, which governs how many/which blocks the workout
@@ -76,5 +82,24 @@ final class Workout: SyncableModel {
         if types == [.time] { return .time }
         if types == [.rep] { return .rep }
         return .mixed
+    }
+
+    /// Short label for list rows. By Time/By Reps show their kind's own label
+    /// ("Follow Along"/"Rep"), with ": Empty" appended before their one block exists.
+    /// Personalized appends its block composition — "Personalized: Follow Along" for
+    /// one made entirely of Follow Along blocks, "Personalized: Mixed" once it has
+    /// both kinds, "Personalized: Empty" before it has any.
+    var listTypeLabel: String {
+        switch kind {
+        case .byTime: return displayType == .empty ? "Follow Along: Empty" : "Follow Along"
+        case .byRep: return displayType == .empty ? "Rep: Empty" : "Rep"
+        case .personalized:
+            switch displayType {
+            case .time: return "Personalized: Follow Along"
+            case .rep: return "Personalized: Rep"
+            case .empty: return "Personalized: Empty"
+            case .mixed: return "Personalized: Mixed"
+            }
+        }
     }
 }

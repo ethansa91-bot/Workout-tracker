@@ -34,7 +34,9 @@ enum WorkoutCloningService {
                     sortOrder: entry.sortOrder,
                     exercise: entry.exercise,
                     targetSets: entry.targetSets,
-                    customRestSeconds: entry.customRestSeconds
+                    customRestSeconds: entry.customRestSeconds,
+                    trackingMode: entry.trackingMode,
+                    headStartSeconds: entry.headStartSeconds
                 )
                 context.insert(entryCopy)
             }

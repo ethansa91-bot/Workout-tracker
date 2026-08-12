@@ -84,6 +84,8 @@ struct RepBlockExerciseDTO: Codable {
     let exerciseId: UUID?
     let targetSets: Int
     let customRestSeconds: Int?
+    let trackingMode: String
+    let headStartSeconds: Int
     let updatedAt: Date
     let deletedAt: Date?
 
@@ -95,6 +97,8 @@ struct RepBlockExerciseDTO: Codable {
         try c.encode(exerciseId, forKey: .exerciseId)
         try c.encode(targetSets, forKey: .targetSets)
         try c.encode(customRestSeconds, forKey: .customRestSeconds)
+        try c.encode(trackingMode, forKey: .trackingMode)
+        try c.encode(headStartSeconds, forKey: .headStartSeconds)
         try c.encode(updatedAt, forKey: .updatedAt)
         try c.encode(deletedAt, forKey: .deletedAt)
     }
@@ -174,6 +178,7 @@ struct SetLogDTO: Codable {
     let reps: Int
     let weight: Double
     let weightUnit: String
+    let holdSeconds: Int?
     let loggedAt: Date
     let isCancelled: Bool
     let updatedAt: Date
@@ -190,8 +195,32 @@ struct SetLogDTO: Codable {
         try c.encode(reps, forKey: .reps)
         try c.encode(weight, forKey: .weight)
         try c.encode(weightUnit, forKey: .weightUnit)
+        try c.encode(holdSeconds, forKey: .holdSeconds)
         try c.encode(loggedAt, forKey: .loggedAt)
         try c.encode(isCancelled, forKey: .isCancelled)
+        try c.encode(updatedAt, forKey: .updatedAt)
+        try c.encode(deletedAt, forKey: .deletedAt)
+    }
+}
+
+struct PersonalRecordDTO: Codable {
+    let id: UUID
+    let exerciseId: UUID?
+    let trackingMode: String
+    let weight: Double?
+    let reps: Int?
+    let holdSeconds: Int?
+    let updatedAt: Date
+    let deletedAt: Date?
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(exerciseId, forKey: .exerciseId)
+        try c.encode(trackingMode, forKey: .trackingMode)
+        try c.encode(weight, forKey: .weight)
+        try c.encode(reps, forKey: .reps)
+        try c.encode(holdSeconds, forKey: .holdSeconds)
         try c.encode(updatedAt, forKey: .updatedAt)
         try c.encode(deletedAt, forKey: .deletedAt)
     }
@@ -293,7 +322,7 @@ enum TimeBlockStepSyncAdapter: CatalogSyncAdapter {
 enum RepBlockExerciseSyncAdapter: CatalogSyncAdapter {
     static let tableName = "rep_block_exercises"
     static func dto(from model: RepBlockExercise) -> RepBlockExerciseDTO {
-        RepBlockExerciseDTO(id: model.id, workoutBlockId: model.block?.id ?? UUID(), sortOrder: model.sortOrder, exerciseId: model.exercise?.id, targetSets: model.targetSets, customRestSeconds: model.customRestSeconds, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
+        RepBlockExerciseDTO(id: model.id, workoutBlockId: model.block?.id ?? UUID(), sortOrder: model.sortOrder, exerciseId: model.exercise?.id, targetSets: model.targetSets, customRestSeconds: model.customRestSeconds, trackingMode: model.trackingModeRaw, headStartSeconds: model.headStartSeconds, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
     }
     static func id(of dto: RepBlockExerciseDTO) -> UUID { dto.id }
     static func updatedAt(of dto: RepBlockExerciseDTO) -> Date { dto.updatedAt }
@@ -306,7 +335,7 @@ enum RepBlockExerciseSyncAdapter: CatalogSyncAdapter {
     static func insertLocal(from dto: RepBlockExerciseDTO, context: ModelContext) -> RepBlockExercise {
         let block = WorkoutBlockSyncAdapter.fetchLocal(id: dto.workoutBlockId, context: context)
         let exercise = dto.exerciseId.flatMap { ExerciseSyncAdapter.fetchLocal(id: $0, context: context) }
-        let model = RepBlockExercise(id: dto.id, block: block, sortOrder: dto.sortOrder, exercise: exercise, targetSets: dto.targetSets, customRestSeconds: dto.customRestSeconds)
+        let model = RepBlockExercise(id: dto.id, block: block, sortOrder: dto.sortOrder, exercise: exercise, targetSets: dto.targetSets, customRestSeconds: dto.customRestSeconds, trackingMode: RepExerciseTrackingMode(rawValue: dto.trackingMode) ?? .repsWeight, headStartSeconds: dto.headStartSeconds)
         context.insert(model)
         return model
     }
@@ -314,6 +343,8 @@ enum RepBlockExerciseSyncAdapter: CatalogSyncAdapter {
         model.sortOrder = dto.sortOrder
         model.targetSets = dto.targetSets
         model.customRestSeconds = dto.customRestSeconds
+        model.trackingModeRaw = dto.trackingMode
+        model.headStartSeconds = dto.headStartSeconds
         if model.exercise?.id != dto.exerciseId {
             model.exercise = dto.exerciseId.flatMap { ExerciseSyncAdapter.fetchLocal(id: $0, context: context) }
         }
@@ -424,8 +455,8 @@ enum SetLogSyncAdapter: CatalogSyncAdapter {
         SetLogDTO(
             id: model.id, sessionId: model.session?.id ?? UUID(), repBlockExerciseId: model.repBlockExercise?.id,
             exerciseId: model.exercise?.id, exerciseNameSnapshot: model.exerciseNameSnapshot, setIndex: model.setIndex,
-            reps: model.reps, weight: model.weight, weightUnit: model.weightUnit, loggedAt: model.loggedAt,
-            isCancelled: model.isCancelled, updatedAt: model.updatedAt, deletedAt: model.deletedAt
+            reps: model.reps, weight: model.weight, weightUnit: model.weightUnit, holdSeconds: model.holdSeconds,
+            loggedAt: model.loggedAt, isCancelled: model.isCancelled, updatedAt: model.updatedAt, deletedAt: model.deletedAt
         )
     }
     static func id(of dto: SetLogDTO) -> UUID { dto.id }
@@ -443,7 +474,7 @@ enum SetLogSyncAdapter: CatalogSyncAdapter {
         let model = SetLog(
             id: dto.id, session: session, repBlockExercise: repEntry, exercise: exercise,
             exerciseNameSnapshot: dto.exerciseNameSnapshot, setIndex: dto.setIndex, reps: dto.reps,
-            weight: dto.weight, weightUnit: dto.weightUnit, isCancelled: dto.isCancelled
+            weight: dto.weight, weightUnit: dto.weightUnit, holdSeconds: dto.holdSeconds, isCancelled: dto.isCancelled
         )
         model.loggedAt = dto.loggedAt
         context.insert(model)
@@ -454,6 +485,7 @@ enum SetLogSyncAdapter: CatalogSyncAdapter {
         model.reps = dto.reps
         model.weight = dto.weight
         model.weightUnit = dto.weightUnit
+        model.holdSeconds = dto.holdSeconds
         model.loggedAt = dto.loggedAt
         model.isCancelled = dto.isCancelled
         model.exerciseNameSnapshot = dto.exerciseNameSnapshot
@@ -463,6 +495,36 @@ enum SetLogSyncAdapter: CatalogSyncAdapter {
         if model.repBlockExercise?.id != dto.repBlockExerciseId {
             model.repBlockExercise = dto.repBlockExerciseId.flatMap { RepBlockExerciseSyncAdapter.fetchLocal(id: $0, context: context) }
         }
+        if model.exercise?.id != dto.exerciseId {
+            model.exercise = dto.exerciseId.flatMap { ExerciseSyncAdapter.fetchLocal(id: $0, context: context) }
+        }
+    }
+}
+
+enum PersonalRecordSyncAdapter: CatalogSyncAdapter {
+    static let tableName = "personal_records"
+    static func dto(from model: PersonalRecord) -> PersonalRecordDTO {
+        PersonalRecordDTO(id: model.id, exerciseId: model.exercise?.id, trackingMode: model.trackingModeRaw, weight: model.weight, reps: model.reps, holdSeconds: model.holdSeconds, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
+    }
+    static func id(of dto: PersonalRecordDTO) -> UUID { dto.id }
+    static func updatedAt(of dto: PersonalRecordDTO) -> Date { dto.updatedAt }
+    static func deletedAt(of dto: PersonalRecordDTO) -> Date? { dto.deletedAt }
+    static func fetchLocal(id: UUID, context: ModelContext) -> PersonalRecord? {
+        var descriptor = FetchDescriptor<PersonalRecord>(predicate: #Predicate { $0.id == id })
+        descriptor.fetchLimit = 1
+        return try? context.fetch(descriptor).first
+    }
+    static func insertLocal(from dto: PersonalRecordDTO, context: ModelContext) -> PersonalRecord {
+        let exercise = dto.exerciseId.flatMap { ExerciseSyncAdapter.fetchLocal(id: $0, context: context) }
+        let model = PersonalRecord(id: dto.id, exercise: exercise, trackingMode: RepExerciseTrackingMode(rawValue: dto.trackingMode) ?? .repsWeight, weight: dto.weight, reps: dto.reps, holdSeconds: dto.holdSeconds)
+        context.insert(model)
+        return model
+    }
+    static func applyRemote(_ dto: PersonalRecordDTO, to model: PersonalRecord, context: ModelContext) {
+        model.trackingModeRaw = dto.trackingMode
+        model.weight = dto.weight
+        model.reps = dto.reps
+        model.holdSeconds = dto.holdSeconds
         if model.exercise?.id != dto.exerciseId {
             model.exercise = dto.exerciseId.flatMap { ExerciseSyncAdapter.fetchLocal(id: $0, context: context) }
         }

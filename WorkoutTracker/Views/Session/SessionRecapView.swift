@@ -17,6 +17,12 @@ struct SessionRecapView: View {
     @State private var activeSession: WorkoutSession?
     @State private var showingSupersedeConfirm = false
     @State private var sessionSoundProfile: TimerSoundProfile?
+    @State private var showingRenamePrompt = false
+    @State private var renameText = ""
+    @State private var errorMessage: String?
+    @State private var editMode: EditMode = .inactive
+    @State private var blockPendingDeletion: WorkoutBlock?
+    @State private var manageExercisesBlock: WorkoutBlock?
 
     private var activeSoundProfile: TimerSoundProfile {
         sessionSoundProfile ?? AppSettings.timerSoundProfile
@@ -45,38 +51,43 @@ struct SessionRecapView: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
 
-            ForEach(workout.sortedBlocks) { block in
-                Section(blockTitle(block)) {
-                    ForEach(overviewItems(for: block)) { item in
-                        overviewItemRow(item)
-                    }
+            Section {
+                if !isLocked && workout.kind == .personalized {
+                    blockListControls
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
+
+                ForEach(workout.sortedBlocks) { block in
+                    blockCard(block)
+                        .padding(.vertical, 4)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+                .onMove(perform: reorderAction)
             }
+
             if !allBlocksReady {
                 Text("Every block needs at least one exercise before this workout can be started.")
                     .font(.footnote)
                     .foregroundStyle(Color.appInkMuted)
+                    .listRowBackground(Color.clear)
             }
         }
         .themedListBackground()
+        .environment(\.editMode, $editMode)
         .navigationTitle(workout.name)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if !isLocked {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        destinationView(for: .editing(workout))
-                    } label: {
-                        Image(systemName: "pencil")
-                    }
-                }
-            }
-        }
         .safeAreaInset(edge: .bottom) {
             startControls
         }
         .navigationDestination(item: $activeSession) { session in
             SessionRunnerView(session: session, soundProfile: activeSoundProfile)
+        }
+        .navigationDestination(item: $manageExercisesBlock) { block in
+            BlockEditorView(block: block)
         }
         .confirmationDialog(
             "Starting a new session will mark your paused session as unfinished — it can't be resumed afterward. Continue?",
@@ -84,6 +95,29 @@ struct SessionRecapView: View {
             titleVisibility: .visible
         ) {
             Button("Start New", role: .destructive) { startNewSession() }
+        }
+        .confirmationDialog(
+            "Delete \"\(blockPendingDeletion.map { blockTitle($0) } ?? "")\"? Its exercises will be removed too.",
+            isPresented: Binding(
+                get: { blockPendingDeletion != nil },
+                set: { if !$0 { blockPendingDeletion = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) { confirmDeleteBlock() }
+        }
+        .alert("Rename Workout", isPresented: $showingRenamePrompt) {
+            TextField("Name", text: $renameText)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") { renameWorkout() }
+        }
+        .alert("Error", isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("OK") { errorMessage = nil }
+        } message: {
+            Text(errorMessage ?? "")
         }
     }
 
@@ -147,10 +181,22 @@ struct SessionRecapView: View {
 
     private var heroCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(heroStat)
-                .font(.appSerif(.title2))
-                .foregroundStyle(Color.appInk)
-            Text(heroSubtitle)
+            HStack(spacing: 8) {
+                Text(workout.name)
+                    .font(.appSerif(.title2))
+                    .foregroundStyle(Color.appInk)
+                if !isLocked {
+                    Button {
+                        renameText = workout.name
+                        showingRenamePrompt = true
+                    } label: {
+                        Image(systemName: "pencil")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.appInkMuted)
+                }
+            }
+            Text(heroInfoLine)
                 .font(.subheadline)
                 .foregroundStyle(Color.appInkMuted)
         }
@@ -159,27 +205,21 @@ struct SessionRecapView: View {
         .cardStyle()
     }
 
-    private var heroStat: String {
-        let blockCount = workout.sortedBlocks.count
+    private var heroInfoLine: String {
         let exerciseCount = workout.sortedBlocks.reduce(0) { total, block in
             total + (block.blockType == .time
                 ? block.sortedTimeSteps.filter { $0.stepType == .exercise }.count
                 : block.sortedRepExercises.count)
         }
-        return "\(blockCount) Block\(blockCount == 1 ? "" : "s") · \(exerciseCount) Exercise\(exerciseCount == 1 ? "" : "s")"
-    }
-
-    private var heroSubtitle: String {
-        "\(workout.displayType.rawValue.capitalized) workout"
-    }
-
-    @ViewBuilder
-    private func destinationView(for destination: WorkoutEditDestination) -> some View {
-        switch destination {
-        case .workout(let workout):
-            WorkoutEditorView(workout: workout)
-        case .block(let block):
-            BlockEditorView(block: block)
+        let exercisesText = "\(exerciseCount) Exercise\(exerciseCount == 1 ? "" : "s")"
+        switch workout.kind {
+        case .personalized:
+            let blockCount = workout.sortedBlocks.count
+            return "\(blockCount) Block\(blockCount == 1 ? "" : "s") · \(exercisesText) · Personalized"
+        case .byTime:
+            return "\(exercisesText) · Follow Along"
+        case .byRep:
+            return "\(exercisesText) · By Reps"
         }
     }
 
@@ -194,7 +234,154 @@ struct SessionRecapView: View {
 
     private func blockTitle(_ block: WorkoutBlock) -> String {
         if let name = block.name, !name.isEmpty { return name }
-        return block.blockType == .time ? "Time Block" : "Rep Block"
+        return block.blockType == .time ? "Follow Along Block" : "Rep Block"
+    }
+
+    /// Header + exercise rows all inside one `.cardStyle()` container so the block's
+    /// title and its exercises read as one visually connected unit, rather than a
+    /// native List section header floating above loose rows.
+    private func blockCard(_ block: WorkoutBlock) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            blockSectionHeader(block)
+            Rectangle()
+                .fill(Color.appHairline)
+                .frame(height: 1)
+            ForEach(overviewItems(for: block)) { item in
+                overviewItemRow(item)
+            }
+        }
+        .padding(16)
+        .cardStyle()
+    }
+
+    @ViewBuilder
+    private func blockSectionHeader(_ block: WorkoutBlock) -> some View {
+        HStack(spacing: 12) {
+            if workout.kind == .personalized {
+                Text(blockTitle(block))
+                    .font(.headline)
+                    .foregroundStyle(Color.appInk)
+            } else {
+                Text("Exercises")
+                    .textCase(.uppercase)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.appInkMuted)
+            }
+
+            Spacer()
+
+            // While rearranging, the only actions available are dragging blocks and
+            // adding a new one — Clone/Delete/Manage Exercises hide entirely so a stray
+            // tap can't do anything else mid-reorder.
+            if !isLocked && !editMode.isEditing {
+                if workout.kind == .personalized {
+                    Button {
+                        cloneBlock(block)
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.appInkMuted)
+
+                    Button {
+                        blockPendingDeletion = block
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.red)
+                }
+
+                // A plain Button here, not NavigationLink — List auto-adds a trailing
+                // disclosure chevron to any row containing a NavigationLink, even one
+                // that's just a small inline element rather than the whole row. Manage
+                // Exercises is already the only tap target that goes anywhere, so the
+                // extra chevron was redundant.
+                Button {
+                    manageExercisesBlock = block
+                } label: {
+                    // Personalized already has two other icon-only actions (Clone,
+                    // Delete) alongside this one, so a pencil keeps the row consistent;
+                    // Follow Along/By Reps has only this one action, where text reads
+                    // more clearly on its own.
+                    if workout.kind == .personalized {
+                        Image(systemName: "pencil")
+                    } else {
+                        Text("Manage Exercises")
+                            .font(.subheadline)
+                    }
+                }
+                .foregroundStyle(Color.appAccent)
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var blockListControls: some View {
+        HStack(spacing: 16) {
+            Spacer()
+
+            Menu {
+                Button("Follow Along Block") { addBlock(.time) }
+                Button("Rep Block") { addBlock(.rep) }
+            } label: {
+                Text("Add a Block")
+            }
+            .buttonStyle(.borderedProminent)
+
+            if workout.sortedBlocks.count > 1 {
+                Button {
+                    editMode = editMode.isEditing ? .inactive : .active
+                } label: {
+                    Text(editMode.isEditing ? "Done" : "Rearrange Blocks")
+                }
+                .buttonStyle(.borderedProminent)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 4)
+    }
+
+    private func addBlock(_ type: WorkoutBlockType) {
+        do { _ = try WorkoutEditingService.addBlock(to: workout, type: type, context: context) }
+        catch { errorMessage = error.localizedDescription }
+    }
+
+    private func cloneBlock(_ block: WorkoutBlock) {
+        do { _ = try WorkoutBlockCloningService.cloneBlock(block, context: context) }
+        catch { errorMessage = error.localizedDescription }
+    }
+
+    private func confirmDeleteBlock() {
+        guard let block = blockPendingDeletion else { return }
+        do { try WorkoutEditingService.deleteBlock(block, from: workout, context: context) }
+        catch { errorMessage = error.localizedDescription }
+        blockPendingDeletion = nil
+    }
+
+    // nil (not just a hidden drag handle) while not rearranging, so blocks genuinely
+    // can't be reordered outside that mode — same optional-closure pattern used for
+    // `moveBlocksAction` in WorkoutEditorView.
+    private var reorderAction: ((IndexSet, Int) -> Void)? {
+        if !editMode.isEditing { return nil }
+        return moveBlocks
+    }
+
+    private func moveBlocks(from source: IndexSet, to destination: Int) {
+        do { try WorkoutEditingService.moveBlocks(in: workout, from: source, to: destination, context: context) }
+        catch { errorMessage = error.localizedDescription }
+    }
+
+    private func renameWorkout() {
+        let trimmed = renameText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        do {
+            try WorkoutEditingService.rename(workout, to: trimmed, context: context)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func overviewItems(for block: WorkoutBlock) -> [SessionOverviewItem] {
@@ -213,9 +400,18 @@ struct SessionRecapView: View {
                     id: entry.id,
                     iconName: entry.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional",
                     title: entry.exercise?.name ?? "Exercise",
-                    detail: "\(entry.targetSets) sets · rest \(entry.customRestSeconds.map { "\($0)s" } ?? "default")"
+                    detail: repExerciseDetail(for: entry)
                 )
             }
+        }
+    }
+
+    private func repExerciseDetail(for entry: RepBlockExercise) -> String {
+        switch entry.trackingMode {
+        case .repsWeight:
+            return "\(entry.targetSets) sets · rest \(entry.customRestSeconds.map { "\($0)s" } ?? "default")"
+        case .maxHoldTime:
+            return "\(entry.targetSets) sets · max hold · \(entry.headStartSeconds)s head start"
         }
     }
 

@@ -18,6 +18,10 @@ final class SetLog: SyncableModel {
     /// Snapshot of the app-wide unit at logging time, so a later unit-setting change
     /// doesn't retroactively misrepresent history.
     var weightUnit: String
+    /// Non-nil means this is a max-hold-time set — `reps`/`weight` are unused
+    /// sentinel values (`0`) for it. This alone is the mode discriminator, no
+    /// separate flag needed.
+    var holdSeconds: Int?
     var loggedAt: Date
     /// Edit/cancel support: a cancelled set is excluded from progress counts and from
     /// best/max computations; logging again fills the slot.
@@ -37,6 +41,7 @@ final class SetLog: SyncableModel {
         reps: Int,
         weight: Double,
         weightUnit: String,
+        holdSeconds: Int? = nil,
         isCancelled: Bool = false
     ) {
         self.id = id
@@ -48,6 +53,7 @@ final class SetLog: SyncableModel {
         self.reps = reps
         self.weight = weight
         self.weightUnit = weightUnit
+        self.holdSeconds = holdSeconds
         self.loggedAt = .now
         self.isCancelled = isCancelled
         self.updatedAt = .now

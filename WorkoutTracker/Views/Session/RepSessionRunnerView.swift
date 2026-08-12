@@ -11,7 +11,9 @@ struct RepSessionRunnerView: View {
 
     @State private var draftReps: [Int: Int] = [:]
     @State private var draftWeight: [Int: Double] = [:]
+    @State private var draftHoldSeconds: [Int: Int] = [:]
     @State private var restStartSignal = 0
+    @State private var restStopSignal = 0
 
     private var entries: [RepBlockExercise] { block.sortedRepExercises }
     private var currentIndex: Int { session.currentExerciseIndex ?? 0 }
@@ -25,7 +27,7 @@ struct RepSessionRunnerView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     header(exercise: exercise, entry: entry)
-                    historyRow(exercise: exercise)
+                    historyRow(entry: entry, exercise: exercise)
                     setsSection(entry: entry, exercise: exercise)
                 }
                 .padding()
@@ -48,7 +50,8 @@ struct RepSessionRunnerView: View {
             RestTimerView(
                 totalSeconds: entry.customRestSeconds ?? AppSettings.defaultRestSeconds,
                 soundProfile: soundProfile,
-                startSignal: $restStartSignal
+                startSignal: $restStartSignal,
+                stopSignal: $restStopSignal
             )
             VStack(alignment: .leading, spacing: 6) {
                 Text(exercise.name).font(.appSerif(.title3))
@@ -70,55 +73,108 @@ struct RepSessionRunnerView: View {
         }
     }
 
-    private func historyRow(exercise: Exercise) -> some View {
-        let maxWeight = SetLogQueries.maxWeightEver(exercise: exercise, context: context)
-        let last = SetLogQueries.lastBestSet(exercise: exercise, excluding: session, context: context)
-        return HStack(spacing: 16) {
-            if let maxWeight {
-                Label("Max \(formattedWeight(maxWeight))", systemImage: "trophy.fill")
+    @ViewBuilder
+    private func historyRow(entry: RepBlockExercise, exercise: Exercise) -> some View {
+        let record = PersonalRecordQueries.current(for: exercise, context: context)
+        switch entry.trackingMode {
+        case .repsWeight:
+            let maxSet: SetLogQueries.BestSet? = record.map { SetLogQueries.BestSet(weight: $0.weight ?? 0, reps: $0.reps ?? 0) }
+                ?? SetLogQueries.bestSetEver(exercise: exercise, context: context)
+            let last = SetLogQueries.lastBestSet(exercise: exercise, excluding: session, context: context)
+            HStack(spacing: 16) {
+                if let maxSet {
+                    Label("Max \(maxSet.reps) × \(formattedWeight(maxSet.weight))", systemImage: "trophy.fill")
+                }
+                if let last {
+                    Label("Last \(last.reps) × \(formattedWeight(last.weight))", systemImage: "clock.arrow.circlepath")
+                }
+                if maxSet == nil && last == nil {
+                    Text("No history yet for this exercise").italic()
+                }
             }
-            if let last {
-                Label("Last \(last.reps) × \(formattedWeight(last.weight))", systemImage: "clock.arrow.circlepath")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        case .maxHoldTime:
+            let bestHold = record?.holdSeconds ?? SetLogQueries.bestHoldEver(exercise: exercise, context: context)
+            let lastHold = SetLogQueries.lastHoldSeconds(exercise: exercise, excluding: session, context: context)
+            HStack(spacing: 16) {
+                if let bestHold {
+                    Label("Best \(bestHold)s", systemImage: "trophy.fill")
+                }
+                if let lastHold {
+                    Label("Last \(lastHold)s", systemImage: "clock.arrow.circlepath")
+                }
+                if bestHold == nil && lastHold == nil {
+                    Text("No history yet for this exercise").italic()
+                }
             }
-            if maxWeight == nil && last == nil {
-                Text("No history yet for this exercise").italic()
-            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
     }
 
     private func setsSection(entry: RepBlockExercise, exercise: Exercise) -> some View {
         let weightOptions = exercise.equipment?.sortedWeightCombos.map(\.value) ?? []
         let logs = loggedSets(for: entry)
         let last = SetLogQueries.lastBestSet(exercise: exercise, excluding: session, context: context)
+        let bestHold = entry.trackingMode == .maxHoldTime
+            ? (PersonalRecordQueries.current(for: exercise, context: context)?.holdSeconds ?? SetLogQueries.bestHoldEver(exercise: exercise, context: context))
+            : nil
 
         return VStack(spacing: 12) {
             ForEach(0..<entry.targetSets, id: \.self) { setIndex in
-                if let log = logs.first(where: { $0.setIndex == setIndex }) {
-                    SetRowView(
-                        setNumber: setIndex + 1,
-                        weightOptions: weightOptions,
-                        weightUnit: log.weightUnit,
-                        reps: .constant(log.reps),
-                        weight: .constant(log.weight),
-                        isLogged: true,
-                        isWorseThanLast: isWorse(reps: log.reps, weight: log.weight, than: last),
-                        onLog: {},
-                        onCancel: { cancelSet(log) }
-                    )
-                } else {
-                    SetRowView(
-                        setNumber: setIndex + 1,
-                        weightOptions: weightOptions,
-                        weightUnit: AppSettings.weightUnit,
-                        reps: bindingReps(setIndex),
-                        weight: bindingWeight(setIndex),
-                        isLogged: false,
-                        isWorseThanLast: false,
-                        onLog: { logSet(entry: entry, setIndex: setIndex) },
-                        onCancel: {}
-                    )
+                switch entry.trackingMode {
+                case .repsWeight:
+                    if let log = logs.first(where: { $0.setIndex == setIndex }) {
+                        SetRowView(
+                            setNumber: setIndex + 1,
+                            weightOptions: weightOptions,
+                            weightUnit: log.weightUnit,
+                            reps: .constant(log.reps),
+                            weight: .constant(log.weight),
+                            isLogged: true,
+                            isWorseThanLast: isWorse(reps: log.reps, weight: log.weight, than: last),
+                            onLog: {},
+                            onCancel: { cancelSet(log) }
+                        )
+                    } else {
+                        SetRowView(
+                            setNumber: setIndex + 1,
+                            weightOptions: weightOptions,
+                            weightUnit: AppSettings.weightUnit,
+                            reps: bindingReps(setIndex),
+                            weight: bindingWeight(setIndex),
+                            isLogged: false,
+                            isWorseThanLast: false,
+                            onLog: { logSet(entry: entry, setIndex: setIndex) },
+                            onCancel: {}
+                        )
+                    }
+                case .maxHoldTime:
+                    if let log = logs.first(where: { $0.setIndex == setIndex }) {
+                        HoldSetRowView(
+                            setNumber: setIndex + 1,
+                            headStartSeconds: entry.headStartSeconds,
+                            previousBest: bestHold,
+                            recordedSeconds: .constant(log.holdSeconds ?? 0),
+                            isLogged: true,
+                            onLog: {},
+                            onCancel: { cancelSet(log) }
+                        )
+                        .id("\(entry.id)-\(setIndex)-logged")
+                    } else {
+                        HoldSetRowView(
+                            setNumber: setIndex + 1,
+                            headStartSeconds: entry.headStartSeconds,
+                            previousBest: bestHold,
+                            recordedSeconds: bindingHoldSeconds(setIndex),
+                            isLogged: false,
+                            onStart: { restStopSignal += 1 },
+                            onLog: { logHoldSet(entry: entry, setIndex: setIndex) },
+                            onCancel: {}
+                        )
+                        .id("\(entry.id)-\(setIndex)-pending")
+                    }
                 }
             }
 
@@ -188,13 +244,16 @@ struct RepSessionRunnerView: View {
     private func primeDrafts(for entry: RepBlockExercise, exercise: Exercise) {
         draftReps.removeAll()
         draftWeight.removeAll()
+        draftHoldSeconds.removeAll()
+        let record = PersonalRecordQueries.current(for: exercise, context: context)
         let best = SetLogQueries.lastBestSet(exercise: exercise, excluding: session, context: context)
         let weightOptions = exercise.equipment?.sortedWeightCombos.map(\.value) ?? []
-        let defaultWeight = best?.weight ?? weightOptions.first ?? 0
-        let defaultReps = best?.reps ?? 8
+        let defaultWeight: Double = record?.weight ?? best?.weight ?? weightOptions.first ?? 0
+        let defaultReps: Int = record?.reps ?? best?.reps ?? 8
         for index in 0..<entry.targetSets {
             draftReps[index] = defaultReps
             draftWeight[index] = defaultWeight
+            draftHoldSeconds[index] = 0
         }
     }
 
@@ -204,6 +263,10 @@ struct RepSessionRunnerView: View {
 
     private func bindingWeight(_ index: Int) -> Binding<Double> {
         Binding(get: { draftWeight[index] ?? 0 }, set: { draftWeight[index] = $0 })
+    }
+
+    private func bindingHoldSeconds(_ index: Int) -> Binding<Int> {
+        Binding(get: { draftHoldSeconds[index] ?? 0 }, set: { draftHoldSeconds[index] = $0 })
     }
 
     // MARK: - Actions
@@ -221,6 +284,25 @@ struct RepSessionRunnerView: View {
             reps: reps,
             weight: weight,
             weightUnit: AppSettings.weightUnit
+        )
+        context.insert(log)
+        session.markDirty()
+        try? context.save()
+    }
+
+    private func logHoldSet(entry: RepBlockExercise, setIndex: Int) {
+        restStartSignal += 1
+        let holdSeconds = draftHoldSeconds[setIndex] ?? 0
+        let log = SetLog(
+            session: session,
+            repBlockExercise: entry,
+            exercise: entry.exercise,
+            exerciseNameSnapshot: entry.exercise?.name,
+            setIndex: setIndex,
+            reps: 0,
+            weight: 0,
+            weightUnit: AppSettings.weightUnit,
+            holdSeconds: holdSeconds
         )
         context.insert(log)
         session.markDirty()

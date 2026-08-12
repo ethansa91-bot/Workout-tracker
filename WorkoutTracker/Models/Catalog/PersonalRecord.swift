@@ -1,23 +1,19 @@
 import Foundation
 import SwiftData
 
-enum RepExerciseTrackingMode: String, Codable {
-    case repsWeight, maxHoldTime
-}
-
+/// A manually-set personal record for an exercise — independent of session
+/// history. Never overwritten automatically by a later logged set; only changes
+/// when the user explicitly edits and saves it. Reuses `RepExerciseTrackingMode`
+/// (from the max-hold-time rep-block feature) so a record is either weight × reps
+/// or a max hold time, matching the same two shapes a set can be logged as.
 @Model
-final class RepBlockExercise: SyncableModel, Orderable {
+final class PersonalRecord: SyncableModel {
     @Attribute(.unique) var id: UUID
-    var block: WorkoutBlock?
-    var sortOrder: Int
     var exercise: Exercise?
-    var targetSets: Int
-    /// nil falls back to `AppSettings.defaultRestSeconds`.
-    var customRestSeconds: Int?
     var trackingModeRaw: String = RepExerciseTrackingMode.repsWeight.rawValue
-    /// Only meaningful when `trackingMode == .maxHoldTime` — seconds between
-    /// pressing Start and the stopwatch actually beginning to count up.
-    var headStartSeconds: Int = 3
+    var weight: Double?
+    var reps: Int?
+    var holdSeconds: Int?
     var updatedAt: Date
     var deletedAt: Date?
     var isDirty: Bool
@@ -25,22 +21,18 @@ final class RepBlockExercise: SyncableModel, Orderable {
 
     init(
         id: UUID = UUID(),
-        block: WorkoutBlock? = nil,
-        sortOrder: Int,
         exercise: Exercise? = nil,
-        targetSets: Int,
-        customRestSeconds: Int? = nil,
         trackingMode: RepExerciseTrackingMode = .repsWeight,
-        headStartSeconds: Int = 3
+        weight: Double? = nil,
+        reps: Int? = nil,
+        holdSeconds: Int? = nil
     ) {
         self.id = id
-        self.block = block
-        self.sortOrder = sortOrder
         self.exercise = exercise
-        self.targetSets = targetSets
-        self.customRestSeconds = customRestSeconds
         self.trackingModeRaw = trackingMode.rawValue
-        self.headStartSeconds = headStartSeconds
+        self.weight = weight
+        self.reps = reps
+        self.holdSeconds = holdSeconds
         self.updatedAt = .now
         self.deletedAt = nil
         self.isDirty = true

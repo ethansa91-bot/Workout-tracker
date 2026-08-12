@@ -4,10 +4,14 @@ import Combine
 /// Rest countdown — a normal tap starts/pauses/resumes it; it also auto-starts
 /// (only if not already running) whenever the caller bumps `startSignal`, which
 /// happens once per logged set; holding the button resets it back to full duration.
+/// Bumping `stopSignal` force-stops and resets it regardless of running/paused
+/// state — used when a max-hold-time stopwatch starts, since resting and holding
+/// at the same time doesn't make sense.
 struct RestTimerView: View {
     let totalSeconds: Int
     let soundProfile: TimerSoundProfile
     @Binding var startSignal: Int
+    @Binding var stopSignal: Int
 
     @State private var remainingSeconds: Int
     @State private var isRunning = false
@@ -15,10 +19,11 @@ struct RestTimerView: View {
     // Must be @State, not `let` — see TimeSessionRunnerView for why.
     @State private var ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    init(totalSeconds: Int, soundProfile: TimerSoundProfile, startSignal: Binding<Int>) {
+    init(totalSeconds: Int, soundProfile: TimerSoundProfile, startSignal: Binding<Int>, stopSignal: Binding<Int>) {
         self.totalSeconds = totalSeconds
         self.soundProfile = soundProfile
         _startSignal = startSignal
+        _stopSignal = stopSignal
         _remainingSeconds = State(initialValue: totalSeconds)
     }
 
@@ -69,6 +74,10 @@ struct RestTimerView: View {
             guard !isRunning else { return }
             remainingSeconds = totalSeconds
             isRunning = true
+        }
+        .onChange(of: stopSignal) { _, _ in
+            remainingSeconds = totalSeconds
+            isRunning = false
         }
     }
 

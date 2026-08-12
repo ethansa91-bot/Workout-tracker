@@ -120,10 +120,10 @@ enum WorkoutEditingService {
     // MARK: - Rep exercises
 
     @discardableResult
-    static func addRepExercise(to block: WorkoutBlock, exercise: Exercise, targetSets: Int, customRestSeconds: Int?, context: ModelContext) throws -> RepBlockExercise {
+    static func addRepExercise(to block: WorkoutBlock, exercise: Exercise, targetSets: Int, customRestSeconds: Int?, trackingMode: RepExerciseTrackingMode = .repsWeight, headStartSeconds: Int = 3, context: ModelContext) throws -> RepBlockExercise {
         let workout = try requireUnlockedParent(of: block)
         let nextOrder = (block.repExercises.map(\.sortOrder).max() ?? -1) + 1
-        let entry = RepBlockExercise(block: block, sortOrder: nextOrder, exercise: exercise, targetSets: targetSets, customRestSeconds: customRestSeconds)
+        let entry = RepBlockExercise(block: block, sortOrder: nextOrder, exercise: exercise, targetSets: targetSets, customRestSeconds: customRestSeconds, trackingMode: trackingMode, headStartSeconds: headStartSeconds)
         context.insert(entry)
         block.markDirty()
         workout.markDirty()

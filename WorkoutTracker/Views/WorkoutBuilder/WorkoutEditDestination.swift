@@ -10,14 +10,4 @@ enum WorkoutEditDestination: Hashable, Identifiable {
         case .block(let block): return block.id
         }
     }
-
-    /// By Time/By Reps workouts with an existing block jump straight to that block's
-    /// exercise editor; Personalized (or a blockless single-kind workout) lands on
-    /// the full workout editor.
-    static func editing(_ workout: Workout) -> WorkoutEditDestination {
-        if workout.kind != .personalized, let firstBlock = workout.sortedBlocks.first {
-            return .block(firstBlock)
-        }
-        return .workout(workout)
-    }
 }

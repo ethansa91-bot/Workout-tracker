@@ -27,7 +27,7 @@ enum WorkoutBlockCloningService {
         guard range.lowerBound >= 0, range.upperBound <= entries.count, !range.isEmpty else { return }
 
         let clones = entries[range].map { original in
-            RepBlockExercise(block: block, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds)
+            RepBlockExercise(block: block, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds)
         }
         clones.forEach { context.insert($0) }
         entries.insert(contentsOf: clones, at: entries.count)
@@ -64,7 +64,9 @@ enum WorkoutBlockCloningService {
                 sortOrder: entry.sortOrder,
                 exercise: entry.exercise,
                 targetSets: entry.targetSets,
-                customRestSeconds: entry.customRestSeconds
+                customRestSeconds: entry.customRestSeconds,
+                trackingMode: entry.trackingMode,
+                headStartSeconds: entry.headStartSeconds
             )
             context.insert(entryCopy)
         }

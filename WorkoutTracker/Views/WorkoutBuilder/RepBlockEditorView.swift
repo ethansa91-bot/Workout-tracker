@@ -140,12 +140,21 @@ struct RepBlockEditorView: View {
             IconBadge(systemName: entry.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional")
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.exercise?.name ?? "Exercise")
-                Text("\(entry.targetSets) sets · rest \(entry.customRestSeconds.map { "\($0)s" } ?? "default")")
+                Text(subtitle(for: entry))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 2)
+    }
+
+    private func subtitle(for entry: RepBlockExercise) -> String {
+        switch entry.trackingMode {
+        case .repsWeight:
+            return "\(entry.targetSets) sets · rest \(entry.customRestSeconds.map { "\($0)s" } ?? "default")"
+        case .maxHoldTime:
+            return "\(entry.targetSets) sets · max hold · \(entry.headStartSeconds)s head start"
+        }
     }
 
     private var moveEntriesAction: ((IndexSet, Int) -> Void)? {

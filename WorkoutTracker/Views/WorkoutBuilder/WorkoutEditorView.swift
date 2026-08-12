@@ -53,7 +53,7 @@ struct WorkoutEditorView: View {
                 }
             ))
             .disabled(isLocked)
-            LabeledContent("Type", value: workout.displayType.rawValue.capitalized)
+            LabeledContent("Type", value: workout.displayType.label)
         }
     }
 
@@ -113,7 +113,7 @@ struct WorkoutEditorView: View {
         if !isLocked {
             if workout.kind == .personalized {
                 Menu {
-                    Button("Time Block") { addBlock(.time) }
+                    Button("Follow Along Block") { addBlock(.time) }
                     Button("Repetition Block") { addBlock(.rep) }
                 } label: {
                     Label("Add Block", systemImage: "plus")
@@ -175,9 +175,18 @@ struct WorkoutEditorView: View {
                     id: entry.id,
                     iconName: entry.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional",
                     title: entry.exercise?.name ?? "Exercise",
-                    detail: "\(entry.targetSets) sets · rest \(entry.customRestSeconds.map { "\($0)s" } ?? "default")"
+                    detail: repExerciseDetail(for: entry)
                 )
             }
+        }
+    }
+
+    private func repExerciseDetail(for entry: RepBlockExercise) -> String {
+        switch entry.trackingMode {
+        case .repsWeight:
+            return "\(entry.targetSets) sets · rest \(entry.customRestSeconds.map { "\($0)s" } ?? "default")"
+        case .maxHoldTime:
+            return "\(entry.targetSets) sets · max hold · \(entry.headStartSeconds)s head start"
         }
     }
 
@@ -215,7 +224,7 @@ struct WorkoutEditorView: View {
 
     private func displayName(for block: WorkoutBlock) -> String {
         if let name = block.name, !name.isEmpty { return name }
-        return block.blockType == .time ? "Time Block" : "Rep Block"
+        return block.blockType == .time ? "Follow Along Block" : "Rep Block"
     }
 
     private func addBlock(_ type: WorkoutBlockType) {
