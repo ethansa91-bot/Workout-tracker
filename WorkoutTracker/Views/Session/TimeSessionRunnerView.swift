@@ -4,9 +4,9 @@ import Combine
 
 struct TimeSessionRunnerView: View {
     @Bindable var session: WorkoutSession
-    let block: WorkoutBlock
+    let section: WorkoutSection
     let soundProfile: TimerSoundProfile
-    let onBlockComplete: () -> Void
+    let onSectionComplete: () -> Void
 
     @Environment(\.modelContext) private var context
 
@@ -19,13 +19,13 @@ struct TimeSessionRunnerView: View {
     // (i.e. every tick), so the timer rarely survives long enough to actually fire.
     @State private var ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    private var steps: [TimeBlockStep] { block.sortedTimeSteps }
+    private var steps: [TimeSectionStep] { section.sortedTimeSteps }
     private var currentIndex: Int { session.currentStepIndex ?? 0 }
-    private var currentStep: TimeBlockStep? {
+    private var currentStep: TimeSectionStep? {
         guard currentIndex >= 0, currentIndex < steps.count else { return nil }
         return steps[currentIndex]
     }
-    private var nextStep: TimeBlockStep? {
+    private var nextStep: TimeSectionStep? {
         let next = currentIndex + 1
         guard next < steps.count else { return nil }
         return steps[next]
@@ -57,11 +57,11 @@ struct TimeSessionRunnerView: View {
                 Button(jumpConfirmActionTitle, role: .destructive) { confirmJump() }
             }
         } else {
-            Color.clear.onAppear { onBlockComplete() }
+            Color.clear.onAppear { onSectionComplete() }
         }
     }
 
-    private func mainStepView(_ step: TimeBlockStep) -> some View {
+    private func mainStepView(_ step: TimeSectionStep) -> some View {
         VStack(spacing: 12) {
             switch step.stepType {
             case .exercise:
@@ -106,13 +106,13 @@ struct TimeSessionRunnerView: View {
             }
             .padding(.horizontal)
         } else {
-            Text("Last step in this block")
+            Text("Last step in this section")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
     }
 
-    private func nextStepIcon(_ step: TimeBlockStep) -> String {
+    private func nextStepIcon(_ step: TimeSectionStep) -> String {
         switch step.stepType {
         case .exercise: return step.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional"
         case .rest: return "pause.circle"
@@ -120,7 +120,7 @@ struct TimeSessionRunnerView: View {
         }
     }
 
-    private func nextStepTitle(_ step: TimeBlockStep) -> String {
+    private func nextStepTitle(_ step: TimeSectionStep) -> String {
         switch step.stepType {
         case .exercise: return step.exercise?.name ?? "Exercise"
         case .rest: return "Rest"
@@ -130,7 +130,7 @@ struct TimeSessionRunnerView: View {
 
     private var completedIndices: Set<Int> {
         Set(session.stepLogs.compactMap { log -> Int? in
-            guard let step = log.timeBlockStep else { return nil }
+            guard let step = log.timeSectionStep else { return nil }
             return steps.firstIndex(where: { $0.id == step.id })
         })
     }
@@ -166,11 +166,11 @@ struct TimeSessionRunnerView: View {
         advance()
     }
 
-    private func logStep(_ step: TimeBlockStep, outcome: StepOutcome, actualDuration: Int) {
-        guard !session.stepLogs.contains(where: { $0.timeBlockStep?.id == step.id }) else { return }
+    private func logStep(_ step: TimeSectionStep, outcome: StepOutcome, actualDuration: Int) {
+        guard !session.stepLogs.contains(where: { $0.timeSectionStep?.id == step.id }) else { return }
         let log = StepLog(
             session: session,
-            timeBlockStep: step,
+            timeSectionStep: step,
             stepExerciseNameSnapshot: step.exercise?.name,
             plannedDurationSeconds: step.durationSeconds,
             actualDurationSeconds: max(0, actualDuration),
@@ -189,7 +189,7 @@ struct TimeSessionRunnerView: View {
         } else {
             session.markDirty()
             try? context.save()
-            onBlockComplete()
+            onSectionComplete()
         }
     }
 
@@ -207,7 +207,7 @@ struct TimeSessionRunnerView: View {
             }
         } else {
             let idsToClear = Set(steps[pendingJumpIndex...].map(\.id))
-            for log in session.stepLogs where log.timeBlockStep.map({ idsToClear.contains($0.id) }) ?? false {
+            for log in session.stepLogs where log.timeSectionStep.map({ idsToClear.contains($0.id) }) ?? false {
                 context.delete(log)
             }
         }

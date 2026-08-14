@@ -19,9 +19,9 @@ final class WorkoutSession: SyncableModel {
     var lastResumedAt: Date?
 
     /// Resumable position pointer. Safe as index-based because a workout referenced by
-    /// any session is permanently locked, so its block/step ordering can never shift
+    /// any session is permanently locked, so its section/step ordering can never shift
     /// underneath a paused, later-resumed session.
-    var currentBlockIndex: Int
+    var currentSectionIndex: Int
     var currentStepIndex: Int?
     var currentExerciseIndex: Int?
     var currentSetIndex: Int?
@@ -54,7 +54,7 @@ final class WorkoutSession: SyncableModel {
         self.endedAt = nil
         self.accumulatedActiveSeconds = 0
         self.lastResumedAt = .now
-        self.currentBlockIndex = 0
+        self.currentSectionIndex = 0
         self.currentStepIndex = nil
         self.currentExerciseIndex = nil
         self.currentSetIndex = nil

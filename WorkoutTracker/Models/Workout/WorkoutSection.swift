@@ -1,40 +1,72 @@
 import Foundation
 import SwiftData
 
-enum WorkoutBlockType: String, Codable {
-    case time, rep
+enum WorkoutSectionType: String, Codable {
+    case time, rep, emom, amrap
+}
+
+extension WorkoutSectionType {
+    var iconSymbolName: String {
+        switch self {
+        case .time: return "timer"
+        case .rep: return "list.number"
+        case .emom: return "repeat"
+        case .amrap: return "flame"
+        }
+    }
+
+    var fallbackSectionName: String {
+        switch self {
+        case .time: return "Follow Along Section"
+        case .rep: return "Rep Section"
+        case .emom: return "EMOM Section"
+        case .amrap: return "AMRAP Section"
+        }
+    }
 }
 
 @Model
-final class WorkoutBlock: SyncableModel, Orderable {
+final class WorkoutSection: SyncableModel, Orderable {
     @Attribute(.unique) var id: UUID
     var workout: Workout?
     var sortOrder: Int
     var name: String?
-    var blockTypeRaw: String
+    var sectionTypeRaw: String
     var updatedAt: Date
     var deletedAt: Date?
     var isDirty: Bool
     var remoteSyncedAt: Date?
 
-    /// Populated only when `blockType == .time`.
-    @Relationship(deleteRule: .cascade, inverse: \TimeBlockStep.block)
-    var timeSteps: [TimeBlockStep] = []
+    /// Populated only when `sectionType == .time`.
+    @Relationship(deleteRule: .cascade, inverse: \TimeSectionStep.section)
+    var timeSteps: [TimeSectionStep] = []
 
-    /// Populated only when `blockType == .rep`.
-    @Relationship(deleteRule: .cascade, inverse: \RepBlockExercise.block)
-    var repExercises: [RepBlockExercise] = []
+    /// Populated only when `sectionType == .rep`.
+    @Relationship(deleteRule: .cascade, inverse: \RepSectionExercise.section)
+    var repExercises: [RepSectionExercise] = []
 
-    var blockType: WorkoutBlockType {
-        get { WorkoutBlockType(rawValue: blockTypeRaw) ?? .time }
-        set { blockTypeRaw = newValue.rawValue }
+    /// Populated only when `sectionType == .emom` or `.amrap` — both are just a short
+    /// list of exercises shown all at once during the session, no per-exercise
+    /// settings, unlike `repExercises`.
+    @Relationship(deleteRule: .cascade, inverse: \SectionExerciseEntry.section)
+    var quickExercises: [SectionExerciseEntry] = []
+
+    /// EMOM only: number of 1-minute rounds.
+    var emomRoundCount: Int = 10
+
+    /// AMRAP only: total countdown duration, in seconds.
+    var amrapDurationSeconds: Int = 720
+
+    var sectionType: WorkoutSectionType {
+        get { WorkoutSectionType(rawValue: sectionTypeRaw) ?? .time }
+        set { sectionTypeRaw = newValue.rawValue }
     }
 
-    init(id: UUID = UUID(), workout: Workout? = nil, sortOrder: Int, blockType: WorkoutBlockType, name: String? = nil) {
+    init(id: UUID = UUID(), workout: Workout? = nil, sortOrder: Int, sectionType: WorkoutSectionType, name: String? = nil) {
         self.id = id
         self.workout = workout
         self.sortOrder = sortOrder
-        self.blockTypeRaw = blockType.rawValue
+        self.sectionTypeRaw = sectionType.rawValue
         self.name = name
         self.updatedAt = .now
         self.deletedAt = nil
@@ -42,11 +74,28 @@ final class WorkoutBlock: SyncableModel, Orderable {
         self.remoteSyncedAt = nil
     }
 
-    var sortedTimeSteps: [TimeBlockStep] {
+    var sortedTimeSteps: [TimeSectionStep] {
         timeSteps.filter { $0.deletedAt == nil }.sorted { $0.sortOrder < $1.sortOrder }
     }
 
-    var sortedRepExercises: [RepBlockExercise] {
+    var sortedRepExercises: [RepSectionExercise] {
         repExercises.filter { $0.deletedAt == nil }.sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    var sortedQuickExercises: [SectionExerciseEntry] {
+        quickExercises.filter { $0.deletedAt == nil }.sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    /// A section with no parent workout is a reusable template, imported (deep-copied)
+    /// into a real workout via `WorkoutSectionCloningService.importTemplate`.
+    var isTemplate: Bool {
+        workout == nil
+    }
+
+    /// Templates are never locked (there's no session history to protect); an
+    /// in-workout section defers entirely to its parent workout's lock state.
+    var isLocked: Bool {
+        guard let workout else { return false }
+        return workout.isLocked
     }
 }

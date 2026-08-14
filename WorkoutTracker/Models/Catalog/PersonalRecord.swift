@@ -4,7 +4,7 @@ import SwiftData
 /// A manually-set personal record for an exercise — independent of session
 /// history. Never overwritten automatically by a later logged set; only changes
 /// when the user explicitly edits and saves it. Reuses `RepExerciseTrackingMode`
-/// (from the max-hold-time rep-block feature) so a record is either weight × reps
+/// (from the max-hold-time rep-section feature) so a record is either weight × reps
 /// or a max hold time, matching the same two shapes a set can be logged as.
 @Model
 final class PersonalRecord: SyncableModel {

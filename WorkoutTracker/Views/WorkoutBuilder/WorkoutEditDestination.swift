@@ -2,12 +2,12 @@ import Foundation
 
 enum WorkoutEditDestination: Hashable, Identifiable {
     case workout(Workout)
-    case block(WorkoutBlock)
+    case section(WorkoutSection)
 
     var id: UUID {
         switch self {
         case .workout(let workout): return workout.id
-        case .block(let block): return block.id
+        case .section(let section): return section.id
         }
     }
 }

@@ -1,7 +1,10 @@
 import SwiftUI
 import SwiftData
 
-struct RepSectionEditorView: View {
+/// Shared editor for EMOM and AMRAP sections — both are just a short list of
+/// exercises (all shown at once during the session, no per-exercise settings) plus a
+/// single section-level timing setting (EMOM: round count; AMRAP: total duration).
+struct QuickSectionEditorView: View {
     @Bindable var section: WorkoutSection
     var onSaveNavigatesToRecap: Bool = false
     @Environment(\.modelContext) private var context
@@ -10,7 +13,6 @@ struct RepSectionEditorView: View {
     @State private var editMode: EditMode = .inactive
     @State private var selectedEntryIDs: Set<UUID> = []
     @State private var showingAddExercises = false
-    @State private var editingEntry: RepSectionExercise?
     @State private var showingDeleteConfirm = false
     @State private var errorMessage: String?
     @State private var showingRecap = false
@@ -23,15 +25,16 @@ struct RepSectionEditorView: View {
         VStack(spacing: 0) {
             if !isLocked {
                 nameBar
+                settingsBar
                 headerBar
                 Divider()
             }
             Group {
-                if section.sortedRepExercises.isEmpty {
+                if section.sortedQuickExercises.isEmpty {
                     emptyState
                 } else {
                     List(selection: $selectedEntryIDs) {
-                        ForEach(section.sortedRepExercises) { entry in
+                        ForEach(section.sortedQuickExercises) { entry in
                             entryRow(entry)
                         }
                         .onMove(perform: moveEntriesAction)
@@ -54,9 +57,6 @@ struct RepSectionEditorView: View {
                 addExercises(exercises)
             }
         }
-        .sheet(item: $editingEntry) { entry in
-            RepExerciseFormView(section: section, editingEntry: entry)
-        }
         .confirmationDialog(
             "Delete \(selectedEntryIDs.count) selected exercise\(selectedEntryIDs.count == 1 ? "" : "s")?",
             isPresented: $showingDeleteConfirm,
@@ -75,7 +75,7 @@ struct RepSectionEditorView: View {
     }
 
     private var nameBar: some View {
-        TextField(section.sectionType == .rep ? "Rep Section" : "Section Name", text: $nameField)
+        TextField(section.sectionType.fallbackSectionName, text: $nameField)
             .textFieldStyle(.roundedBorder)
             .padding(.horizontal)
             .padding(.top, 12)
@@ -85,12 +85,33 @@ struct RepSectionEditorView: View {
     }
 
     @ViewBuilder
+    private var settingsBar: some View {
+        switch section.sectionType {
+        case .emom:
+            Stepper("Rounds: \(section.emomRoundCount) (\(section.emomRoundCount) min)", value: emomRoundsBinding, in: 1...60)
+                .padding(.horizontal)
+                .padding(.top, 8)
+        case .amrap:
+            Stepper("Duration: \(section.amrapDurationSeconds / 60) min", value: amrapMinutesBinding, in: 1...60)
+                .padding(.horizontal)
+                .padding(.top, 8)
+        case .time, .rep:
+            EmptyView()
+        }
+    }
+
+    private var emomRoundsBinding: Binding<Int> {
+        Binding(get: { section.emomRoundCount }, set: { updateEmomRounds($0) })
+    }
+
+    private var amrapMinutesBinding: Binding<Int> {
+        Binding(get: { section.amrapDurationSeconds / 60 }, set: { updateAmrapDuration($0 * 60) })
+    }
+
+    @ViewBuilder
     private var headerBar: some View {
         if isEditing {
             HStack {
-                Button("Clone") { cloneSelection() }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!isContiguousSelection)
                 Spacer()
                 Button("Delete", role: .destructive) { showingDeleteConfirm = true }
                     .buttonStyle(.borderedProminent)
@@ -127,11 +148,6 @@ struct RepSectionEditorView: View {
     private var mainToolbar: some ToolbarContent {
         if !isLocked {
             ToolbarItem(placement: .topBarTrailing) {
-                // A plain custom Button that mutates our own `@State editMode`
-                // directly — the system `EditButton()` was found (via live device
-                // testing) to toggle its own label without ever writing through to
-                // our `.environment(\.editMode, $editMode)` binding, leaving the
-                // List/header permanently stuck in the non-editing state.
                 Button {
                     editMode = isEditing ? .inactive : .active
                 } label: {
@@ -142,42 +158,15 @@ struct RepSectionEditorView: View {
     }
 
     private var existingExerciseIDs: Set<UUID> {
-        Set(section.sortedRepExercises.compactMap { $0.exercise?.id })
+        Set(section.sortedQuickExercises.compactMap { $0.exercise?.id })
     }
 
-    @ViewBuilder
-    private func entryRow(_ entry: RepSectionExercise) -> some View {
-        if isEditing {
-            entryRowContent(entry)
-        } else {
-            entryRowContent(entry)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    if !isLocked { editingEntry = entry }
-                }
-        }
-    }
-
-    private func entryRowContent(_ entry: RepSectionExercise) -> some View {
+    private func entryRow(_ entry: SectionExerciseEntry) -> some View {
         HStack(spacing: 12) {
             IconBadge(systemName: entry.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional")
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.exercise?.name ?? "Exercise")
-                Text(subtitle(for: entry))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            Text(entry.exercise?.name ?? "Exercise")
         }
         .padding(.vertical, 2)
-    }
-
-    private func subtitle(for entry: RepSectionExercise) -> String {
-        switch entry.trackingMode {
-        case .repsWeight:
-            return "\(entry.targetSets) sets · rest \(entry.customRestSeconds.map { "\($0)s" } ?? "default")"
-        case .maxHoldTime:
-            return "\(entry.targetSets) sets · max hold · \(entry.headStartSeconds)s head start"
-        }
     }
 
     private var moveEntriesAction: ((IndexSet, Int) -> Void)? {
@@ -185,23 +174,15 @@ struct RepSectionEditorView: View {
         return moveEntries
     }
 
-    private var isContiguousSelection: Bool {
-        guard !selectedEntryIDs.isEmpty else { return false }
-        let entries = section.sortedRepExercises
-        let indices = entries.indices.filter { selectedEntryIDs.contains(entries[$0].id) }
-        guard let first = indices.first, let last = indices.last else { return false }
-        return indices.count == (last - first + 1)
-    }
-
     private func moveEntries(from source: IndexSet, to destination: Int) {
-        do { try WorkoutEditingService.moveRepExercises(in: section, from: source, to: destination, context: context) }
+        do { try WorkoutEditingService.moveQuickExercises(in: section, from: source, to: destination, context: context) }
         catch { errorMessage = error.localizedDescription }
     }
 
     private func addExercises(_ exercises: [Exercise]) {
         for exercise in exercises {
             do {
-                try WorkoutEditingService.addRepExercise(to: section, exercise: exercise, targetSets: 3, customRestSeconds: nil, context: context)
+                try WorkoutEditingService.addQuickExercise(to: section, exercise: exercise, context: context)
             } catch {
                 errorMessage = error.localizedDescription
                 break
@@ -209,24 +190,23 @@ struct RepSectionEditorView: View {
         }
     }
 
-    private func cloneSelection() {
-        let entries = section.sortedRepExercises
-        let indices = entries.indices.filter { selectedEntryIDs.contains(entries[$0].id) }
-        guard let first = indices.first, let last = indices.last else { return }
-        do {
-            try WorkoutSectionCloningService.cloneRepExercises(in: section, range: first..<(last + 1), context: context)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
     private func deleteSelection() {
-        let entries = section.sortedRepExercises
+        let entries = section.sortedQuickExercises
         for entry in entries where selectedEntryIDs.contains(entry.id) {
-            do { try WorkoutEditingService.deleteRepExercise(entry, from: section, context: context) }
+            do { try WorkoutEditingService.deleteQuickExercise(entry, from: section, context: context) }
             catch { errorMessage = error.localizedDescription }
         }
         selectedEntryIDs.removeAll()
+    }
+
+    private func updateEmomRounds(_ count: Int) {
+        do { try WorkoutEditingService.updateEmomRoundCount(section, to: count, context: context) }
+        catch { errorMessage = error.localizedDescription }
+    }
+
+    private func updateAmrapDuration(_ seconds: Int) {
+        do { try WorkoutEditingService.updateAmrapDuration(section, to: seconds, context: context) }
+        catch { errorMessage = error.localizedDescription }
     }
 
     private func renameSection() {

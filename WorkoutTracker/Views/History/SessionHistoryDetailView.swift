@@ -53,7 +53,7 @@ struct SessionHistoryDetailView: View {
                                 tint: log.outcome == .completed ? .green : .secondary,
                                 size: 28
                             )
-                            Text(log.timeBlockStep?.stepType == .getReady ? "Get Ready" : (log.stepExerciseNameSnapshot ?? "Rest"))
+                            Text(log.timeSectionStep?.stepType == .getReady ? "Get Ready" : (log.stepExerciseNameSnapshot ?? "Rest"))
                             Spacer()
                             Text("\(log.actualDurationSeconds)s")
                                 .font(.caption)

@@ -3,9 +3,9 @@ import SwiftData
 
 struct RepSessionRunnerView: View {
     @Bindable var session: WorkoutSession
-    let block: WorkoutBlock
+    let section: WorkoutSection
     let soundProfile: TimerSoundProfile
-    let onBlockComplete: () -> Void
+    let onSectionComplete: () -> Void
 
     @Environment(\.modelContext) private var context
 
@@ -15,9 +15,9 @@ struct RepSessionRunnerView: View {
     @State private var restStartSignal = 0
     @State private var restStopSignal = 0
 
-    private var entries: [RepBlockExercise] { block.sortedRepExercises }
+    private var entries: [RepSectionExercise] { section.sortedRepExercises }
     private var currentIndex: Int { session.currentExerciseIndex ?? 0 }
-    private var currentEntry: RepBlockExercise? {
+    private var currentEntry: RepSectionExercise? {
         guard currentIndex >= 0, currentIndex < entries.count else { return nil }
         return entries[currentIndex]
     }
@@ -49,13 +49,13 @@ struct RepSessionRunnerView: View {
             .onAppear { primeDrafts(for: entry, exercise: exercise) }
             .onChange(of: entry.id) { _, _ in primeDrafts(for: entry, exercise: exercise) }
         } else {
-            Color.clear.onAppear { onBlockComplete() }
+            Color.clear.onAppear { onSectionComplete() }
         }
     }
 
     // MARK: - Layout pieces
 
-    private func header(exercise: Exercise, entry: RepBlockExercise) -> some View {
+    private func header(exercise: Exercise, entry: RepSectionExercise) -> some View {
         HStack(alignment: .top, spacing: 16) {
             RestTimerView(
                 totalSeconds: entry.customRestSeconds ?? AppSettings.defaultRestSeconds,
@@ -85,7 +85,7 @@ struct RepSessionRunnerView: View {
     }
 
     @ViewBuilder
-    private func historyRow(entry: RepBlockExercise, exercise: Exercise) -> some View {
+    private func historyRow(entry: RepSectionExercise, exercise: Exercise) -> some View {
         let record = PersonalRecordQueries.current(for: exercise, context: context)
         switch entry.trackingMode {
         case .repsWeight:
@@ -124,7 +124,7 @@ struct RepSessionRunnerView: View {
         }
     }
 
-    private func setsSection(entry: RepBlockExercise, exercise: Exercise) -> some View {
+    private func setsSection(entry: RepSectionExercise, exercise: Exercise) -> some View {
         let weightOptions = exercise.equipment?.sortedWeightCombos.map(\.value) ?? []
         let logs = loggedSets(for: entry)
         let last = SetLogQueries.lastBestSet(exercise: exercise, excluding: session, context: context)
@@ -191,7 +191,7 @@ struct RepSessionRunnerView: View {
         }
     }
 
-    private func navigationBar(entry: RepBlockExercise) -> some View {
+    private func navigationBar(entry: RepSectionExercise) -> some View {
         HStack {
             Button {
                 goToPrevious()
@@ -222,13 +222,13 @@ struct RepSessionRunnerView: View {
 
     // MARK: - Data helpers
 
-    private func loggedSets(for entry: RepBlockExercise) -> [SetLog] {
+    private func loggedSets(for entry: RepSectionExercise) -> [SetLog] {
         session.setLogs
-            .filter { $0.repBlockExercise?.id == entry.id && !$0.isCancelled }
+            .filter { $0.repSectionExercise?.id == entry.id && !$0.isCancelled }
             .sorted { $0.setIndex < $1.setIndex }
     }
 
-    private func canAdvance(_ entry: RepBlockExercise) -> Bool {
+    private func canAdvance(_ entry: RepSectionExercise) -> Bool {
         loggedSets(for: entry).count >= entry.targetSets
     }
 
@@ -244,7 +244,7 @@ struct RepSessionRunnerView: View {
         return value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value)) \(unit)" : "\(value) \(unit)"
     }
 
-    private func primeDrafts(for entry: RepBlockExercise, exercise: Exercise) {
+    private func primeDrafts(for entry: RepSectionExercise, exercise: Exercise) {
         draftReps.removeAll()
         draftWeight.removeAll()
         draftHoldSeconds.removeAll()
@@ -274,13 +274,13 @@ struct RepSessionRunnerView: View {
 
     // MARK: - Actions
 
-    private func logSet(entry: RepBlockExercise, setIndex: Int) {
+    private func logSet(entry: RepSectionExercise, setIndex: Int) {
         restStartSignal += 1
         let reps = draftReps[setIndex] ?? 8
         let weight = draftWeight[setIndex] ?? 0
         let log = SetLog(
             session: session,
-            repBlockExercise: entry,
+            repSectionExercise: entry,
             exercise: entry.exercise,
             exerciseNameSnapshot: entry.exercise?.name,
             setIndex: setIndex,
@@ -293,12 +293,12 @@ struct RepSessionRunnerView: View {
         try? context.save()
     }
 
-    private func logHoldSet(entry: RepBlockExercise, setIndex: Int) {
+    private func logHoldSet(entry: RepSectionExercise, setIndex: Int) {
         restStartSignal += 1
         let holdSeconds = draftHoldSeconds[setIndex] ?? 0
         let log = SetLog(
             session: session,
-            repBlockExercise: entry,
+            repSectionExercise: entry,
             exercise: entry.exercise,
             exerciseNameSnapshot: entry.exercise?.name,
             setIndex: setIndex,
@@ -325,7 +325,7 @@ struct RepSessionRunnerView: View {
         try? context.save()
     }
 
-    private func goToNext(entry: RepBlockExercise, force: Bool = false) {
+    private func goToNext(entry: RepSectionExercise, force: Bool = false) {
         guard force || canAdvance(entry) else { return }
         let next = currentIndex + 1
         if next < entries.count {
@@ -333,7 +333,7 @@ struct RepSessionRunnerView: View {
         } else {
             session.markDirty()
             try? context.save()
-            onBlockComplete()
+            onSectionComplete()
             return
         }
         session.markDirty()

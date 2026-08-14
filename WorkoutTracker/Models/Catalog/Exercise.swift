@@ -5,6 +5,7 @@ import SwiftData
 final class Exercise: SyncableModel {
     @Attribute(.unique) var id: UUID
     var name: String
+    var label: String?
     var notes: String?
     var iconSymbolName: String
     /// Asset catalog name of a reference photo in `Assets.xcassets/ExercisePhotos`,
@@ -26,6 +27,7 @@ final class Exercise: SyncableModel {
     init(
         id: UUID = UUID(),
         name: String,
+        label: String? = nil,
         notes: String? = nil,
         iconSymbolName: String,
         imageAssetName: String? = nil,
@@ -35,6 +37,7 @@ final class Exercise: SyncableModel {
     ) {
         self.id = id
         self.name = name
+        self.label = label
         self.notes = notes
         self.iconSymbolName = iconSymbolName
         self.imageAssetName = imageAssetName

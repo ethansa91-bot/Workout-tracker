@@ -38,7 +38,7 @@ struct WorkoutEditorView: View {
     private var listContent: some View {
         List {
             nameSection
-            blocksSection
+            sectionsSection
         }
     }
 
@@ -58,38 +58,38 @@ struct WorkoutEditorView: View {
     }
 
     @ViewBuilder
-    private var blocksSection: some View {
-        Section("Blocks") {
-            if workout.sortedBlocks.isEmpty {
-                Text("No blocks yet").foregroundStyle(.secondary)
+    private var sectionsSection: some View {
+        Section("Sections") {
+            if workout.sortedSections.isEmpty {
+                Text("No sections yet").foregroundStyle(.secondary)
             }
-            blockRows
-            addBlockMenu
+            sectionRows
+            addSectionMenu
         }
     }
 
-    private var blockRows: some View {
-        ForEach(workout.sortedBlocks) { block in
+    private var sectionRows: some View {
+        ForEach(workout.sortedSections) { section in
             NavigationLink {
-                BlockEditorView(block: block)
+                SectionEditorView(section: section)
             } label: {
-                blockRow(block)
+                sectionRow(section)
             }
             .swipeActions(edge: .leading) {
-                cloneBlockButton(block)
+                cloneSectionButton(section)
             }
         }
-        .onDelete(perform: deleteBlocksAction)
-        .onMove(perform: moveBlocksAction)
+        .onDelete(perform: deleteSectionsAction)
+        .onMove(perform: moveSectionsAction)
     }
 
     @ViewBuilder
-    private func cloneBlockButton(_ block: WorkoutBlock) -> some View {
+    private func cloneSectionButton(_ section: WorkoutSection) -> some View {
         if !isLocked {
             Button {
-                cloneBlock(block)
+                cloneSection(section)
             } label: {
-                Label("Clone Block", systemImage: "doc.on.doc")
+                Label("Clone Section", systemImage: "doc.on.doc")
             }
             .tint(.blue)
         }
@@ -98,31 +98,31 @@ struct WorkoutEditorView: View {
     // Explicit optional-closure types here sidestep a real Swift inference limitation:
     // `isLocked ? nil : someFunctionReference` inline in a modifier argument position
     // fails to type-check ("ambiguous"/"failed to produce diagnostic") without one.
-    private var deleteBlocksAction: ((IndexSet) -> Void)? {
+    private var deleteSectionsAction: ((IndexSet) -> Void)? {
         if isLocked { return nil }
-        return deleteBlocks
+        return deleteSections
     }
 
-    private var moveBlocksAction: ((IndexSet, Int) -> Void)? {
+    private var moveSectionsAction: ((IndexSet, Int) -> Void)? {
         if isLocked { return nil }
-        return moveBlocks
+        return moveSections
     }
 
     @ViewBuilder
-    private var addBlockMenu: some View {
+    private var addSectionMenu: some View {
         if !isLocked {
             if workout.kind == .personalized {
                 Menu {
-                    Button("Follow Along Block") { addBlock(.time) }
-                    Button("Repetition Block") { addBlock(.rep) }
+                    Button("Follow Along Section") { addSection(.time) }
+                    Button("Repetition Section") { addSection(.rep) }
                 } label: {
-                    Label("Add Block", systemImage: "plus")
+                    Label("Add Section", systemImage: "plus")
                 }
-            } else if workout.sortedBlocks.isEmpty {
+            } else if workout.sortedSections.isEmpty {
                 Button {
-                    addBlock(workout.kind == .byTime ? .time : .rep)
+                    addSection(workout.kind == .byTime ? .time : .rep)
                 } label: {
-                    Label("Add Block", systemImage: "plus")
+                    Label("Add Section", systemImage: "plus")
                 }
             }
         }
@@ -139,29 +139,30 @@ struct WorkoutEditorView: View {
         }
     }
 
-    private func blockRow(_ block: WorkoutBlock) -> some View {
+    private func sectionRow(_ section: WorkoutSection) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
-                IconBadge(systemName: block.blockType == .time ? "timer" : "list.number")
+                IconBadge(systemName: section.sectionType == .time ? "timer" : "list.number")
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(displayName(for: block))
-                    Text(block.blockType == .time ? "\(block.sortedTimeSteps.count) steps" : "\(block.sortedRepExercises.count) exercises")
+                    Text(displayName(for: section))
+                    Text(section.sectionType == .time ? "\(section.sortedTimeSteps.count) steps" : "\(section.sortedRepExercises.count) exercises")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
-            ForEach(overviewItems(for: block)) { item in
+            ForEach(overviewItems(for: section)) { item in
                 overviewItemRow(item)
             }
         }
         .padding(.vertical, 4)
     }
 
-    /// One row per contained exercise/rest, shown directly under its block so the whole
-    /// workout's contents are visible at a glance without navigating into each block.
-    private func overviewItems(for block: WorkoutBlock) -> [OverviewItem] {
-        if block.blockType == .time {
-            return block.sortedTimeSteps.map { step in
+    /// One row per contained exercise/rest, shown directly under its section so the
+    /// whole workout's contents are visible at a glance without navigating into each
+    /// section.
+    private func overviewItems(for section: WorkoutSection) -> [OverviewItem] {
+        if section.sectionType == .time {
+            return section.sortedTimeSteps.map { step in
                 OverviewItem(
                     id: step.id,
                     iconName: overviewIcon(for: step),
@@ -170,7 +171,7 @@ struct WorkoutEditorView: View {
                 )
             }
         } else {
-            return block.sortedRepExercises.map { entry in
+            return section.sortedRepExercises.map { entry in
                 OverviewItem(
                     id: entry.id,
                     iconName: entry.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional",
@@ -181,7 +182,7 @@ struct WorkoutEditorView: View {
         }
     }
 
-    private func repExerciseDetail(for entry: RepBlockExercise) -> String {
+    private func repExerciseDetail(for entry: RepSectionExercise) -> String {
         switch entry.trackingMode {
         case .repsWeight:
             return "\(entry.targetSets) sets · rest \(entry.customRestSeconds.map { "\($0)s" } ?? "default")"
@@ -190,7 +191,7 @@ struct WorkoutEditorView: View {
         }
     }
 
-    private func overviewIcon(for step: TimeBlockStep) -> String {
+    private func overviewIcon(for step: TimeSectionStep) -> String {
         switch step.stepType {
         case .exercise: return step.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional"
         case .rest: return "pause.circle"
@@ -198,7 +199,7 @@ struct WorkoutEditorView: View {
         }
     }
 
-    private func overviewTitle(for step: TimeBlockStep) -> String {
+    private func overviewTitle(for step: TimeSectionStep) -> String {
         switch step.stepType {
         case .exercise: return step.exercise?.name ?? "Exercise"
         case .rest: return "Rest"
@@ -222,31 +223,31 @@ struct WorkoutEditorView: View {
         .padding(.leading, 8)
     }
 
-    private func displayName(for block: WorkoutBlock) -> String {
-        if let name = block.name, !name.isEmpty { return name }
-        return block.blockType == .time ? "Follow Along Block" : "Rep Block"
+    private func displayName(for section: WorkoutSection) -> String {
+        if let name = section.name, !name.isEmpty { return name }
+        return section.sectionType == .time ? "Follow Along Section" : "Rep Section"
     }
 
-    private func addBlock(_ type: WorkoutBlockType) {
-        do { _ = try WorkoutEditingService.addBlock(to: workout, type: type, context: context) }
+    private func addSection(_ type: WorkoutSectionType) {
+        do { _ = try WorkoutEditingService.addSection(to: workout, type: type, context: context) }
         catch { errorMessage = error.localizedDescription }
     }
 
-    private func deleteBlocks(at offsets: IndexSet) {
-        let blocks = workout.sortedBlocks
+    private func deleteSections(at offsets: IndexSet) {
+        let sections = workout.sortedSections
         for index in offsets {
-            do { try WorkoutEditingService.deleteBlock(blocks[index], from: workout, context: context) }
+            do { try WorkoutEditingService.deleteSection(sections[index], from: workout, context: context) }
             catch { errorMessage = error.localizedDescription }
         }
     }
 
-    private func moveBlocks(from source: IndexSet, to destination: Int) {
-        do { try WorkoutEditingService.moveBlocks(in: workout, from: source, to: destination, context: context) }
+    private func moveSections(from source: IndexSet, to destination: Int) {
+        do { try WorkoutEditingService.moveSections(in: workout, from: source, to: destination, context: context) }
         catch { errorMessage = error.localizedDescription }
     }
 
-    private func cloneBlock(_ block: WorkoutBlock) {
-        do { _ = try WorkoutBlockCloningService.cloneBlock(block, context: context) }
+    private func cloneSection(_ section: WorkoutSection) {
+        do { _ = try WorkoutSectionCloningService.cloneSection(section, context: context) }
         catch { errorMessage = error.localizedDescription }
     }
 }

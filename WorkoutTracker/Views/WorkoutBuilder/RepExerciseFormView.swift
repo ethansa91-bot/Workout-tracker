@@ -2,8 +2,8 @@ import SwiftUI
 import SwiftData
 
 struct RepExerciseFormView: View {
-    let block: WorkoutBlock
-    var editingEntry: RepBlockExercise?
+    let section: WorkoutSection
+    var editingEntry: RepSectionExercise?
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -16,8 +16,8 @@ struct RepExerciseFormView: View {
     @State private var showingExercisePicker = false
     @State private var errorMessage: String?
 
-    init(block: WorkoutBlock, editingEntry: RepBlockExercise? = nil) {
-        self.block = block
+    init(section: WorkoutSection, editingEntry: RepSectionExercise? = nil) {
+        self.section = section
         self.editingEntry = editingEntry
         _selectedExercise = State(initialValue: editingEntry?.exercise)
         _targetSets = State(initialValue: editingEntry?.targetSets ?? 3)
@@ -86,7 +86,7 @@ struct RepExerciseFormView: View {
         let rest: Int? = restSeconds == AppSettings.defaultRestSeconds ? nil : restSeconds
         do {
             if let editingEntry {
-                guard let workout = block.workout, !workout.isLocked else { throw WorkoutEditingError.locked }
+                guard !section.isLocked else { throw WorkoutEditingError.locked }
                 editingEntry.exercise = selectedExercise
                 editingEntry.targetSets = targetSets
                 editingEntry.customRestSeconds = rest
@@ -96,7 +96,7 @@ struct RepExerciseFormView: View {
                 try context.save()
             } else {
                 try WorkoutEditingService.addRepExercise(
-                    to: block,
+                    to: section,
                     exercise: selectedExercise,
                     targetSets: targetSets,
                     customRestSeconds: rest,

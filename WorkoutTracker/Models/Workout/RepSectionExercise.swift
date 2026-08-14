@@ -6,9 +6,9 @@ enum RepExerciseTrackingMode: String, Codable {
 }
 
 @Model
-final class RepBlockExercise: SyncableModel, Orderable {
+final class RepSectionExercise: SyncableModel, Orderable {
     @Attribute(.unique) var id: UUID
-    var block: WorkoutBlock?
+    var section: WorkoutSection?
     var sortOrder: Int
     var exercise: Exercise?
     var targetSets: Int
@@ -25,7 +25,7 @@ final class RepBlockExercise: SyncableModel, Orderable {
 
     init(
         id: UUID = UUID(),
-        block: WorkoutBlock? = nil,
+        section: WorkoutSection? = nil,
         sortOrder: Int,
         exercise: Exercise? = nil,
         targetSets: Int,
@@ -34,7 +34,7 @@ final class RepBlockExercise: SyncableModel, Orderable {
         headStartSeconds: Int = 3
     ) {
         self.id = id
-        self.block = block
+        self.section = section
         self.sortOrder = sortOrder
         self.exercise = exercise
         self.targetSets = targetSets

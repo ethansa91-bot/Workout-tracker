@@ -67,12 +67,7 @@ struct ArchivedWorkoutsView: View {
     }
 
     private func workoutTypeIcon(_ workout: Workout) -> String {
-        switch workout.displayType {
-        case .time: return "timer"
-        case .rep: return "list.number"
-        case .mixed: return "square.stack.3d.up.fill"
-        case .empty: return "list.bullet.rectangle"
-        }
+        workout.displayType.iconSymbolName
     }
 
     private func unarchiveWorkout(_ workout: Workout) {

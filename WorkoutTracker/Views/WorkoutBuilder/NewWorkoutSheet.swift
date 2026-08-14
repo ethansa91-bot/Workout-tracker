@@ -5,25 +5,12 @@ struct NewWorkoutSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
-    @State private var kind: WorkoutKind = .personalized
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Name") {
                     TextField("Workout name", text: $name)
-                }
-                Section("Type") {
-                    Picker("Type", selection: $kind) {
-                        Text("Personalized").tag(WorkoutKind.personalized)
-                        Text("Follow Along").tag(WorkoutKind.byTime)
-                        Text("By Reps").tag(WorkoutKind.byRep)
-                    }
-                    .pickerStyle(.inline)
-                    .labelsHidden()
-                    Text(kindDescription)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
             }
             .themedListBackground()
@@ -35,7 +22,7 @@ struct NewWorkoutSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") {
-                        onCreate(trimmedName, kind)
+                        onCreate(trimmedName, .personalized)
                         dismiss()
                     }
                     .disabled(trimmedName.isEmpty)
@@ -46,13 +33,5 @@ struct NewWorkoutSheet: View {
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespaces)
-    }
-
-    private var kindDescription: String {
-        switch kind {
-        case .personalized: return "Mix time and rep blocks freely."
-        case .byTime: return "A single timed block — add exercises next."
-        case .byRep: return "A single set/rep block — add exercises next."
-        }
     }
 }

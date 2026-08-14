@@ -10,10 +10,9 @@ import SwiftData
 
 struct ContentView: View {
     var body: some View {
-        // iOS shows only the first 4 tabItems directly, collapsing the rest into
-        // an automatic "More" tab — so Schedule/My Workouts/Records/Settings (the
-        // ones that must always stay directly visible, in this exact order, with
-        // Settings last) occupy positions 0-3; Library/History fall into "More".
+        // iOS only collapses tabs into an automatic "More" tab once there are more
+        // than 5 — five items (Library folded into My Workouts as a horizontal
+        // pane selector instead of its own tab) all show directly, no "More".
         TabView {
             ScheduleListView()
                 .tabItem { Label("Schedule", systemImage: "calendar") }
@@ -26,9 +25,6 @@ struct ContentView: View {
 
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape") }
-
-            LibraryHomeView()
-                .tabItem { Label("Library", systemImage: "dumbbell.fill") }
 
             SessionHistoryListView()
                 .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }

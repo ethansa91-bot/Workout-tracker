@@ -44,14 +44,14 @@ enum WgerCatalogCorrection {
     }
 
     private static func relinkReferences(from old: Exercise, to replacement: Exercise, context: ModelContext) {
-        let repBlockExercises = (try? context.fetch(FetchDescriptor<RepBlockExercise>())) ?? []
-        for row in repBlockExercises where row.exercise?.id == old.id {
+        let repSectionExercises = (try? context.fetch(FetchDescriptor<RepSectionExercise>())) ?? []
+        for row in repSectionExercises where row.exercise?.id == old.id {
             row.exercise = replacement
             row.markDirty()
         }
 
-        let timeBlockSteps = (try? context.fetch(FetchDescriptor<TimeBlockStep>())) ?? []
-        for row in timeBlockSteps where row.exercise?.id == old.id {
+        let timeSectionSteps = (try? context.fetch(FetchDescriptor<TimeSectionStep>())) ?? []
+        for row in timeSectionSteps where row.exercise?.id == old.id {
             row.exercise = replacement
             row.markDirty()
         }

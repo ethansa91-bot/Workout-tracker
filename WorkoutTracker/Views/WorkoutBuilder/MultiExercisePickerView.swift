@@ -4,10 +4,10 @@ import SwiftData
 /// Multi-select sibling of `ExercisePickerView`: stays open across multiple taps so
 /// several exercises can be bulk-added in one pass, then closed with "Done."
 struct MultiExercisePickerView: View {
-    /// Exercises already in the block, so reopening this picker to add more doesn't
+    /// Exercises already in the section, so reopening this picker to add more doesn't
     /// look like a blank slate — shown as an "In workout" marker. The "+" stays fully
     /// active regardless, since adding the same exercise again (to repeat it later in
-    /// the block) is intentionally supported.
+    /// the section) is intentionally supported.
     var existingExerciseIDs: Set<UUID> = []
     let onDone: ([Exercise]) -> Void
 
@@ -63,13 +63,13 @@ struct MultiExercisePickerView: View {
 
     private func row(_ exercise: Exercise) -> some View {
         let selected = isSelected(exercise)
-        let alreadyInBlock = existingExerciseIDs.contains(exercise.id)
+        let alreadyInSection = existingExerciseIDs.contains(exercise.id)
         return HStack(spacing: 12) {
             IconBadge(systemName: exercise.iconSymbolName)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(exercise.name)
-                    if alreadyInBlock {
+                    if alreadyInSection {
                         StatusPill(text: "In workout", tint: .secondary)
                     }
                 }

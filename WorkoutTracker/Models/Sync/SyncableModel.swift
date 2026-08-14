@@ -12,9 +12,9 @@ protocol SyncableModel: PersistentModel {
     var remoteSyncedAt: Date? { get set }
 }
 
-/// Entities whose sibling rows have an explicit display order (workout blocks, steps
-/// within a block, exercises within a block). Lets reorder/clone logic be written once
-/// generically instead of once per entity.
+/// Entities whose sibling rows have an explicit display order (workout sections, steps
+/// within a section, exercises within a section). Lets reorder/clone logic be written
+/// once generically instead of once per entity.
 protocol Orderable: AnyObject {
     var sortOrder: Int { get set }
 }

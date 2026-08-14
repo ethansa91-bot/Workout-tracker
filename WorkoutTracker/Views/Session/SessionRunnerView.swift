@@ -16,23 +16,28 @@ struct SessionRunnerView: View {
     @State private var ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var workout: Workout? { session.workout }
-    private var blocks: [WorkoutBlock] { workout?.sortedBlocks ?? [] }
-    private var currentBlock: WorkoutBlock? {
-        guard session.currentBlockIndex >= 0, session.currentBlockIndex < blocks.count else { return nil }
-        return blocks[session.currentBlockIndex]
+    private var sections: [WorkoutSection] { workout?.sortedSections ?? [] }
+    private var currentSection: WorkoutSection? {
+        guard session.currentSectionIndex >= 0, session.currentSectionIndex < sections.count else { return nil }
+        return sections[session.currentSectionIndex]
     }
 
     var body: some View {
         Group {
-            if let currentBlock {
+            if let currentSection {
                 Group {
-                    if currentBlock.blockType == .time {
-                        TimeSessionRunnerView(session: session, block: currentBlock, soundProfile: soundProfile, onBlockComplete: advanceBlock)
-                    } else {
-                        RepSessionRunnerView(session: session, block: currentBlock, soundProfile: soundProfile, onBlockComplete: advanceBlock)
+                    switch currentSection.sectionType {
+                    case .time:
+                        TimeSessionRunnerView(session: session, section: currentSection, soundProfile: soundProfile, onSectionComplete: advanceSection)
+                    case .rep:
+                        RepSessionRunnerView(session: session, section: currentSection, soundProfile: soundProfile, onSectionComplete: advanceSection)
+                    case .emom:
+                        EmomSessionRunnerView(session: session, section: currentSection, soundProfile: soundProfile, onSectionComplete: advanceSection)
+                    case .amrap:
+                        AmrapSessionRunnerView(session: session, section: currentSection, soundProfile: soundProfile, onSectionComplete: advanceSection)
                     }
                 }
-                .id(currentBlock.id)
+                .id(currentSection.id)
             } else {
                 VStack {
                     Spacer()
@@ -140,18 +145,28 @@ struct SessionRunnerView: View {
     }
 
     private var totalItems: Int {
-        blocks.reduce(0) { $0 + itemCount(in: $1) }
+        sections.reduce(0) { $0 + itemCount(in: $1) }
     }
 
-    private func itemCount(in block: WorkoutBlock) -> Int {
-        block.blockType == .time ? block.sortedTimeSteps.count : block.sortedRepExercises.count
+    private func itemCount(in section: WorkoutSection) -> Int {
+        switch section.sectionType {
+        case .time: return section.sortedTimeSteps.count
+        case .rep: return section.sortedRepExercises.count
+        case .emom: return section.emomRoundCount
+        // A single countdown, not a list of items — counted as one unit of progress.
+        case .amrap: return 1
+        }
     }
 
     private var progressFraction: Double {
         guard totalItems > 0 else { return 0 }
-        var completed = blocks.prefix(session.currentBlockIndex).reduce(0) { $0 + itemCount(in: $1) }
-        if let currentBlock {
-            completed += currentBlock.blockType == .time ? (session.currentStepIndex ?? 0) : (session.currentExerciseIndex ?? 0)
+        var completed = sections.prefix(session.currentSectionIndex).reduce(0) { $0 + itemCount(in: $1) }
+        if let currentSection {
+            switch currentSection.sectionType {
+            case .time, .emom: completed += session.currentStepIndex ?? 0
+            case .rep: completed += session.currentExerciseIndex ?? 0
+            case .amrap: break // stays a single unit until the countdown finishes
+            }
         }
         return min(1, Double(completed) / Double(totalItems))
     }
@@ -161,9 +176,9 @@ struct SessionRunnerView: View {
         elapsedDisplay = String(format: "%d:%02d:%02d", total / 3600, (total % 3600) / 60, total % 60)
     }
 
-    private func advanceBlock() {
+    private func advanceSection() {
         guard let workout else { return }
-        WorkoutSessionService.advanceBlock(session, workout: workout, context: context)
+        WorkoutSessionService.advanceSection(session, workout: workout, context: context)
     }
 
     private func pauseSession() {

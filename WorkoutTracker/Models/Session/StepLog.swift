@@ -5,14 +5,14 @@ enum StepOutcome: String, Codable {
     case completed, skipped
 }
 
-/// Per-step outcome for a time block. Powers the horizontal scrub strip: a step that
+/// Per-step outcome for a time section. Powers the horizontal scrub strip: a step that
 /// was jumped over on the way forward gets a `.skipped` log; one actually run through
 /// gets `.completed`.
 @Model
 final class StepLog: SyncableModel {
     @Attribute(.unique) var id: UUID
     var session: WorkoutSession?
-    var timeBlockStep: TimeBlockStep?
+    var timeSectionStep: TimeSectionStep?
     /// Display resilience if the underlying step is later edited/removed on a clone.
     var stepExerciseNameSnapshot: String?
     var plannedDurationSeconds: Int
@@ -33,7 +33,7 @@ final class StepLog: SyncableModel {
     init(
         id: UUID = UUID(),
         session: WorkoutSession? = nil,
-        timeBlockStep: TimeBlockStep? = nil,
+        timeSectionStep: TimeSectionStep? = nil,
         stepExerciseNameSnapshot: String? = nil,
         plannedDurationSeconds: Int,
         actualDurationSeconds: Int,
@@ -42,7 +42,7 @@ final class StepLog: SyncableModel {
     ) {
         self.id = id
         self.session = session
-        self.timeBlockStep = timeBlockStep
+        self.timeSectionStep = timeSectionStep
         self.stepExerciseNameSnapshot = stepExerciseNameSnapshot
         self.plannedDurationSeconds = plannedDurationSeconds
         self.actualDurationSeconds = actualDurationSeconds

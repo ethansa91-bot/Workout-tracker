@@ -38,69 +38,94 @@ enum WorkoutEditingService {
         try context.save()
     }
 
-    // MARK: - Blocks
+    // MARK: - Sections
 
-    static func addBlock(to workout: Workout, type: WorkoutBlockType, context: ModelContext) throws -> WorkoutBlock {
+    static func addSection(to workout: Workout, type: WorkoutSectionType, context: ModelContext) throws -> WorkoutSection {
         try requireUnlocked(workout)
-        let nextOrder = (workout.blocks.map(\.sortOrder).max() ?? -1) + 1
-        let block = WorkoutBlock(workout: workout, sortOrder: nextOrder, blockType: type)
-        context.insert(block)
+        let nextOrder = (workout.sections.map(\.sortOrder).max() ?? -1) + 1
+        let section = WorkoutSection(workout: workout, sortOrder: nextOrder, sectionType: type)
+        context.insert(section)
         if type == .time {
-            let getReady = TimeBlockStep(block: block, sortOrder: 0, stepType: .getReady, exercise: nil, durationSeconds: 15)
+            let getReady = TimeSectionStep(section: section, sortOrder: 0, stepType: .getReady, exercise: nil, durationSeconds: 15)
             context.insert(getReady)
         }
         workout.markDirty()
         try context.save()
-        return block
+        return section
     }
 
-    static func deleteBlock(_ block: WorkoutBlock, from workout: Workout, context: ModelContext) throws {
+    static func deleteSection(_ section: WorkoutSection, from workout: Workout, context: ModelContext) throws {
         try requireUnlocked(workout)
-        SyncDeletion.delete(block, context: context)
-        WorkoutBlock.resequence(workout.sortedBlocks.filter { $0.id != block.id })
+        SyncDeletion.delete(section, context: context)
+        WorkoutSection.resequence(workout.sortedSections.filter { $0.id != section.id })
         workout.markDirty()
         try context.save()
     }
 
-    static func moveBlocks(in workout: Workout, from source: IndexSet, to destination: Int, context: ModelContext) throws {
+    static func moveSections(in workout: Workout, from source: IndexSet, to destination: Int, context: ModelContext) throws {
         try requireUnlocked(workout)
-        var blocks = workout.sortedBlocks
-        blocks.move(fromOffsets: source, toOffset: destination)
-        WorkoutBlock.resequence(blocks)
+        var sections = workout.sortedSections
+        sections.move(fromOffsets: source, toOffset: destination)
+        WorkoutSection.resequence(sections)
         workout.markDirty()
+        try context.save()
+    }
+
+    /// Creates a standalone template section (`workout == nil`) — reachable from the
+    /// Section Templates screen's "+" button, not from any workout. Never locked, so
+    /// no guard needed.
+    static func createTemplate(name: String, type: WorkoutSectionType, context: ModelContext) -> WorkoutSection {
+        let section = WorkoutSection(workout: nil, sortOrder: 0, sectionType: type, name: name)
+        context.insert(section)
+        if type == .time {
+            let getReady = TimeSectionStep(section: section, sortOrder: 0, stepType: .getReady, exercise: nil, durationSeconds: 15)
+            context.insert(getReady)
+        }
+        try? context.save()
+        return section
+    }
+
+    /// Renames a section — in-workout or template alike. The name field is what
+    /// distinguishes one section from another once several of the same type exist.
+    /// `nil` clears the name back to its type-based fallback label.
+    static func rename(_ section: WorkoutSection, to name: String?, context: ModelContext) throws {
+        let workout = try requireUnlockedParent(of: section)
+        section.name = name
+        section.markDirty()
+        workout?.markDirty()
         try context.save()
     }
 
     // MARK: - Time steps
 
     @discardableResult
-    static func addTimeStep(to block: WorkoutBlock, stepType: TimeStepType, exercise: Exercise?, durationSeconds: Int, context: ModelContext) throws -> TimeBlockStep {
-        let workout = try requireUnlockedParent(of: block)
-        let nextOrder = (block.timeSteps.map(\.sortOrder).max() ?? -1) + 1
-        let step = TimeBlockStep(block: block, sortOrder: nextOrder, stepType: stepType, exercise: exercise, durationSeconds: durationSeconds)
+    static func addTimeStep(to section: WorkoutSection, stepType: TimeStepType, exercise: Exercise?, durationSeconds: Int, context: ModelContext) throws -> TimeSectionStep {
+        let workout = try requireUnlockedParent(of: section)
+        let nextOrder = (section.timeSteps.map(\.sortOrder).max() ?? -1) + 1
+        let step = TimeSectionStep(section: section, sortOrder: nextOrder, stepType: stepType, exercise: exercise, durationSeconds: durationSeconds)
         context.insert(step)
-        block.markDirty()
-        workout.markDirty()
+        section.markDirty()
+        workout?.markDirty()
         try context.save()
         return step
     }
 
-    static func deleteTimeStep(_ step: TimeBlockStep, from block: WorkoutBlock, context: ModelContext) throws {
-        let workout = try requireUnlockedParent(of: block)
+    static func deleteTimeStep(_ step: TimeSectionStep, from section: WorkoutSection, context: ModelContext) throws {
+        let workout = try requireUnlockedParent(of: section)
         SyncDeletion.delete(step, context: context)
-        TimeBlockStep.resequence(block.sortedTimeSteps.filter { $0.id != step.id })
-        block.markDirty()
-        workout.markDirty()
+        TimeSectionStep.resequence(section.sortedTimeSteps.filter { $0.id != step.id })
+        section.markDirty()
+        workout?.markDirty()
         try context.save()
     }
 
-    static func moveTimeSteps(in block: WorkoutBlock, from source: IndexSet, to destination: Int, context: ModelContext) throws {
-        let workout = try requireUnlockedParent(of: block)
-        var steps = block.sortedTimeSteps
+    static func moveTimeSteps(in section: WorkoutSection, from source: IndexSet, to destination: Int, context: ModelContext) throws {
+        let workout = try requireUnlockedParent(of: section)
+        var steps = section.sortedTimeSteps
         steps.move(fromOffsets: source, toOffset: destination)
-        TimeBlockStep.resequence(steps)
-        block.markDirty()
-        workout.markDirty()
+        TimeSectionStep.resequence(steps)
+        section.markDirty()
+        workout?.markDirty()
         try context.save()
     }
 
@@ -108,18 +133,18 @@ enum WorkoutEditingService {
     /// Only one rest is meaningful directly after a given exercise; the caller is
     /// responsible for disabling the affordance once one already follows.
     @discardableResult
-    static func addRestStep(after step: TimeBlockStep, durationSeconds: Int, context: ModelContext) throws -> TimeBlockStep {
-        guard let block = step.block else { throw WorkoutEditingError.locked }
-        let workout = try requireUnlockedParent(of: block)
-        var steps = block.sortedTimeSteps
+    static func addRestStep(after step: TimeSectionStep, durationSeconds: Int, context: ModelContext) throws -> TimeSectionStep {
+        guard let section = step.section else { throw WorkoutEditingError.locked }
+        let workout = try requireUnlockedParent(of: section)
+        var steps = section.sortedTimeSteps
         guard let index = steps.firstIndex(where: { $0.id == step.id }) else { throw WorkoutEditingError.locked }
 
-        let rest = TimeBlockStep(block: block, sortOrder: 0, stepType: .rest, exercise: nil, durationSeconds: durationSeconds)
+        let rest = TimeSectionStep(section: section, sortOrder: 0, stepType: .rest, exercise: nil, durationSeconds: durationSeconds)
         context.insert(rest)
         steps.insert(rest, at: index + 1)
-        TimeBlockStep.resequence(steps)
-        block.markDirty()
-        workout.markDirty()
+        TimeSectionStep.resequence(steps)
+        section.markDirty()
+        workout?.markDirty()
         try context.save()
         return rest
     }
@@ -127,33 +152,84 @@ enum WorkoutEditingService {
     // MARK: - Rep exercises
 
     @discardableResult
-    static func addRepExercise(to block: WorkoutBlock, exercise: Exercise, targetSets: Int, customRestSeconds: Int?, trackingMode: RepExerciseTrackingMode = .repsWeight, headStartSeconds: Int = 3, context: ModelContext) throws -> RepBlockExercise {
-        let workout = try requireUnlockedParent(of: block)
-        let nextOrder = (block.repExercises.map(\.sortOrder).max() ?? -1) + 1
-        let entry = RepBlockExercise(block: block, sortOrder: nextOrder, exercise: exercise, targetSets: targetSets, customRestSeconds: customRestSeconds, trackingMode: trackingMode, headStartSeconds: headStartSeconds)
+    static func addRepExercise(to section: WorkoutSection, exercise: Exercise, targetSets: Int, customRestSeconds: Int?, trackingMode: RepExerciseTrackingMode = .repsWeight, headStartSeconds: Int = 3, context: ModelContext) throws -> RepSectionExercise {
+        let workout = try requireUnlockedParent(of: section)
+        let nextOrder = (section.repExercises.map(\.sortOrder).max() ?? -1) + 1
+        let entry = RepSectionExercise(section: section, sortOrder: nextOrder, exercise: exercise, targetSets: targetSets, customRestSeconds: customRestSeconds, trackingMode: trackingMode, headStartSeconds: headStartSeconds)
         context.insert(entry)
-        block.markDirty()
-        workout.markDirty()
+        section.markDirty()
+        workout?.markDirty()
         try context.save()
         return entry
     }
 
-    static func deleteRepExercise(_ entry: RepBlockExercise, from block: WorkoutBlock, context: ModelContext) throws {
-        let workout = try requireUnlockedParent(of: block)
+    static func deleteRepExercise(_ entry: RepSectionExercise, from section: WorkoutSection, context: ModelContext) throws {
+        let workout = try requireUnlockedParent(of: section)
         SyncDeletion.delete(entry, context: context)
-        RepBlockExercise.resequence(block.sortedRepExercises.filter { $0.id != entry.id })
-        block.markDirty()
-        workout.markDirty()
+        RepSectionExercise.resequence(section.sortedRepExercises.filter { $0.id != entry.id })
+        section.markDirty()
+        workout?.markDirty()
         try context.save()
     }
 
-    static func moveRepExercises(in block: WorkoutBlock, from source: IndexSet, to destination: Int, context: ModelContext) throws {
-        let workout = try requireUnlockedParent(of: block)
-        var entries = block.sortedRepExercises
+    static func moveRepExercises(in section: WorkoutSection, from source: IndexSet, to destination: Int, context: ModelContext) throws {
+        let workout = try requireUnlockedParent(of: section)
+        var entries = section.sortedRepExercises
         entries.move(fromOffsets: source, toOffset: destination)
-        RepBlockExercise.resequence(entries)
-        block.markDirty()
-        workout.markDirty()
+        RepSectionExercise.resequence(entries)
+        section.markDirty()
+        workout?.markDirty()
+        try context.save()
+    }
+
+    // MARK: - Quick exercises (EMOM/AMRAP)
+
+    @discardableResult
+    static func addQuickExercise(to section: WorkoutSection, exercise: Exercise, context: ModelContext) throws -> SectionExerciseEntry {
+        let workout = try requireUnlockedParent(of: section)
+        let nextOrder = (section.quickExercises.map(\.sortOrder).max() ?? -1) + 1
+        let entry = SectionExerciseEntry(section: section, sortOrder: nextOrder, exercise: exercise)
+        context.insert(entry)
+        section.markDirty()
+        workout?.markDirty()
+        try context.save()
+        return entry
+    }
+
+    static func deleteQuickExercise(_ entry: SectionExerciseEntry, from section: WorkoutSection, context: ModelContext) throws {
+        let workout = try requireUnlockedParent(of: section)
+        SyncDeletion.delete(entry, context: context)
+        SectionExerciseEntry.resequence(section.sortedQuickExercises.filter { $0.id != entry.id })
+        section.markDirty()
+        workout?.markDirty()
+        try context.save()
+    }
+
+    static func moveQuickExercises(in section: WorkoutSection, from source: IndexSet, to destination: Int, context: ModelContext) throws {
+        let workout = try requireUnlockedParent(of: section)
+        var entries = section.sortedQuickExercises
+        entries.move(fromOffsets: source, toOffset: destination)
+        SectionExerciseEntry.resequence(entries)
+        section.markDirty()
+        workout?.markDirty()
+        try context.save()
+    }
+
+    /// EMOM only: number of 1-minute rounds.
+    static func updateEmomRoundCount(_ section: WorkoutSection, to count: Int, context: ModelContext) throws {
+        let workout = try requireUnlockedParent(of: section)
+        section.emomRoundCount = count
+        section.markDirty()
+        workout?.markDirty()
+        try context.save()
+    }
+
+    /// AMRAP only: total countdown duration, in seconds.
+    static func updateAmrapDuration(_ section: WorkoutSection, to seconds: Int, context: ModelContext) throws {
+        let workout = try requireUnlockedParent(of: section)
+        section.amrapDurationSeconds = seconds
+        section.markDirty()
+        workout?.markDirty()
         try context.save()
     }
 
@@ -163,10 +239,11 @@ enum WorkoutEditingService {
         guard !workout.isLocked else { throw WorkoutEditingError.locked }
     }
 
+    /// `nil` return means `section` is a template (no parent workout) — always
+    /// editable, nothing to mark dirty at the workout level.
     @discardableResult
-    private static func requireUnlockedParent(of block: WorkoutBlock) throws -> Workout {
-        guard let workout = block.workout else { throw WorkoutEditingError.locked }
-        try requireUnlocked(workout)
-        return workout
+    static func requireUnlockedParent(of section: WorkoutSection) throws -> Workout? {
+        guard !section.isLocked else { throw WorkoutEditingError.locked }
+        return section.workout
     }
 }

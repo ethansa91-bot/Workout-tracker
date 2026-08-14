@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// Horizontal strip of every step in the current time block. Tapping only *selects* a
+/// Horizontal strip of every step in the current time section. Tapping only *selects* a
 /// step — it never jumps immediately, since jumping back is a real redo (discards
 /// progress) and shouldn't happen from a stray tap.
 struct SessionScrubStripView: View {
-    let steps: [TimeBlockStep]
+    let steps: [TimeSectionStep]
     let currentIndex: Int
     let completedIndices: Set<Int>
     let onSelect: (Int) -> Void
@@ -27,7 +27,7 @@ struct SessionScrubStripView: View {
         }
     }
 
-    private func stepChip(_ step: TimeBlockStep, index: Int) -> some View {
+    private func stepChip(_ step: TimeSectionStep, index: Int) -> some View {
         VStack(spacing: 4) {
             Image(systemName: chipIcon(step))
                 .font(.title3)
@@ -41,7 +41,7 @@ struct SessionScrubStripView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
-    private func chipIcon(_ step: TimeBlockStep) -> String {
+    private func chipIcon(_ step: TimeSectionStep) -> String {
         switch step.stepType {
         case .exercise: return step.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional"
         case .rest: return "pause.circle"
@@ -49,7 +49,7 @@ struct SessionScrubStripView: View {
         }
     }
 
-    private func chipTitle(_ step: TimeBlockStep) -> String {
+    private func chipTitle(_ step: TimeSectionStep) -> String {
         switch step.stepType {
         case .exercise: return step.exercise?.name ?? "Exercise"
         case .rest: return "Rest"

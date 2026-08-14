@@ -1,8 +1,8 @@
 import SwiftUI
 import SwiftData
 
-struct TimeBlockEditorView: View {
-    @Bindable var block: WorkoutBlock
+struct TimeSectionEditorView: View {
+    @Bindable var section: WorkoutSection
     var onSaveNavigatesToRecap: Bool = false
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -10,26 +10,28 @@ struct TimeBlockEditorView: View {
     @State private var editMode: EditMode = .inactive
     @State private var selectedStepIDs: Set<UUID> = []
     @State private var showingAddExercises = false
-    @State private var editingStep: TimeBlockStep?
+    @State private var editingStep: TimeSectionStep?
     @State private var showingDeleteConfirm = false
     @State private var errorMessage: String?
     @State private var showingRecap = false
+    @State private var nameField: String = ""
 
-    private var isLocked: Bool { block.workout?.isLocked ?? true }
+    private var isLocked: Bool { section.isLocked }
     private var isEditing: Bool { editMode.isEditing }
 
     var body: some View {
         VStack(spacing: 0) {
             if !isLocked {
+                nameBar
                 headerBar
                 Divider()
             }
             Group {
-                if block.sortedTimeSteps.isEmpty {
+                if section.sortedTimeSteps.isEmpty {
                     emptyState
                 } else {
                     List(selection: $selectedStepIDs) {
-                        ForEach(block.sortedTimeSteps) { step in
+                        ForEach(section.sortedTimeSteps) { step in
                             stepRow(step)
                                 .selectionDisabled(step.stepType == .getReady)
                                 .moveDisabled(step.stepType == .getReady)
@@ -43,8 +45,9 @@ struct TimeBlockEditorView: View {
         }
         .background(Color.appBackground)
         .toolbar { mainToolbar }
+        .onAppear { nameField = section.name ?? "" }
         .navigationDestination(isPresented: $showingRecap) {
-            if let workout = block.workout {
+            if let workout = section.workout {
                 SessionRecapView(workout: workout)
             }
         }
@@ -54,7 +57,7 @@ struct TimeBlockEditorView: View {
             }
         }
         .sheet(item: $editingStep) { step in
-            TimeStepFormView(block: block, stepType: step.stepType, editingStep: step)
+            TimeStepFormView(section: section, stepType: step.stepType, editingStep: step)
         }
         .confirmationDialog(
             "Delete \(selectedStepIDs.count) selected step\(selectedStepIDs.count == 1 ? "" : "s")?",
@@ -71,6 +74,16 @@ struct TimeBlockEditorView: View {
         } message: {
             Text(errorMessage ?? "")
         }
+    }
+
+    private var nameBar: some View {
+        TextField(section.sectionType == .time ? "Follow Along Section" : "Section Name", text: $nameField)
+            .textFieldStyle(.roundedBorder)
+            .padding(.horizontal)
+            .padding(.top, 12)
+            .submitLabel(.done)
+            .onSubmit { renameSection() }
+            .onDisappear { renameSection() }
     }
 
     @ViewBuilder
@@ -93,6 +106,7 @@ struct TimeBlockEditorView: View {
                     .buttonStyle(.borderedProminent)
                 Spacer()
                 Button("Save") {
+                    renameSection()
                     if onSaveNavigatesToRecap {
                         showingRecap = true
                     } else {
@@ -130,11 +144,11 @@ struct TimeBlockEditorView: View {
     }
 
     private var existingExerciseIDs: Set<UUID> {
-        Set(block.sortedTimeSteps.compactMap { $0.exercise?.id })
+        Set(section.sortedTimeSteps.compactMap { $0.exercise?.id })
     }
 
     @ViewBuilder
-    private func stepRow(_ step: TimeBlockStep) -> some View {
+    private func stepRow(_ step: TimeSectionStep) -> some View {
         if isEditing {
             stepRowContent(step)
         } else {
@@ -146,7 +160,7 @@ struct TimeBlockEditorView: View {
         }
     }
 
-    private func stepRowContent(_ step: TimeBlockStep) -> some View {
+    private func stepRowContent(_ step: TimeSectionStep) -> some View {
         HStack(spacing: 12) {
             switch step.stepType {
             case .exercise:
@@ -176,7 +190,7 @@ struct TimeBlockEditorView: View {
         .padding(.vertical, 2)
     }
 
-    private func addRestButton(after step: TimeBlockStep) -> some View {
+    private func addRestButton(after step: TimeSectionStep) -> some View {
         Button {
             addRest(after: step)
         } label: {
@@ -188,8 +202,8 @@ struct TimeBlockEditorView: View {
         .disabled(hasRestAfter(step))
     }
 
-    private func hasRestAfter(_ step: TimeBlockStep) -> Bool {
-        let steps = block.sortedTimeSteps
+    private func hasRestAfter(_ step: TimeSectionStep) -> Bool {
+        let steps = section.sortedTimeSteps
         guard let index = steps.firstIndex(where: { $0.id == step.id }), index + 1 < steps.count else { return false }
         return steps[index + 1].stepType == .rest
     }
@@ -201,21 +215,21 @@ struct TimeBlockEditorView: View {
 
     private var isContiguousSelection: Bool {
         guard !selectedStepIDs.isEmpty else { return false }
-        let steps = block.sortedTimeSteps
+        let steps = section.sortedTimeSteps
         let indices = steps.indices.filter { selectedStepIDs.contains(steps[$0].id) }
         guard let first = indices.first, let last = indices.last else { return false }
         return indices.count == (last - first + 1)
     }
 
     private func moveSteps(from source: IndexSet, to destination: Int) {
-        do { try WorkoutEditingService.moveTimeSteps(in: block, from: source, to: destination, context: context) }
+        do { try WorkoutEditingService.moveTimeSteps(in: section, from: source, to: destination, context: context) }
         catch { errorMessage = error.localizedDescription }
     }
 
     private func addExercises(_ exercises: [Exercise]) {
         for exercise in exercises {
             do {
-                try WorkoutEditingService.addTimeStep(to: block, stepType: .exercise, exercise: exercise, durationSeconds: 30, context: context)
+                try WorkoutEditingService.addTimeStep(to: section, stepType: .exercise, exercise: exercise, durationSeconds: 30, context: context)
             } catch {
                 errorMessage = error.localizedDescription
                 break
@@ -223,28 +237,36 @@ struct TimeBlockEditorView: View {
         }
     }
 
-    private func addRest(after step: TimeBlockStep) {
+    private func addRest(after step: TimeSectionStep) {
         do { try WorkoutEditingService.addRestStep(after: step, durationSeconds: 30, context: context) }
         catch { errorMessage = error.localizedDescription }
     }
 
     private func cloneSelection() {
-        let steps = block.sortedTimeSteps
+        let steps = section.sortedTimeSteps
         let indices = steps.indices.filter { selectedStepIDs.contains(steps[$0].id) }
         guard let first = indices.first, let last = indices.last else { return }
         do {
-            try WorkoutBlockCloningService.cloneTimeSteps(in: block, range: first..<(last + 1), context: context)
+            try WorkoutSectionCloningService.cloneTimeSteps(in: section, range: first..<(last + 1), context: context)
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
     private func deleteSelection() {
-        let steps = block.sortedTimeSteps
+        let steps = section.sortedTimeSteps
         for step in steps where selectedStepIDs.contains(step.id) {
-            do { try WorkoutEditingService.deleteTimeStep(step, from: block, context: context) }
+            do { try WorkoutEditingService.deleteTimeStep(step, from: section, context: context) }
             catch { errorMessage = error.localizedDescription }
         }
         selectedStepIDs.removeAll()
+    }
+
+    private func renameSection() {
+        let trimmed = nameField.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newName = trimmed.isEmpty ? nil : trimmed
+        guard newName != section.name else { return }
+        do { try WorkoutEditingService.rename(section, to: newName, context: context) }
+        catch { errorMessage = error.localizedDescription }
     }
 }

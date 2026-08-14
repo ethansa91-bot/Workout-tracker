@@ -21,10 +21,13 @@ struct SessionRecapView: View {
     @State private var renameText = ""
     @State private var errorMessage: String?
     @State private var editMode: EditMode = .inactive
-    @State private var blockPendingDeletion: WorkoutBlock?
-    @State private var manageExercisesBlock: WorkoutBlock?
+    @State private var sectionPendingDeletion: WorkoutSection?
+    @State private var manageExercisesSection: WorkoutSection?
     @State private var showingDescriptionEditor = false
     @State private var descriptionText = ""
+    @State private var sectionPendingSaveAsTemplate: WorkoutSection?
+    @State private var templateNameText = ""
+    @State private var showingImportTemplateSheet = false
 
     private var activeSoundProfile: TimerSoundProfile {
         sessionSoundProfile ?? AppSettings.timerSoundProfile
@@ -34,13 +37,15 @@ struct SessionRecapView: View {
     private var pausedSession: WorkoutSession? {
         workout.sessions.first { $0.status == .paused }
     }
-    /// Every block must contain at least one exercise — a workout with even a single
-    /// empty block isn't ready to start, not just a workout with zero blocks.
-    private var allBlocksReady: Bool {
-        !workout.sortedBlocks.isEmpty && workout.sortedBlocks.allSatisfy { block in
-            block.blockType == .time
-                ? block.sortedTimeSteps.contains { $0.stepType == .exercise }
-                : !block.sortedRepExercises.isEmpty
+    /// Every section must contain at least one exercise — a workout with even a single
+    /// empty section isn't ready to start, not just a workout with zero sections.
+    private var allSectionsReady: Bool {
+        !workout.sortedSections.isEmpty && workout.sortedSections.allSatisfy { section in
+            switch section.sectionType {
+            case .time: return section.sortedTimeSteps.contains { $0.stepType == .exercise }
+            case .rep: return !section.sortedRepExercises.isEmpty
+            case .emom, .amrap: return !section.sortedQuickExercises.isEmpty
+            }
         }
     }
 
@@ -55,14 +60,14 @@ struct SessionRecapView: View {
 
             Section {
                 if !isLocked && workout.kind == .personalized {
-                    blockListControls
+                    sectionListControls
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                 }
 
-                ForEach(workout.sortedBlocks) { block in
-                    blockCard(block)
+                ForEach(workout.sortedSections) { section in
+                    sectionCard(section)
                         .padding(.vertical, 4)
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
@@ -71,8 +76,8 @@ struct SessionRecapView: View {
                 .onMove(perform: reorderAction)
             }
 
-            if !allBlocksReady {
-                Text("Every block needs at least one exercise before this workout can be started.")
+            if !allSectionsReady {
+                Text("Every section needs at least one exercise before this workout can be started.")
                     .font(.footnote)
                     .foregroundStyle(Color.appInkMuted)
                     .listRowBackground(Color.clear)
@@ -88,8 +93,8 @@ struct SessionRecapView: View {
         .navigationDestination(item: $activeSession) { session in
             SessionRunnerView(session: session, soundProfile: activeSoundProfile)
         }
-        .navigationDestination(item: $manageExercisesBlock) { block in
-            BlockEditorView(block: block)
+        .navigationDestination(item: $manageExercisesSection) { section in
+            SectionEditorView(section: section)
         }
         .confirmationDialog(
             "Starting a new session will mark your paused session as unfinished — it can't be resumed afterward. Continue?",
@@ -99,22 +104,37 @@ struct SessionRecapView: View {
             Button("Start New", role: .destructive) { startNewSession() }
         }
         .confirmationDialog(
-            "Delete \"\(blockPendingDeletion.map { blockTitle($0) } ?? "")\"? Its exercises will be removed too.",
+            "Delete \"\(sectionPendingDeletion.map { sectionTitle($0) } ?? "")\"? Its exercises will be removed too.",
             isPresented: Binding(
-                get: { blockPendingDeletion != nil },
-                set: { if !$0 { blockPendingDeletion = nil } }
+                get: { sectionPendingDeletion != nil },
+                set: { if !$0 { sectionPendingDeletion = nil } }
             ),
             titleVisibility: .visible
         ) {
-            Button("Delete", role: .destructive) { confirmDeleteBlock() }
+            Button("Delete", role: .destructive) { confirmDeleteSection() }
         }
         .alert("Rename Workout", isPresented: $showingRenamePrompt) {
             TextField("Name", text: $renameText)
             Button("Cancel", role: .cancel) {}
             Button("Save") { renameWorkout() }
         }
+        .alert("Save as Template", isPresented: Binding(
+            get: { sectionPendingSaveAsTemplate != nil },
+            set: { if !$0 { sectionPendingSaveAsTemplate = nil } }
+        )) {
+            TextField("Template name", text: $templateNameText)
+            Button("Cancel", role: .cancel) { sectionPendingSaveAsTemplate = nil }
+            Button("Save") { confirmSaveAsTemplate() }
+        } message: {
+            Text("A copy of this section's exercises will be saved to Section Templates.")
+        }
         .sheet(isPresented: $showingDescriptionEditor) {
             descriptionEditorSheet
+        }
+        .sheet(isPresented: $showingImportTemplateSheet) {
+            TemplatePickerSheet { template in
+                importTemplate(template)
+            }
         }
         .alert("Error", isPresented: Binding(
             get: { errorMessage != nil },
@@ -146,7 +166,7 @@ struct SessionRecapView: View {
             }
             .padding()
             .background(Color.appSurface)
-        } else if allBlocksReady {
+        } else if allSectionsReady {
             VStack(spacing: 8) {
                 soundProfilePicker
                 Button {
@@ -244,16 +264,18 @@ struct SessionRecapView: View {
     }
 
     private var heroInfoLine: String {
-        let exerciseCount = workout.sortedBlocks.reduce(0) { total, block in
-            total + (block.blockType == .time
-                ? block.sortedTimeSteps.filter { $0.stepType == .exercise }.count
-                : block.sortedRepExercises.count)
+        let exerciseCount = workout.sortedSections.reduce(0) { total, section in
+            switch section.sectionType {
+            case .time: return total + section.sortedTimeSteps.filter { $0.stepType == .exercise }.count
+            case .rep: return total + section.sortedRepExercises.count
+            case .emom, .amrap: return total + section.sortedQuickExercises.count
+            }
         }
         let exercisesText = "\(exerciseCount) Exercise\(exerciseCount == 1 ? "" : "s")"
         switch workout.kind {
         case .personalized:
-            let blockCount = workout.sortedBlocks.count
-            return "\(blockCount) Block\(blockCount == 1 ? "" : "s") · \(exercisesText) · Personalized"
+            let sectionCount = workout.sortedSections.count
+            return "\(sectionCount) Section\(sectionCount == 1 ? "" : "s") · \(exercisesText) · Personalized"
         case .byTime:
             return "\(exercisesText) · Follow Along"
         case .byRep:
@@ -270,21 +292,29 @@ struct SessionRecapView: View {
         activeSession = session
     }
 
-    private func blockTitle(_ block: WorkoutBlock) -> String {
-        if let name = block.name, !name.isEmpty { return name }
-        return block.blockType == .time ? "Follow Along Block" : "Rep Block"
+    private func sectionTitle(_ section: WorkoutSection) -> String {
+        if let name = section.name, !name.isEmpty { return name }
+        return section.sectionType.fallbackSectionName
     }
 
-    /// Header + exercise rows all inside one `.cardStyle()` container so the block's
+    private func quickSectionSubtitle(_ section: WorkoutSection) -> String? {
+        switch section.sectionType {
+        case .emom: return "\(section.emomRoundCount) rounds · 1 min each"
+        case .amrap: return "\(section.amrapDurationSeconds / 60) min AMRAP"
+        case .time, .rep: return nil
+        }
+    }
+
+    /// Header + exercise rows all inside one `.cardStyle()` container so the section's
     /// title and its exercises read as one visually connected unit, rather than a
     /// native List section header floating above loose rows.
-    private func blockCard(_ block: WorkoutBlock) -> some View {
+    private func sectionCard(_ section: WorkoutSection) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            blockSectionHeader(block)
+            sectionHeader(section)
             Rectangle()
                 .fill(Color.appHairline)
                 .frame(height: 1)
-            ForEach(overviewItems(for: block)) { item in
+            ForEach(overviewItems(for: section)) { item in
                 overviewItemRow(item)
             }
         }
@@ -293,12 +323,19 @@ struct SessionRecapView: View {
     }
 
     @ViewBuilder
-    private func blockSectionHeader(_ block: WorkoutBlock) -> some View {
+    private func sectionHeader(_ section: WorkoutSection) -> some View {
         HStack(spacing: 12) {
             if workout.kind == .personalized {
-                Text(blockTitle(block))
-                    .font(.headline)
-                    .foregroundStyle(Color.appInk)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(sectionTitle(section))
+                        .font(.headline)
+                        .foregroundStyle(Color.appInk)
+                    if let subtitle = quickSectionSubtitle(section) {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(Color.appInkMuted)
+                    }
+                }
             } else {
                 Text("Exercises")
                     .textCase(.uppercase)
@@ -308,13 +345,13 @@ struct SessionRecapView: View {
 
             Spacer()
 
-            // While rearranging, the only actions available are dragging blocks and
+            // While rearranging, the only actions available are dragging sections and
             // adding a new one — Clone/Delete/Manage Exercises hide entirely so a stray
             // tap can't do anything else mid-reorder.
             if !isLocked && !editMode.isEditing {
                 if workout.kind == .personalized {
                     Button {
-                        cloneBlock(block)
+                        cloneSection(section)
                     } label: {
                         Image(systemName: "doc.on.doc")
                     }
@@ -322,7 +359,15 @@ struct SessionRecapView: View {
                     .foregroundStyle(Color.appInkMuted)
 
                     Button {
-                        blockPendingDeletion = block
+                        saveAsTemplate(section)
+                    } label: {
+                        Image(systemName: "square.and.arrow.up.on.square")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.appInkMuted)
+
+                    Button {
+                        sectionPendingDeletion = section
                     } label: {
                         Image(systemName: "trash")
                     }
@@ -336,12 +381,12 @@ struct SessionRecapView: View {
                 // Exercises is already the only tap target that goes anywhere, so the
                 // extra chevron was redundant.
                 Button {
-                    manageExercisesBlock = block
+                    manageExercisesSection = section
                 } label: {
-                    // Personalized already has two other icon-only actions (Clone,
-                    // Delete) alongside this one, so a pencil keeps the row consistent;
-                    // Follow Along/By Reps has only this one action, where text reads
-                    // more clearly on its own.
+                    // Personalized already has other icon-only actions (Clone, Save as
+                    // Template, Delete) alongside this one, so a pencil keeps the row
+                    // consistent; Follow Along/By Reps has only this one action, where
+                    // text reads more clearly on its own.
                     if workout.kind == .personalized {
                         Image(systemName: "pencil")
                     } else {
@@ -356,23 +401,26 @@ struct SessionRecapView: View {
     }
 
     @ViewBuilder
-    private var blockListControls: some View {
+    private var sectionListControls: some View {
         HStack(spacing: 16) {
             Spacer()
 
             Menu {
-                Button("Follow Along Block") { addBlock(.time) }
-                Button("Rep Block") { addBlock(.rep) }
+                Button("Follow Along Section") { addSection(.time) }
+                Button("Rep Section") { addSection(.rep) }
+                Button("EMOM Section") { addSection(.emom) }
+                Button("AMRAP Section") { addSection(.amrap) }
+                Button("Import Template…") { showingImportTemplateSheet = true }
             } label: {
-                Text("Add a Block")
+                Text("Add a Section")
             }
             .buttonStyle(.borderedProminent)
 
-            if workout.sortedBlocks.count > 1 {
+            if workout.sortedSections.count > 1 {
                 Button {
                     editMode = editMode.isEditing ? .inactive : .active
                 } label: {
-                    Text(editMode.isEditing ? "Done" : "Rearrange Blocks")
+                    Text(editMode.isEditing ? "Done" : "Rearrange Sections")
                 }
                 .buttonStyle(.borderedProminent)
             }
@@ -382,33 +430,52 @@ struct SessionRecapView: View {
         .padding(.horizontal, 4)
     }
 
-    private func addBlock(_ type: WorkoutBlockType) {
-        do { _ = try WorkoutEditingService.addBlock(to: workout, type: type, context: context) }
+    private func addSection(_ type: WorkoutSectionType) {
+        do { _ = try WorkoutEditingService.addSection(to: workout, type: type, context: context) }
         catch { errorMessage = error.localizedDescription }
     }
 
-    private func cloneBlock(_ block: WorkoutBlock) {
-        do { _ = try WorkoutBlockCloningService.cloneBlock(block, context: context) }
+    private func cloneSection(_ section: WorkoutSection) {
+        do { _ = try WorkoutSectionCloningService.cloneSection(section, context: context) }
         catch { errorMessage = error.localizedDescription }
     }
 
-    private func confirmDeleteBlock() {
-        guard let block = blockPendingDeletion else { return }
-        do { try WorkoutEditingService.deleteBlock(block, from: workout, context: context) }
-        catch { errorMessage = error.localizedDescription }
-        blockPendingDeletion = nil
+    private func saveAsTemplate(_ section: WorkoutSection) {
+        templateNameText = sectionTitle(section)
+        sectionPendingSaveAsTemplate = section
     }
 
-    // nil (not just a hidden drag handle) while not rearranging, so blocks genuinely
+    private func confirmSaveAsTemplate() {
+        guard let section = sectionPendingSaveAsTemplate else { return }
+        let trimmed = templateNameText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        do { _ = try WorkoutSectionCloningService.saveAsTemplate(section, name: trimmed, context: context) }
+        catch { errorMessage = error.localizedDescription }
+        sectionPendingSaveAsTemplate = nil
+    }
+
+    private func importTemplate(_ template: WorkoutSection) {
+        do { _ = try WorkoutSectionCloningService.importTemplate(template, into: workout, context: context) }
+        catch { errorMessage = error.localizedDescription }
+    }
+
+    private func confirmDeleteSection() {
+        guard let section = sectionPendingDeletion else { return }
+        do { try WorkoutEditingService.deleteSection(section, from: workout, context: context) }
+        catch { errorMessage = error.localizedDescription }
+        sectionPendingDeletion = nil
+    }
+
+    // nil (not just a hidden drag handle) while not rearranging, so sections genuinely
     // can't be reordered outside that mode — same optional-closure pattern used for
-    // `moveBlocksAction` in WorkoutEditorView.
+    // `moveSectionsAction` in WorkoutEditorView.
     private var reorderAction: ((IndexSet, Int) -> Void)? {
         if !editMode.isEditing { return nil }
-        return moveBlocks
+        return moveSections
     }
 
-    private func moveBlocks(from source: IndexSet, to destination: Int) {
-        do { try WorkoutEditingService.moveBlocks(in: workout, from: source, to: destination, context: context) }
+    private func moveSections(from source: IndexSet, to destination: Int) {
+        do { try WorkoutEditingService.moveSections(in: workout, from: source, to: destination, context: context) }
         catch { errorMessage = error.localizedDescription }
     }
 
@@ -452,9 +519,10 @@ struct SessionRecapView: View {
         }
     }
 
-    private func overviewItems(for block: WorkoutBlock) -> [SessionOverviewItem] {
-        if block.blockType == .time {
-            return block.sortedTimeSteps.map { step in
+    private func overviewItems(for section: WorkoutSection) -> [SessionOverviewItem] {
+        switch section.sectionType {
+        case .time:
+            return section.sortedTimeSteps.map { step in
                 SessionOverviewItem(
                     id: step.id,
                     iconName: overviewIcon(for: step),
@@ -462,8 +530,8 @@ struct SessionRecapView: View {
                     detail: "\(step.durationSeconds)s"
                 )
             }
-        } else {
-            return block.sortedRepExercises.map { entry in
+        case .rep:
+            return section.sortedRepExercises.map { entry in
                 SessionOverviewItem(
                     id: entry.id,
                     iconName: entry.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional",
@@ -471,10 +539,19 @@ struct SessionRecapView: View {
                     detail: repExerciseDetail(for: entry)
                 )
             }
+        case .emom, .amrap:
+            return section.sortedQuickExercises.map { entry in
+                SessionOverviewItem(
+                    id: entry.id,
+                    iconName: entry.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional",
+                    title: entry.exercise?.name ?? "Exercise",
+                    detail: ""
+                )
+            }
         }
     }
 
-    private func repExerciseDetail(for entry: RepBlockExercise) -> String {
+    private func repExerciseDetail(for entry: RepSectionExercise) -> String {
         switch entry.trackingMode {
         case .repsWeight:
             return "\(entry.targetSets) sets · rest \(entry.customRestSeconds.map { "\($0)s" } ?? "default")"
@@ -483,7 +560,7 @@ struct SessionRecapView: View {
         }
     }
 
-    private func overviewIcon(for step: TimeBlockStep) -> String {
+    private func overviewIcon(for step: TimeSectionStep) -> String {
         switch step.stepType {
         case .exercise: return step.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional"
         case .rest: return "pause.circle"
@@ -491,7 +568,7 @@ struct SessionRecapView: View {
         }
     }
 
-    private func overviewTitle(for step: TimeBlockStep) -> String {
+    private func overviewTitle(for step: TimeSectionStep) -> String {
         switch step.stepType {
         case .exercise: return step.exercise?.name ?? "Exercise"
         case .rest: return "Rest"
@@ -509,5 +586,53 @@ struct SessionRecapView: View {
                 .foregroundStyle(Color.appRust)
         }
         .padding(.vertical, 2)
+    }
+}
+
+/// Minimal list-of-templates picker presented as a sheet from "Import Template…".
+private struct TemplatePickerSheet: View {
+    let onSelect: (WorkoutSection) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @Query(sort: \WorkoutSection.name) private var allSections: [WorkoutSection]
+
+    private var templates: [WorkoutSection] {
+        allSections.filter { $0.workout == nil && $0.deletedAt == nil }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if templates.isEmpty {
+                    ContentUnavailableView(
+                        "No Section Templates Yet",
+                        systemImage: "square.stack.3d.up",
+                        description: Text("Save a section as a template from any workout first.")
+                    )
+                } else {
+                    List(templates) { template in
+                        Button {
+                            onSelect(template)
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 12) {
+                                IconBadge(systemName: template.sectionType.iconSymbolName)
+                                Text(template.name?.isEmpty == false ? template.name! : template.sectionType.fallbackSectionName)
+                                    .foregroundStyle(Color.appInk)
+                            }
+                        }
+                    }
+                    .themedListBackground()
+                }
+            }
+            .background(Color.appBackground)
+            .navigationTitle("Import Template")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
     }
 }

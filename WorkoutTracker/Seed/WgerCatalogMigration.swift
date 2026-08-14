@@ -7,12 +7,12 @@ import SwiftData
 /// `SeedData/*.json` files were regenerated from wger) — this migration only does real
 /// work on a device that already seeded the old, hand-curated catalog.
 ///
-/// Three exercises ("90/90 Hip Stretch", "Barbell Back Squat", "Arnold Press") were
-/// wired into real workout blocks and personal records on this device. Two of them
-/// turned out to have a real wger equivalent under a different name, so their old row
-/// is merged into the matching new one (block/record/log references get repointed,
-/// old row deleted); "90/90 Hip Stretch" has no wger equivalent and is just deleted,
-/// same as any other unmatched legacy exercise — see `legacyExerciseMergeMap`.
+/// Only exercises listed in `legacyExerciseMergeMap` are touched: their references
+/// (workout sections, personal records, set logs) get repointed to the matching new
+/// wger row and the old row is deleted, with the old name preserved as the new row's
+/// `label` when it differs. Anything not in the map — including a user's own custom
+/// exercises — is left exactly as-is, coexisting alongside the new 266-exercise
+/// catalog. Nothing is ever deleted just for being unmapped.
 ///
 /// For muscles/equipment/categories, some new names coincide exactly with old ones
 /// (e.g. "Barbell", "Biceps") — those rows are revived in place (fields updated, kept
@@ -25,11 +25,51 @@ enum WgerCatalogMigration {
 
     /// Old (pre-wger) exercise name -> the wger exercise it's actually the same
     /// movement as, just named differently. References on the old row (workout
-    /// blocks, personal records, set logs) get repointed to the new row before the
+    /// sections, personal records, set logs) get repointed to the new row before the
     /// old one is deleted, so nothing orphans.
-    private static let legacyExerciseMergeMap: [String: String] = [
+    /// Internal (not private) so `WgerNoPhotoCleanup` can exempt these replacement
+    /// targets from its no-photo deletion pass — a couple of them (e.g. "Arnold
+    /// Shoulder Press") carry real relinked workout history but have no wger photo.
+    static let legacyExerciseMergeMap: [String: String] = [
         "Arnold Press": "Arnold Shoulder Press",
         "Barbell Back Squat": "Barbell Full Squat",
+
+        // Personal exercise -> matching wger catalog exercise, from the Exercise
+        // Reviewer pass over the full 266-exercise catalog. Three personal names
+        // matched two catalog exercises each ("Bench Dips", "Barbell Shoulder
+        // Press", "Dumbbell Hammer Curl") — only the first-listed target absorbs
+        // the merge; the second just ends up favorited with no relink/label.
+        "Incline Reverse Fly": "Incline Bench Reverse Fly",
+        "TRX Bicep Curl": "Biceps with TRX",
+        "TRX Row": "TRX Rows",
+        "Weighted Lunge": "Lunges",
+        "Hollow Body Hold (Banana Hold)": "Hollow Hold",
+        "Bench Dips": "Floor dips",
+        "Roman Chair Hyperextension, Straight Spine (Arms Extended)": "Hyperextensions",
+        "Dumbbell Romanian Deadlift": "Dumbbell Romanian Deadlift",
+        "Calf Raise": "Double Leg Calf Raise",
+        "Close-Grip Flat Dumbbell Press": "Dumbbell Hex Press",
+        "Incline Dumbbell Curl (45°)": "Seated W Curl",
+        "Ab Wheel Rollout": "Ab wheel",
+        "Banded Glute Kickback": "rubber band glute kickback",
+        "Standing Dumbbell Curl": "Biceps Curls With Dumbbell",
+        "Bent-Over Barbell Row (90°)": "Bent Over Rowing",
+        "Single-Arm Dumbbell Row (3-Point Stance)": "Bent Over Dumbbell Rows",
+        "EZ Bar Curl": "Biceps Curls With SZ-bar",
+        "Flat Bench Dumbbell Press": "Benchpress Dumbbells",
+        "Parallel Bar Dips": "Dips",
+        "Flat Bench Dumbbell Fly": "Fly With Dumbbells",
+        "Alternating Dumbbell Front Raise": "Front Raises",
+        "Dumbbell Hammer Curl": "Hammer Curls",
+        "EZ Bar Skull Crusher": "Skullcrusher SZ-bar",
+        "Standing Dumbbell Lateral Raise": "Lateral Raises",
+        "Bent-Over Reverse Fly (Standing)": "Rear Delt Raises",
+        "Pistol Squat": "Pistol Squat",
+        "Seated Dumbbell Shoulder Press": "Shoulder Press, Dumbbells",
+        "Barbell Shoulder Press": "Shoulder Press, Barbell",
+        "Dumbbell Shrug": "Shrugs, Dumbbells",
+        "EZ Bar Preacher Curl": "Preacher Curls",
+        "Incline Dumbbell Press (45°)": "Incline Bench Press - Dumbbell",
     ]
 
     static func migrateIfNeeded(context: ModelContext) {
@@ -39,8 +79,13 @@ enum WgerCatalogMigration {
         guard
             let muscleSeeds: [MuscleSeed] = try? loadJSON("muscles"),
             let equipmentSeeds: [EquipmentSeed] = try? loadJSON("equipment"),
-            let exerciseSeeds: [ExerciseSeed] = try? loadJSON("exercises")
+            let allExerciseSeeds: [ExerciseSeed] = try? loadJSON("exercises")
         else { return }
+
+        // Only the ~266 wger exercises with a real photo are wanted in the catalog —
+        // the rest of wger's 850-exercise export has no image, just a generic SF
+        // Symbol, and was never part of what the Exercise Reviewer tool showed.
+        let exerciseSeeds = allExerciseSeeds.filter { ExerciseImageMapping.assetName[$0.name] != nil }
 
         let musclesByName = migrateMuscles(context: context, seeds: muscleSeeds)
         let equipmentByName = migrateEquipment(context: context, seeds: equipmentSeeds)
@@ -205,25 +250,29 @@ enum WgerCatalogMigration {
         }
 
         for old in existing {
-            if let mergeTargetName = legacyExerciseMergeMap[old.name], let replacement = newByName[mergeTargetName] {
-                relinkReferences(from: old, to: replacement, context: context)
+            guard let mergeTargetName = legacyExerciseMergeMap[old.name],
+                  let replacement = newByName[mergeTargetName] else { continue }
+            relinkReferences(from: old, to: replacement, context: context)
+            if replacement.label == nil, old.name != replacement.name {
+                replacement.label = old.name
+                replacement.markDirty()
             }
             SyncDeletion.delete(old, context: context)
         }
     }
 
-    /// Repoints every workout block, personal record, and set log referencing `old`
+    /// Repoints every workout section, personal record, and set log referencing `old`
     /// to `replacement` instead, so merging a legacy exercise into its wger
     /// equivalent doesn't orphan anything currently using it.
     private static func relinkReferences(from old: Exercise, to replacement: Exercise, context: ModelContext) {
-        let repBlockExercises = (try? context.fetch(FetchDescriptor<RepBlockExercise>())) ?? []
-        for row in repBlockExercises where row.exercise?.id == old.id {
+        let repSectionExercises = (try? context.fetch(FetchDescriptor<RepSectionExercise>())) ?? []
+        for row in repSectionExercises where row.exercise?.id == old.id {
             row.exercise = replacement
             row.markDirty()
         }
 
-        let timeBlockSteps = (try? context.fetch(FetchDescriptor<TimeBlockStep>())) ?? []
-        for row in timeBlockSteps where row.exercise?.id == old.id {
+        let timeSectionSteps = (try? context.fetch(FetchDescriptor<TimeSectionStep>())) ?? []
+        for row in timeSectionSteps where row.exercise?.id == old.id {
             row.exercise = replacement
             row.markDirty()
         }

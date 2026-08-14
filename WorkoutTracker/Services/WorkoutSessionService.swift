@@ -57,34 +57,47 @@ enum WorkoutSessionService {
     }
 
     static func positionAtStart(_ session: WorkoutSession, workout: Workout) {
-        session.currentBlockIndex = 0
-        setPositionForCurrentBlock(session, workout: workout)
+        session.currentSectionIndex = 0
+        setPositionForCurrentSection(session, workout: workout)
     }
 
-    static func setPositionForCurrentBlock(_ session: WorkoutSession, workout: Workout) {
-        let blocks = workout.sortedBlocks
-        guard session.currentBlockIndex < blocks.count else { return }
-        let block = blocks[session.currentBlockIndex]
-        if block.blockType == .time {
+    static func setPositionForCurrentSection(_ session: WorkoutSession, workout: Workout) {
+        let sections = workout.sortedSections
+        guard session.currentSectionIndex < sections.count else { return }
+        let section = sections[session.currentSectionIndex]
+        switch section.sectionType {
+        case .time:
             session.currentStepIndex = 0
             session.currentExerciseIndex = nil
             session.currentSetIndex = nil
-        } else {
+        case .rep:
             session.currentExerciseIndex = 0
             session.currentSetIndex = 0
             session.currentStepIndex = nil
+        case .emom:
+            // currentStepIndex doubles as "current round" — same "position within the
+            // section's ordered progression" role it plays for a time section.
+            session.currentStepIndex = 0
+            session.currentExerciseIndex = nil
+            session.currentSetIndex = nil
+        case .amrap:
+            // currentSetIndex doubles as "rounds completed so far," incremented by
+            // tapping the counter rather than by advancing through fixed items.
+            session.currentSetIndex = 0
+            session.currentStepIndex = nil
+            session.currentExerciseIndex = nil
         }
     }
 
-    /// Advances to the next block, or finishes the session if the current one was last —
-    /// this is how a mixed workout's blocks "stop when a new block starts."
-    static func advanceBlock(_ session: WorkoutSession, workout: Workout, context: ModelContext) {
-        session.currentBlockIndex += 1
-        let blocks = workout.sortedBlocks
-        if session.currentBlockIndex >= blocks.count {
+    /// Advances to the next section, or finishes the session if the current one was
+    /// last — this is how a mixed workout's sections "stop when a new section starts."
+    static func advanceSection(_ session: WorkoutSession, workout: Workout, context: ModelContext) {
+        session.currentSectionIndex += 1
+        let sections = workout.sortedSections
+        if session.currentSectionIndex >= sections.count {
             finish(session, context: context)
         } else {
-            setPositionForCurrentBlock(session, workout: workout)
+            setPositionForCurrentSection(session, workout: workout)
             session.markDirty()
             try? context.save()
         }

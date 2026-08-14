@@ -1,15 +1,15 @@
 import Foundation
 import SwiftData
 
-/// One logged set in a rep block. "Stop sets" isn't a stored flag — an exercise
+/// One logged set in a rep section. "Stop sets" isn't a stored flag — an exercise
 /// advanced past with fewer than `targetSets` non-cancelled logs was stopped early.
 @Model
 final class SetLog: SyncableModel {
     @Attribute(.unique) var id: UUID
     var session: WorkoutSession?
-    var repBlockExercise: RepBlockExercise?
-    /// Denormalized alongside `repBlockExercise` so "last best set" / "max weight ever"
-    /// queries can filter directly on `exercise.id` without joining through the block.
+    var repSectionExercise: RepSectionExercise?
+    /// Denormalized alongside `repSectionExercise` so "last best set" / "max weight ever"
+    /// queries can filter directly on `exercise.id` without joining through the section.
     var exercise: Exercise?
     var exerciseNameSnapshot: String?
     var setIndex: Int
@@ -34,7 +34,7 @@ final class SetLog: SyncableModel {
     init(
         id: UUID = UUID(),
         session: WorkoutSession? = nil,
-        repBlockExercise: RepBlockExercise? = nil,
+        repSectionExercise: RepSectionExercise? = nil,
         exercise: Exercise? = nil,
         exerciseNameSnapshot: String? = nil,
         setIndex: Int,
@@ -46,7 +46,7 @@ final class SetLog: SyncableModel {
     ) {
         self.id = id
         self.session = session
-        self.repBlockExercise = repBlockExercise
+        self.repSectionExercise = repSectionExercise
         self.exercise = exercise
         self.exerciseNameSnapshot = exerciseNameSnapshot
         self.setIndex = setIndex

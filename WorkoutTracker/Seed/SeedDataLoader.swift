@@ -120,7 +120,11 @@ enum SeedDataLoader {
         equipmentByName: [String: Equipment],
         exerciseCategoriesByName: [String: ExerciseCategory]
     ) throws {
-        let seeds: [ExerciseSeed] = try loadJSON("exercises")
+        // Only the ~266 wger exercises with a real photo are wanted in the catalog —
+        // the rest of wger's 850-exercise export has no image, just a generic SF
+        // Symbol, and was never part of what the Exercise Reviewer tool showed.
+        let allSeeds: [ExerciseSeed] = try loadJSON("exercises")
+        let seeds = allSeeds.filter { ExerciseImageMapping.assetName[$0.name] != nil }
         for seed in seeds {
             let equipment = seed.equipment.flatMap { equipmentByName[$0] }
             let symbol = IconSymbolMapping.defaultExerciseSymbol(forCategoryNames: seed.categories)

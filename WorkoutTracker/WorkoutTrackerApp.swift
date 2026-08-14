@@ -19,9 +19,10 @@ struct WorkoutTrackerApp: App {
             ExerciseCategory.self,
             Exercise.self,
             Workout.self,
-            WorkoutBlock.self,
-            TimeBlockStep.self,
-            RepBlockExercise.self,
+            WorkoutSection.self,
+            TimeSectionStep.self,
+            RepSectionExercise.self,
+            SectionExerciseEntry.self,
             WorkoutSession.self,
             StepLog.self,
             SetLog.self,
@@ -56,6 +57,10 @@ struct WorkoutTrackerApp: App {
         WgerCatalogCorrection.correctIfNeeded(context: sharedModelContainer.mainContext)
         WgerCategoryRevert.revertIfNeeded(context: sharedModelContainer.mainContext)
         EquipmentHomeGymMigration.migrateIfNeeded(context: sharedModelContainer.mainContext)
+        WgerNoPhotoCleanup.migrateIfNeeded(context: sharedModelContainer.mainContext)
+        PersonalExerciseImport.importIfNeeded(context: sharedModelContainer.mainContext)
+        ExerciseReviewFavoritesImport.importIfNeeded(context: sharedModelContainer.mainContext)
+        PersonalEquipmentUpdate.migrateIfNeeded(context: sharedModelContainer.mainContext)
     }
 
     var body: some Scene {

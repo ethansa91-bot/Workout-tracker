@@ -1,0 +1,746 @@
+[
+  {
+    "name": "Banana Kicks",
+    "label": "banana kick",
+    "equipment": null,
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Arched hollow position, feet and shoulders off floor. Kick one leg up and down."
+  },
+  {
+    "name": "Basic Crunch",
+    "label": "Normal cruch",
+    "equipment": null,
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Knees bent, feet flat. Crunch shoulders toward knees."
+  },
+  {
+    "name": "Crunch Pulse (Top-Range)",
+    "label": "normal cruch pump",
+    "equipment": null,
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Knees bent, feet flat. Small, fast pulses at top of crunch."
+  },
+  {
+    "name": "Crunch Hold",
+    "label": "normal crunch hold",
+    "equipment": null,
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Knees bent, feet flat. Hold at top of crunch."
+  },
+  {
+    "name": "Bent-Knee Crunch, Basic (Legs at 90°)",
+    "label": "crunch with bend 90° legs",
+    "equipment": null,
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Feet up, knees bent 90°. Crunch toward knees."
+  },
+  {
+    "name": "Bent-Knee Crunch, Pulse (Legs at 90°)",
+    "label": "crunch with bend 90° legs",
+    "equipment": null,
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Feet up, knees bent 90°. Small, fast pulses at top."
+  },
+  {
+    "name": "Bent-Knee Crunch, Hold (Legs at 90°)",
+    "label": "crunch with bend 90° legs",
+    "equipment": null,
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Feet up, knees bent 90°. Hold at top."
+  },
+  {
+    "name": "Flat Leg Crunch, Basic (Straight Relaxed Legs)",
+    "label": "Lying with straight relaxed flat legs",
+    "equipment": null,
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Legs straight and relaxed on floor. Short-range crunch, upper abs focus."
+  },
+  {
+    "name": "Flat Leg Crunch, Pulse (Straight Relaxed Legs)",
+    "label": "Lying with straight relaxed flat legs",
+    "equipment": null,
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Legs straight and relaxed on floor. Small, fast pulses at top."
+  },
+  {
+    "name": "Flat Leg Crunch, Hold (Straight Relaxed Legs)",
+    "label": "Lying with straight relaxed flat legs",
+    "equipment": null,
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Legs straight and relaxed on floor. Hold at top."
+  },
+  {
+    "name": "Straight Leg Raised Crunch, Basic",
+    "label": "crunch with streight leg up",
+    "equipment": null,
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Legs straight, raised toward ceiling. Crunch toward feet."
+  },
+  {
+    "name": "Straight Leg Raised Crunch, Pulse",
+    "label": "crunch with streight leg up",
+    "equipment": null,
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Legs straight, raised toward ceiling. Small, fast pulses at top."
+  },
+  {
+    "name": "Straight Leg Raised Crunch, Hold",
+    "label": "crunch with streight leg up",
+    "equipment": null,
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Legs straight, raised toward ceiling. Hold at top."
+  },
+  {
+    "name": "Figure-4 Crunch",
+    "label": "figure 4",
+    "equipment": null,
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "One leg bent in figure-4, other leg straight. Crunch toward straight leg."
+  },
+  {
+    "name": "Bicycle Crunch",
+    "label": "bicycle",
+    "equipment": null,
+    "muscles": ["Abs", "Obliques"],
+    "categories": ["calisthenics"],
+    "notes": "Pedal legs, opposite elbow to opposite knee, alternating."
+  },
+  {
+    "name": "X Crunch (Opposite Arm/Leg)",
+    "label": "\"X\" abs",
+    "equipment": null,
+    "muscles": ["Abs", "Obliques"],
+    "categories": ["calisthenics"],
+    "notes": "Arms and legs extended in X. Bring one arm and opposite leg up to meet, alternate sides."
+  },
+  {
+    "name": "Hanging Hollow Hold (Arched, Still)",
+    "label": "Abs hanging",
+    "equipment": "Pull-up bar",
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Hang from bar, hold body still in arched position."
+  },
+  {
+    "name": "Hanging Alternating Knee Raise",
+    "label": "Abs hanging",
+    "equipment": "Pull-up bar",
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Hang from bar, raise knees one at a time, alternating."
+  },
+  {
+    "name": "Hanging Double Knee Raise",
+    "label": "Abs hanging",
+    "equipment": "Pull-up bar",
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Hang from bar, raise both knees together."
+  },
+  {
+    "name": "Hanging Straight Leg Raise",
+    "label": "Abs hanging",
+    "equipment": "Pull-up bar",
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Hang from bar, raise a straight leg in front."
+  },
+  {
+    "name": "Hanging Around the World",
+    "label": "Abs hanging",
+    "equipment": "Pull-up bar",
+    "muscles": ["Abs", "Obliques"],
+    "categories": ["calisthenics"],
+    "notes": "Hang from bar, sweep a straight leg side to side in a circle."
+  },
+  {
+    "name": "L-Sit",
+    "label": "I sit",
+    "equipment": null,
+    "muscles": ["Abs"],
+    "categories": ["calisthenics"],
+    "notes": "Arms straight down, legs extended forward at hip height. Hold."
+  },
+  {
+    "name": "TRX Fallback (Nordic-Style Hamstring Fallback)",
+    "label": "Trx fall back",
+    "equipment": "TRX",
+    "muscles": ["Hamstrings"],
+    "categories": ["calisthenics"],
+    "notes": "Kneeling facing TRX, lean back slowly controlling the fall, pull back up with TRX."
+  },
+  {
+    "name": "TRX Hip Bridge Curl",
+    "label": "Trx bridge",
+    "equipment": "TRX",
+    "muscles": ["Hamstrings", "Glutes"],
+    "categories": ["calisthenics"],
+    "notes": "Feet in TRX straps, lift hips into bridge, curl feet in toward body."
+  },
+  {
+    "name": "Side Plank Bench Leg Pump",
+    "label": "Plank bench pump",
+    "equipment": null,
+    "muscles": ["Glutes"],
+    "categories": ["calisthenics"],
+    "notes": "Side plank, one foot on bench, other leg straight underneath. Pump underneath leg up and down."
+  },
+  {
+    "name": "Resistance Band Lunge (Inward Pull)",
+    "label": "In Resistance lounge",
+    "equipment": "Resistance band",
+    "muscles": ["Quads"],
+    "categories": ["strength"],
+    "notes": "Lunge with band around front leg, pulling inward."
+  },
+  {
+    "name": "Resistance Band Lunge (Outward Pull)",
+    "label": "Out resistance lounge",
+    "equipment": "Resistance band",
+    "muscles": ["Glutes"],
+    "categories": ["strength"],
+    "notes": "Lunge with band around front leg, pulling outward."
+  },
+  {
+    "name": "Barbell Squat",
+    "label": "Squat",
+    "equipment": "Barbell",
+    "muscles": ["Quads"],
+    "categories": ["strength"],
+    "notes": null
+  },
+  {
+    "name": "Barbell Sumo Squat",
+    "label": "Sumo squat",
+    "equipment": "Barbell",
+    "muscles": ["Glutes"],
+    "categories": ["strength"],
+    "notes": null
+  },
+  {
+    "name": "Barbell Hip Thrust",
+    "label": "Hip thrust",
+    "equipment": "Barbell",
+    "muscles": ["Glutes"],
+    "categories": ["strength"],
+    "notes": null
+  },
+  {
+    "name": "Donkey Kick Pulse (Bent Knee Up/Down)",
+    "label": "Ground routine (round 1)",
+    "equipment": null,
+    "muscles": ["Glutes"],
+    "categories": ["calisthenics"],
+    "notes": "All fours, knee bent, kick leg straight up and down."
+  },
+  {
+    "name": "Fire Hydrant (Bent Knee Sideways)",
+    "label": "Ground routine (round 2)",
+    "equipment": null,
+    "muscles": ["Glutes"],
+    "categories": ["calisthenics"],
+    "notes": "All fours, knee bent, lift leg out to the side."
+  },
+  {
+    "name": "Fire Hydrant to Extension",
+    "label": "Ground routine (round 3)",
+    "equipment": null,
+    "muscles": ["Glutes"],
+    "categories": ["calisthenics"],
+    "notes": "All fours, lift bent knee to side, extend leg straight, return to bent knee down."
+  },
+  {
+    "name": "TRX Cross Bicep Curl",
+    "label": "Trx cross",
+    "equipment": "TRX",
+    "muscles": ["Biceps"],
+    "categories": ["calisthenics"],
+    "notes": "Facing TRX, lean back, bend elbows crossing hands toward chest."
+  },
+  {
+    "name": "Dumbbell Concentration Curl",
+    "label": "Concentración curl",
+    "equipment": "Dumbbell",
+    "muscles": ["Biceps"],
+    "categories": ["strength"],
+    "notes": "Seated, elbow on knee, curl to full extension, one arm at a time."
+  },
+  {
+    "name": "Dumbbell Preacher Curl",
+    "label": "Preacher curl",
+    "equipment": "Dumbbell",
+    "muscles": ["Biceps"],
+    "categories": ["strength"],
+    "notes": "Roman chair, curl one dumbbell at a time."
+  },
+  {
+    "name": "TRX Y Raise",
+    "label": "Trx Y",
+    "equipment": "TRX",
+    "muscles": ["Traps"],
+    "categories": ["calisthenics"],
+    "notes": "Facing TRX, extend arms from front up to Y position."
+  },
+  {
+    "name": "TRX I Raise",
+    "label": "Trx I",
+    "equipment": "TRX",
+    "muscles": ["Shoulders"],
+    "categories": ["calisthenics"],
+    "notes": "Facing TRX, extend arms straight overhead to I position."
+  },
+  {
+    "name": "Resistance Band Pull (Scapula Activation)",
+    "label": "Resistance pull",
+    "equipment": "Resistance band",
+    "muscles": ["Lats"],
+    "categories": ["strength"],
+    "notes": "Pull resistance band toward you, scapula engaged."
+  },
+  {
+    "name": "Ring Row (Inverted Row)",
+    "label": "Ring pull",
+    "equipment": "Rings",
+    "muscles": ["Lats"],
+    "categories": ["calisthenics"],
+    "notes": "Rings at knee height, legs extended, body flat. Pull body up."
+  },
+  {
+    "name": "Ring Chin-Up",
+    "label": "Ring Chin up",
+    "equipment": "Rings",
+    "muscles": ["Lats"],
+    "categories": ["calisthenics"],
+    "notes": null
+  },
+  {
+    "name": "Ring Pull-Up",
+    "label": "Ring Pull up",
+    "equipment": "Rings",
+    "muscles": ["Lats"],
+    "categories": ["calisthenics"],
+    "notes": null
+  },
+  {
+    "name": "Prone Back Extension, Basic",
+    "label": "lower back routine (lying on stomach, lift torso - normal)",
+    "equipment": null,
+    "muscles": [],
+    "categories": ["calisthenics"],
+    "notes": "Lying face-down, lift torso up and down using lower back."
+  },
+  {
+    "name": "Prone Back Extension, Pulse",
+    "label": "lower back routine (lying on stomach, lift torso - pump)",
+    "equipment": null,
+    "muscles": [],
+    "categories": ["calisthenics"],
+    "notes": "Lying face-down, lift torso. Small, fast pulses at the top."
+  },
+  {
+    "name": "Prone Back Extension, Hold",
+    "label": "lower back routine (lying on stomach, lift torso - hold)",
+    "equipment": null,
+    "muscles": [],
+    "categories": ["calisthenics"],
+    "notes": "Lying face-down, lift torso. Hold at the top."
+  },
+  {
+    "name": "Prone Back Extension with Side Bend, Basic",
+    "label": "lower back routine (side to side - normal)",
+    "equipment": null,
+    "muscles": [],
+    "categories": ["calisthenics"],
+    "notes": "Lying face-down, lift torso and move side to side."
+  },
+  {
+    "name": "Prone Back Extension with Side Bend, Pulse",
+    "label": "lower back routine (side to side - pump, 3 per side)",
+    "equipment": null,
+    "muscles": [],
+    "categories": ["calisthenics"],
+    "notes": "Lying face-down, lift torso. Small pulses side to side, 3 per side."
+  },
+  {
+    "name": "Prone Back Extension with Side Bend, Hold",
+    "label": "lower back routine (side to side - hold)",
+    "equipment": null,
+    "muscles": [],
+    "categories": ["calisthenics"],
+    "notes": "Lying face-down, lift torso and hold up. Move side to side while staying raised."
+  },
+  {
+    "name": "Prone Back Extension with Arm Reach, Basic",
+    "label": "lower back routine (arms extended backward - normal)",
+    "equipment": null,
+    "muscles": [],
+    "categories": ["calisthenics"],
+    "notes": "Lying face-down, lift torso, then extend arms backward."
+  },
+  {
+    "name": "Prone Back Extension with Arm Reach, Pulse",
+    "label": "lower back routine (arms extended backward - pump)",
+    "equipment": null,
+    "muscles": [],
+    "categories": ["calisthenics"],
+    "notes": "Lying face-down, lift torso with arms extended backward. Small pulses extending and closing arms with a slight torso movement."
+  },
+  {
+    "name": "Prone Back Extension with Arm Reach, Hold",
+    "label": "lower back routine (arms extended backward - hold)",
+    "equipment": null,
+    "muscles": [],
+    "categories": ["calisthenics"],
+    "notes": "Lying face-down, lift torso with arms extended backward. Hold."
+  },
+  {
+    "name": "Roman Chair Hyperextension, Rounded Spine Descent",
+    "label": "lower back on Romanian chair (rounded spine to go down)",
+    "equipment": "Roman Chair",
+    "muscles": [],
+    "categories": ["strength"],
+    "notes": "On Roman chair, round the spine while lowering down."
+  },
+  {
+    "name": "Single-Leg Roman Chair Hyperextension with Rotation",
+    "label": "lower back on Romanian chair (one leg, straight spine, staying up, 90° torso rotation)",
+    "equipment": "Roman Chair",
+    "muscles": [],
+    "categories": ["strength"],
+    "notes": "On Roman chair, one leg only. Keep spine straight, stay up, rotate torso 90°."
+  },
+  {
+    "name": "Dumbbell Rolling Shrug (Forward Rotation)",
+    "label": "Round shrug front",
+    "equipment": "Dumbbell",
+    "muscles": ["Traps"],
+    "categories": ["strength"],
+    "notes": "Dumbbell each hand, shrug up, rotate forward."
+  },
+  {
+    "name": "Dumbbell Rolling Shrug (Backward Rotation)",
+    "label": "Round shrug back",
+    "equipment": "Dumbbell",
+    "muscles": ["Traps"],
+    "categories": ["strength"],
+    "notes": "Dumbbell each hand, shrug up, rotate backward."
+  },
+  {
+    "name": "TRX Triceps Extension",
+    "label": "Trx triceps",
+    "equipment": "TRX",
+    "muscles": ["Triceps"],
+    "categories": ["calisthenics"],
+    "notes": "Facing away from TRX, bend elbows, push back to extend arms. Lean forward for difficulty."
+  },
+  {
+    "name": "Seated Two-Hand Dumbbell Overhead Triceps Extension",
+    "label": "1db press sit",
+    "equipment": "Dumbbell",
+    "muscles": ["Triceps"],
+    "categories": ["strength"],
+    "notes": "Seated, one dumbbell held with both hands overhead, lower behind head, press up."
+  },
+  {
+    "name": "Lying Dumbbell Triceps Extension (Cross-Face)",
+    "label": "1db cross",
+    "equipment": "Dumbbell",
+    "muscles": ["Triceps"],
+    "categories": ["strength"],
+    "notes": "Lying down, lower dumbbell across face, extend back up."
+  },
+  {
+    "name": "Dumbbell Skull Crusher (Hammer Grip)",
+    "label": "Db skull crusher",
+    "equipment": "Dumbbell",
+    "muscles": ["Triceps"],
+    "categories": ["strength"],
+    "notes": "Neutral grip, two dumbbells, lower toward head elbows back, press up."
+  },
+  {
+    "name": "Triceps Kickback (3-Point Stance)",
+    "label": "3 points push",
+    "equipment": "Dumbbell",
+    "muscles": ["Triceps"],
+    "categories": ["strength"],
+    "notes": "One hand on bench, dumbbell in other hand. Push weight back with triceps."
+  },
+  {
+    "name": "Incline Lying Triceps Extension",
+    "label": "\"reverse Fly\" (Triceps section)",
+    "equipment": "Dumbbell",
+    "muscles": ["Triceps"],
+    "categories": ["strength"],
+    "notes": "Face-down on incline bench. Bend elbows, extend arms fully."
+  },
+  {
+    "name": "Seated EZ Bar Triceps Extension",
+    "label": "Ez bar sit",
+    "equipment": "SZ-Bar",
+    "muscles": ["Triceps"],
+    "categories": ["strength"],
+    "notes": "Seated, lower EZ bar behind head elbows back, press up."
+  },
+  {
+    "name": "Ring Support Hold (Straight-Arm)",
+    "label": "ring hold",
+    "equipment": "Rings",
+    "muscles": ["Shoulders"],
+    "categories": ["calisthenics"],
+    "notes": "Straight-arm ring support, hands rotated outward. Hold for time."
+  },
+  {
+    "name": "Ring T-Hold (Open/Close)",
+    "label": "T hold progression",
+    "equipment": "Rings",
+    "muscles": ["Shoulders"],
+    "categories": ["calisthenics"],
+    "notes": "From ring support, open arms out to sides into T, then close. Repeat."
+  },
+  {
+    "name": "Rotator Cuff Prevention Raise (Kneeling)",
+    "label": "Prevention",
+    "equipment": "Dumbbell",
+    "muscles": ["Shoulders"],
+    "categories": ["physio"],
+    "notes": "Kneeling, elbow on knee. Raise and lower arm rotating shoulder."
+  },
+  {
+    "name": "Seated Dumbbell Shoulder Press (Rotated Grip)",
+    "label": "Db press 90° hands",
+    "equipment": "Dumbbell",
+    "muscles": ["Shoulders"],
+    "categories": ["strength"],
+    "notes": "Seated 90° bench, palms rotated facing you, press from ear height to full extension."
+  },
+  {
+    "name": "Incline Dumbbell Fly (45°)",
+    "label": "45° fly",
+    "equipment": "Dumbbell",
+    "muscles": ["Chest"],
+    "categories": ["strength"],
+    "notes": "45° incline bench, arms extended slightly bent, open and close to sides."
+  },
+  {
+    "name": "Decline Dumbbell Press (-30°)",
+    "label": "-30° db press",
+    "equipment": "Dumbbell",
+    "muscles": ["Chest"],
+    "categories": ["strength"],
+    "notes": "-30° decline bench, press dumbbells from 90° elbow bend to full extension."
+  },
+  {
+    "name": "Decline Dumbbell Fly (-30°)",
+    "label": "-30 fly",
+    "equipment": "Dumbbell",
+    "muscles": ["Chest"],
+    "categories": ["strength"],
+    "notes": "-30° decline bench, arms extended slightly bent, open and close to sides."
+  },
+  {
+    "name": "Pike Push-Up",
+    "label": "Pike push up",
+    "equipment": null,
+    "muscles": ["Shoulders"],
+    "categories": ["calisthenics"],
+    "notes": null
+  },
+  {
+    "name": "Push-Up",
+    "label": "Push ups",
+    "equipment": null,
+    "muscles": ["Chest"],
+    "categories": ["calisthenics"],
+    "notes": null
+  },
+  {
+    "name": "Diamond Push-Up",
+    "label": "diamond push ups",
+    "equipment": "Weight vest",
+    "muscles": ["Triceps"],
+    "categories": ["calisthenics"],
+    "notes": null
+  },
+  {
+    "name": "Reverse Clamshell (Object Between Knees)",
+    "label": "Reverse clamshell, using something between knee",
+    "equipment": null,
+    "muscles": ["Glutes"],
+    "categories": ["physio"],
+    "notes": "Side-lying, knees bent with an object held between them. Lift ankles apart, keeping knees together."
+  },
+  {
+    "name": "Resistance Band Abductor Lunge",
+    "label": "Abductor lounge with resistance band",
+    "equipment": "Resistance band",
+    "muscles": ["Glutes"],
+    "categories": ["physio"],
+    "notes": "Lunge with a resistance band around the legs, engaging the hip abductors."
+  },
+  {
+    "name": "Side Plank with Ball Push-Away Rotation",
+    "label": "Abductor side plank with ball reach",
+    "equipment": null,
+    "muscles": ["Obliques"],
+    "categories": ["physio"],
+    "notes": "Side plank on left elbow, left leg bent 90°, right leg straight on top. Ball under right hand, push it away while rotating the torso, extending the right arm until facing the floor."
+  },
+  {
+    "name": "Bench Glute Stretch with Contralateral Row",
+    "label": "Bench glute stretch with contralateral row (with resistance band)",
+    "equipment": "Resistance band",
+    "muscles": ["Glutes"],
+    "categories": ["physio"],
+    "notes": "One leg stretched on a bench in a glute stretch position. Row with the band using the opposite-side arm."
+  },
+  {
+    "name": "Half-Kneeling Band Wood Chop (Outside Knee on Bench)",
+    "label": "Band chop with outside knee on bench",
+    "equipment": "Resistance band",
+    "muscles": ["Obliques"],
+    "categories": ["physio"],
+    "notes": "Half-kneeling with the outside knee up on a bench. Perform a diagonal chopping motion with the band."
+  },
+  {
+    "name": "Active Hip Flexor to Hamstring Stretch",
+    "label": "Active hip flexor to hamstring stretch (on one knee, go forward/backward)",
+    "equipment": null,
+    "muscles": ["Hamstrings"],
+    "categories": ["physio"],
+    "notes": "Half-kneeling lunge position. Rock forward for a hip flexor stretch, then rock back for a hamstring stretch."
+  },
+  {
+    "name": "Banded Cat-Cow",
+    "label": "Banded catcow",
+    "equipment": "Resistance band",
+    "muscles": ["Abs"],
+    "categories": ["physio"],
+    "notes": "On hands and knees with a band, alternate arching the spine up (cat) and dropping it down (cow)."
+  },
+  {
+    "name": "Banded Eccentric Single-Leg Slider Hamstring Curl",
+    "label": "Banded eccentric single leg slider hamstring curl",
+    "equipment": "Resistance band",
+    "muscles": ["Hamstrings"],
+    "categories": ["physio"],
+    "notes": "Lying on back, one heel on a slider with band resistance. Slowly extend the leg out, then curl it back in."
+  },
+  {
+    "name": "B-Stance Reciprocal Single-Arm Row",
+    "label": "B-stance reciprocal single arm row",
+    "equipment": "Dumbbell",
+    "muscles": ["Lats"],
+    "categories": ["physio"],
+    "notes": "Staggered (B) stance. Perform single-arm rows, alternating sides."
+  },
+  {
+    "name": "90° Rotational Lunge to Box Step-Up (Overhead Plate)",
+    "label": "90º weight plate rotation to box (starting from lunge position, rotate the body and land one leg on a raised box holding weight above)",
+    "equipment": null,
+    "muscles": ["Quads"],
+    "categories": ["physio"],
+    "notes": "From a lunge position, rotate the body 90° and step one leg onto a raised box while holding a weight plate overhead."
+  },
+  {
+    "name": "Banded Thoracic Extension (45° Roman Chair)",
+    "label": "Banded thoracic extension on 45º Roman chair",
+    "equipment": "Roman Chair",
+    "muscles": ["Traps"],
+    "categories": ["physio"],
+    "notes": "On a 45° Roman chair, extend the upper (thoracic) spine against band resistance."
+  },
+  {
+    "name": "Banded Overhead Squat",
+    "label": "Banded overhead squat",
+    "equipment": "Resistance band",
+    "muscles": ["Quads"],
+    "categories": ["physio"],
+    "notes": "Squat while holding a resistance band overhead, keeping tension throughout the movement."
+  },
+  {
+    "name": "Half-Kneeling Cross-Body Rotational Row with Contralateral Glute Stretch",
+    "label": "Half kneeling rotational row cross body with contralateral glute stretch",
+    "equipment": "Resistance band",
+    "muscles": ["Lats"],
+    "categories": ["physio"],
+    "notes": "Half-kneeling position, stretching the opposite-side glute, while performing a rotational cross-body row."
+  },
+  {
+    "name": "Kettlebell-Loaded Split Stance Hip Rotation",
+    "label": "Kettlebell loaded split stand hip rotation",
+    "equipment": "Kettlebell",
+    "muscles": ["Glutes"],
+    "categories": ["physio"],
+    "notes": "Split stance holding a kettlebell. Rotate the hips."
+  },
+  {
+    "name": "Banded Clamshell",
+    "label": "Banded clamshell",
+    "equipment": "Resistance band",
+    "muscles": ["Glutes"],
+    "categories": ["physio"],
+    "notes": "Side-lying, knees bent with a band above the knees. Lift the top knee apart, keeping feet together."
+  },
+  {
+    "name": "Standing Kettlebell Hip Flexion",
+    "label": "Standing kettlebell hip flexion",
+    "equipment": "Kettlebell",
+    "muscles": ["Quads"],
+    "categories": ["physio"],
+    "notes": "Standing, holding a kettlebell, raise the knee up against resistance."
+  },
+  {
+    "name": "Single-Leg Goblet Squat to Bench (Depth Stop)",
+    "label": "Single leg goblet squat on bench",
+    "equipment": "Dumbbell",
+    "muscles": ["Quads"],
+    "categories": ["physio"],
+    "notes": "Single-leg squat holding weight goblet-style at chest. Lower down until lightly touching a bench behind you, then stand back up."
+  },
+  {
+    "name": "Ring Pike Push-Up",
+    "label": null,
+    "equipment": null,
+    "muscles": ["Shoulders"],
+    "categories": ["calisthenics"],
+    "notes": "With ring, butt higher, push with shoulder."
+  },
+  {
+    "name": "EZ Bar Concentration Curl",
+    "label": "Ez bar concentration curl",
+    "equipment": "SZ-Bar",
+    "muscles": ["Biceps"],
+    "categories": ["strength"],
+    "notes": "With Roman chair."
+  },
+  {
+    "name": "Calf Raise (Open Stance)",
+    "label": "calf raise open",
+    "equipment": "Weight vest",
+    "muscles": ["Calves"],
+    "categories": ["strength"],
+    "notes": "Open feet."
+  },
+  {
+    "name": "Calf Raise (Closed Stance)",
+    "label": "calf raise closed",
+    "equipment": "Weight vest",
+    "muscles": ["Calves"],
+    "categories": ["strength"],
+    "notes": "Closed feet."
+  }
+]

@@ -248,6 +248,7 @@ struct ExerciseCategoryDTO: Codable {
 struct ExerciseDTO: Codable {
     let id: UUID
     let name: String
+    let label: String?
     let notes: String?
     let iconAssetIdentifier: String
     let isCustom: Bool
@@ -260,6 +261,7 @@ struct ExerciseDTO: Codable {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(id, forKey: .id)
         try c.encode(name, forKey: .name)
+        try c.encode(label, forKey: .label)
         try c.encode(notes, forKey: .notes)
         try c.encode(iconAssetIdentifier, forKey: .iconAssetIdentifier)
         try c.encode(isCustom, forKey: .isCustom)
@@ -417,7 +419,7 @@ enum ExerciseCategorySyncAdapter: CatalogSyncAdapter {
 enum ExerciseSyncAdapter: CatalogSyncAdapter {
     static let tableName = "exercises"
     static func dto(from model: Exercise) -> ExerciseDTO {
-        ExerciseDTO(id: model.id, name: model.name, notes: model.notes, iconAssetIdentifier: model.iconSymbolName, isCustom: model.isCustom, isFavorited: model.isFavorited, equipmentId: model.equipment?.id, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
+        ExerciseDTO(id: model.id, name: model.name, label: model.label, notes: model.notes, iconAssetIdentifier: model.iconSymbolName, isCustom: model.isCustom, isFavorited: model.isFavorited, equipmentId: model.equipment?.id, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
     }
     static func id(of dto: ExerciseDTO) -> UUID { dto.id }
     static func updatedAt(of dto: ExerciseDTO) -> Date { dto.updatedAt }
@@ -431,12 +433,13 @@ enum ExerciseSyncAdapter: CatalogSyncAdapter {
         let equipment = dto.equipmentId.flatMap { EquipmentSyncAdapter.fetchLocal(id: $0, context: context) }
         // imageAssetName isn't part of the sync payload — it's a local-only reference
         // photo derived from the exercise's name, the same on every device.
-        let model = Exercise(id: dto.id, name: dto.name, notes: dto.notes, iconSymbolName: dto.iconAssetIdentifier, imageAssetName: ExerciseImageMapping.assetName[dto.name], isCustom: dto.isCustom, isFavorited: dto.isFavorited, equipment: equipment)
+        let model = Exercise(id: dto.id, name: dto.name, label: dto.label, notes: dto.notes, iconSymbolName: dto.iconAssetIdentifier, imageAssetName: ExerciseImageMapping.assetName[dto.name], isCustom: dto.isCustom, isFavorited: dto.isFavorited, equipment: equipment)
         context.insert(model)
         return model
     }
     static func applyRemote(_ dto: ExerciseDTO, to model: Exercise, context: ModelContext) {
         model.name = dto.name
+        model.label = dto.label
         model.notes = dto.notes
         model.iconSymbolName = dto.iconAssetIdentifier
         model.isCustom = dto.isCustom

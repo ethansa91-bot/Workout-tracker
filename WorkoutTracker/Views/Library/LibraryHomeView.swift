@@ -7,31 +7,28 @@ struct LibraryHomeView: View {
     @Query private var exercises: [Exercise]
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    NavigationLink {
-                        ExerciseListView()
-                    } label: {
-                        LibraryRow(title: "Exercises", count: exercises.count, systemImage: "figure.strengthtraining.traditional")
-                    }
-                    NavigationLink {
-                        EquipmentListView()
-                    } label: {
-                        LibraryRow(title: "Equipment", count: equipment.count, systemImage: "dumbbell.fill")
-                    }
-                    NavigationLink {
-                        MuscleListView()
-                    } label: {
-                        LibraryRow(title: "Muscles", count: muscles.count, systemImage: "figure.core.training")
-                    }
+        List {
+            Section {
+                NavigationLink {
+                    ExerciseListView()
+                } label: {
+                    LibraryRow(title: "Exercises", count: exercises.count, systemImage: "figure.strengthtraining.traditional")
                 }
-
-                SyncStatusView()
+                NavigationLink {
+                    EquipmentListView()
+                } label: {
+                    LibraryRow(title: "Equipment", count: equipment.count, systemImage: "dumbbell.fill")
+                }
+                NavigationLink {
+                    MuscleListView()
+                } label: {
+                    LibraryRow(title: "Muscles", count: muscles.count, systemImage: "figure.core.training")
+                }
             }
-            .themedListBackground()
-            .navigationTitle("Library")
+
+            SyncStatusView()
         }
+        .themedListBackground()
     }
 }
 

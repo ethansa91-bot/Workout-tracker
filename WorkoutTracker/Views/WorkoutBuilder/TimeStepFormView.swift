@@ -1,14 +1,14 @@
 import SwiftUI
 import SwiftData
 
-/// Add/edit a single time-block step — an exercise held for a duration, or a rest.
+/// Add/edit a single time-section step — an exercise held for a duration, or a rest.
 /// `stepType` is fixed for the lifetime of this form (chosen up front via "Add
 /// Exercise"/"Add Rest") rather than a toggle inside the form, since the duration
 /// field is identical either way and a type switch here would just be redundant chrome.
 struct TimeStepFormView: View {
-    let block: WorkoutBlock
+    let section: WorkoutSection
     let stepType: TimeStepType
-    var editingStep: TimeBlockStep?
+    var editingStep: TimeSectionStep?
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -18,8 +18,8 @@ struct TimeStepFormView: View {
     @State private var showingExercisePicker = false
     @State private var errorMessage: String?
 
-    init(block: WorkoutBlock, stepType: TimeStepType, editingStep: TimeBlockStep? = nil) {
-        self.block = block
+    init(section: WorkoutSection, stepType: TimeStepType, editingStep: TimeSectionStep? = nil) {
+        self.section = section
         self.stepType = stepType
         self.editingStep = editingStep
         _selectedExercise = State(initialValue: editingStep?.exercise)
@@ -87,14 +87,14 @@ struct TimeStepFormView: View {
     private func save() {
         do {
             if let editingStep {
-                guard let workout = block.workout, !workout.isLocked else { throw WorkoutEditingError.locked }
+                guard !section.isLocked else { throw WorkoutEditingError.locked }
                 editingStep.exercise = stepType == .exercise ? selectedExercise : nil
                 editingStep.durationSeconds = durationSeconds
                 editingStep.markDirty()
                 try context.save()
             } else {
                 try WorkoutEditingService.addTimeStep(
-                    to: block,
+                    to: section,
                     stepType: stepType,
                     exercise: stepType == .exercise ? selectedExercise : nil,
                     durationSeconds: durationSeconds,
