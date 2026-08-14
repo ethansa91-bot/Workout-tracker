@@ -47,6 +47,7 @@ struct PostSaveSyncPrompt<Model: SyncableModel>: View {
                         }
                     }
                     .buttonStyle(.bordered)
+                    .disabled(true)
                 }
             }
 

@@ -1,19 +1,92 @@
 [
-  { "name": "Forearm", "categories": ["upperBody"] },
-  { "name": "Biceps", "categories": ["upperBody"] },
-  { "name": "Triceps", "categories": ["upperBody"] },
-  { "name": "Shoulder", "categories": ["upperBody"] },
-  { "name": "Traps", "categories": ["upperBody"] },
-  { "name": "Lats/Upper Back", "categories": ["upperBody"] },
-  { "name": "Pectoral", "categories": ["upperBody"] },
-  { "name": "Lower Back", "categories": ["core"] },
-  { "name": "Abs", "categories": ["core"] },
-  { "name": "Oblique", "categories": ["core"] },
-  { "name": "Hip Flexors", "categories": ["core"] },
-  { "name": "Glutes", "categories": ["lowerBody"] },
-  { "name": "Quad", "categories": ["lowerBody"] },
-  { "name": "Outer Thighs", "categories": ["lowerBody"] },
-  { "name": "Inner Thighs", "categories": ["lowerBody"] },
-  { "name": "Hamstrings", "categories": ["lowerBody"] },
-  { "name": "Calves", "categories": ["lowerBody"] }
+  {
+    "name": "Shoulders",
+    "categories": [
+      "upperBody"
+    ]
+  },
+  {
+    "name": "Biceps",
+    "categories": [
+      "upperBody"
+    ]
+  },
+  {
+    "name": "Hamstrings",
+    "categories": [
+      "lowerBody"
+    ]
+  },
+  {
+    "name": "Brachialis",
+    "categories": [
+      "upperBody"
+    ]
+  },
+  {
+    "name": "Calves",
+    "categories": [
+      "lowerBody"
+    ]
+  },
+  {
+    "name": "Glutes",
+    "categories": [
+      "lowerBody"
+    ]
+  },
+  {
+    "name": "Lats",
+    "categories": [
+      "upperBody"
+    ]
+  },
+  {
+    "name": "Obliques",
+    "categories": [
+      "core"
+    ]
+  },
+  {
+    "name": "Chest",
+    "categories": [
+      "upperBody"
+    ]
+  },
+  {
+    "name": "Quads",
+    "categories": [
+      "lowerBody"
+    ]
+  },
+  {
+    "name": "Abs",
+    "categories": [
+      "core"
+    ]
+  },
+  {
+    "name": "Serratus Anterior",
+    "categories": [
+      "upperBody"
+    ]
+  },
+  {
+    "name": "Soleus",
+    "categories": [
+      "lowerBody"
+    ]
+  },
+  {
+    "name": "Traps",
+    "categories": [
+      "upperBody"
+    ]
+  },
+  {
+    "name": "Triceps",
+    "categories": [
+      "upperBody"
+    ]
+  }
 ]

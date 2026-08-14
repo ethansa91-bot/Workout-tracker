@@ -191,7 +191,9 @@ struct EquipmentDTO: Codable {
     let name: String
     let iconAssetIdentifier: String
     let isCustom: Bool
-    let isFavorited: Bool
+    let isAtHome: Bool
+    let isAtGym: Bool
+    let preferredWeightUnit: String?
     let updatedAt: Date
     let deletedAt: Date?
 
@@ -201,7 +203,9 @@ struct EquipmentDTO: Codable {
         try c.encode(name, forKey: .name)
         try c.encode(iconAssetIdentifier, forKey: .iconAssetIdentifier)
         try c.encode(isCustom, forKey: .isCustom)
-        try c.encode(isFavorited, forKey: .isFavorited)
+        try c.encode(isAtHome, forKey: .isAtHome)
+        try c.encode(isAtGym, forKey: .isAtGym)
+        try c.encode(preferredWeightUnit, forKey: .preferredWeightUnit)
         try c.encode(updatedAt, forKey: .updatedAt)
         try c.encode(deletedAt, forKey: .deletedAt)
     }
@@ -334,7 +338,7 @@ enum MuscleSyncAdapter: CatalogSyncAdapter {
 enum EquipmentSyncAdapter: CatalogSyncAdapter {
     static let tableName = "equipment"
     static func dto(from model: Equipment) -> EquipmentDTO {
-        EquipmentDTO(id: model.id, name: model.name, iconAssetIdentifier: model.iconSymbolName, isCustom: model.isCustom, isFavorited: model.isFavorited, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
+        EquipmentDTO(id: model.id, name: model.name, iconAssetIdentifier: model.iconSymbolName, isCustom: model.isCustom, isAtHome: model.isAtHome, isAtGym: model.isAtGym, preferredWeightUnit: model.preferredWeightUnit, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
     }
     static func id(of dto: EquipmentDTO) -> UUID { dto.id }
     static func updatedAt(of dto: EquipmentDTO) -> Date { dto.updatedAt }
@@ -345,7 +349,7 @@ enum EquipmentSyncAdapter: CatalogSyncAdapter {
         return try? context.fetch(descriptor).first
     }
     static func insertLocal(from dto: EquipmentDTO, context: ModelContext) -> Equipment {
-        let model = Equipment(id: dto.id, name: dto.name, iconSymbolName: dto.iconAssetIdentifier, isCustom: dto.isCustom, isFavorited: dto.isFavorited)
+        let model = Equipment(id: dto.id, name: dto.name, iconSymbolName: dto.iconAssetIdentifier, isCustom: dto.isCustom, isAtHome: dto.isAtHome, isAtGym: dto.isAtGym, preferredWeightUnit: dto.preferredWeightUnit)
         context.insert(model)
         return model
     }
@@ -353,7 +357,9 @@ enum EquipmentSyncAdapter: CatalogSyncAdapter {
         model.name = dto.name
         model.iconSymbolName = dto.iconAssetIdentifier
         model.isCustom = dto.isCustom
-        model.isFavorited = dto.isFavorited
+        model.isAtHome = dto.isAtHome
+        model.isAtGym = dto.isAtGym
+        model.preferredWeightUnit = dto.preferredWeightUnit
     }
 }
 

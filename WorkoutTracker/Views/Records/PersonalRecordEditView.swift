@@ -53,7 +53,7 @@ struct PersonalRecordEditView: View {
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
                             .frame(width: 100)
-                        Text(AppSettings.weightUnit).foregroundStyle(.secondary)
+                        Text(exercise.equipment?.effectiveWeightUnit ?? AppSettings.weightUnit).foregroundStyle(.secondary)
                     }
                     Stepper("Reps: \(reps)", value: $reps, in: 0...200)
                 } else {

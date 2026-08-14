@@ -83,6 +83,7 @@ struct SessionSummaryView: View {
                     Text("Sync Everything").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+                .disabled(true)
             }
         }
     }

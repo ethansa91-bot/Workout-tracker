@@ -7,7 +7,6 @@ struct ExerciseListView: View {
 
     @State private var searchText = ""
     @State private var filter = ExerciseFilter()
-    @State private var showingFilters = false
     @State private var showingCreateSheet = false
 
     private var filtered: [Exercise] {
@@ -20,6 +19,10 @@ struct ExerciseListView: View {
 
     var body: some View {
         List {
+            ExerciseQuickFilterView(filter: $filter)
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+
             ForEach(filtered) { exercise in
                 NavigationLink {
                     ExerciseDetailView(exercise: exercise)
@@ -32,13 +35,6 @@ struct ExerciseListView: View {
         .searchable(text: $searchText, prompt: "Search exercises")
         .navigationTitle("Exercises")
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    showingFilters = true
-                } label: {
-                    Label("Filter", systemImage: filter.isEmpty ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
-                }
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showingCreateSheet = true
@@ -46,9 +42,6 @@ struct ExerciseListView: View {
                     Label("Add", systemImage: "plus")
                 }
             }
-        }
-        .sheet(isPresented: $showingFilters) {
-            ExerciseFilterView(filter: $filter)
         }
         .sheet(isPresented: $showingCreateSheet) {
             CustomExerciseFormView()

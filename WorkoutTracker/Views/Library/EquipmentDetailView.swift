@@ -14,18 +14,37 @@ struct EquipmentDetailView: View {
                     title: equipment.name,
                     subtitle: equipment.isCustom ? "Custom equipment" : nil
                 )
+                .listRowSeparator(.hidden)
 
-                Toggle("In my equipment", isOn: Binding(
-                    get: { equipment.isFavorited },
-                    set: { newValue in
-                        equipment.isFavorited = newValue
-                        equipment.markDirty()
-                        try? context.save()
+                HStack(spacing: 12) {
+                    toggleChip(icon: "house", label: "At Home", isOn: equipment.isAtHome, tint: Color.accentColor) {
+                        toggleHome()
                     }
-                ))
+                    toggleChip(icon: "building.2", label: "At the Gym", isOn: equipment.isAtGym, tint: .orange) {
+                        toggleGym()
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .listRowSeparator(.hidden)
+                .padding(.vertical, 4)
             }
 
-            if equipment.isFavorited {
+            if equipment.isAtHome || equipment.isAtGym {
+                Section("Weight Unit") {
+                    Picker("Weight unit", selection: Binding(
+                        get: { equipment.effectiveWeightUnit },
+                        set: { newValue in
+                            equipment.preferredWeightUnit = newValue
+                            equipment.markDirty()
+                            try? context.save()
+                        }
+                    )) {
+                        Text("kg").tag("kg")
+                        Text("lb").tag("lb")
+                    }
+                    .pickerStyle(.segmented)
+                }
+
                 Section("Available weights") {
                     ForEach(equipment.sortedWeightCombos) { combo in
                         Text(formatted(combo.value))
@@ -62,8 +81,35 @@ struct EquipmentDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
+    /// Same capsule-chip style as `ExerciseQuickFilterView`'s quick filters, with an
+    /// icon in front of the label instead of text alone.
+    private func toggleChip(icon: String, label: String, isOn: Bool, tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(label, systemImage: isOn ? "\(icon).fill" : icon)
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .foregroundStyle(isOn ? Color.white : tint)
+                .background(isOn ? tint : tint.opacity(0.12), in: Capsule())
+                .overlay(Capsule().stroke(isOn ? Color.clear : tint.opacity(0.35), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func toggleHome() {
+        equipment.isAtHome.toggle()
+        equipment.markDirty()
+        try? context.save()
+    }
+
+    private func toggleGym() {
+        equipment.isAtGym.toggle()
+        equipment.markDirty()
+        try? context.save()
+    }
+
     private func formatted(_ value: Double) -> String {
-        let unit = AppSettings.weightUnit
+        let unit = equipment.effectiveWeightUnit
         return value.truncatingRemainder(dividingBy: 1) == 0
             ? "\(Int(value)) \(unit)"
             : "\(value) \(unit)"

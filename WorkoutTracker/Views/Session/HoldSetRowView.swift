@@ -93,7 +93,7 @@ struct HoldSetRowView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
-            .tint(.red)
+            .tint(Color.appDanger)
         } else {
             switch phase {
             case .idle:

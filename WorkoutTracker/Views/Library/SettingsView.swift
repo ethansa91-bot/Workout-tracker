@@ -13,8 +13,8 @@ struct SettingsView: View {
                 }
                 Section("Units") {
                     Picker("Weight unit", selection: $weightUnit) {
-                        Text("lb").tag("lb")
                         Text("kg").tag("kg")
+                        Text("lb").tag("lb")
                     }
                     .pickerStyle(.segmented)
                 }

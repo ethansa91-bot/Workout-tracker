@@ -1,34 +1,46 @@
 [
-  { "name": "Barbell", "icon": "dumbbell.fill" },
-  { "name": "Dumbbells", "icon": "dumbbell.fill" },
-  { "name": "Kettlebell", "icon": "dumbbell.fill" },
-  { "name": "EZ Curl Bar", "icon": "dumbbell.fill" },
-  { "name": "Trap Bar", "icon": "dumbbell.fill" },
-  { "name": "Weight Plates", "icon": "circle.fill" },
-  { "name": "Squat Rack", "icon": "square.stack.fill" },
-  { "name": "Power Cage", "icon": "square.stack.fill" },
-  { "name": "Smith Machine", "icon": "figure.strengthtraining.traditional" },
-  { "name": "Cable Machine", "icon": "figure.strengthtraining.functional" },
-  { "name": "Lat Pulldown Machine", "icon": "figure.strengthtraining.functional" },
-  { "name": "Leg Press Machine", "icon": "figure.strengthtraining.functional" },
-  { "name": "Leg Extension Machine", "icon": "figure.strengthtraining.functional" },
-  { "name": "Leg Curl Machine", "icon": "figure.strengthtraining.functional" },
-  { "name": "Chest Press Machine", "icon": "figure.strengthtraining.functional" },
-  { "name": "Pec Deck Machine", "icon": "figure.strengthtraining.functional" },
-  { "name": "Rowing Machine", "icon": "figure.rower" },
-  { "name": "Treadmill", "icon": "figure.run" },
-  { "name": "Stationary Bike", "icon": "figure.indoor.cycle" },
-  { "name": "Elliptical", "icon": "figure.elliptical" },
-  { "name": "Pull-Up Bar", "icon": "figure.strengthtraining.traditional" },
-  { "name": "Dip Station", "icon": "figure.strengthtraining.traditional" },
-  { "name": "Resistance Bands", "icon": "waveform.path" },
-  { "name": "Suspension Trainer", "icon": "waveform.path" },
-  { "name": "Medicine Ball", "icon": "circle.fill" },
-  { "name": "Slam Ball", "icon": "circle.fill" },
-  { "name": "Stability Ball", "icon": "circle.fill" },
-  { "name": "Foam Roller", "icon": "cylinder.fill" },
-  { "name": "Jump Rope", "icon": "figure.jumprope" },
-  { "name": "Bench", "icon": "rectangle.fill" },
-  { "name": "Battle Ropes", "icon": "waveform.path" },
-  { "name": "Sled", "icon": "square.stack.fill" }
+  {
+    "name": "Barbell",
+    "icon": "dumbbell.fill"
+  },
+  {
+    "name": "Bench",
+    "icon": "rectangle.fill"
+  },
+  {
+    "name": "Cable machine",
+    "icon": "figure.strengthtraining.functional"
+  },
+  {
+    "name": "Dumbbell",
+    "icon": "dumbbell.fill"
+  },
+  {
+    "name": "Gym mat",
+    "icon": "rectangle.fill"
+  },
+  {
+    "name": "Incline bench",
+    "icon": "rectangle.fill"
+  },
+  {
+    "name": "Kettlebell",
+    "icon": "dumbbell.fill"
+  },
+  {
+    "name": "Pull-up bar",
+    "icon": "figure.strengthtraining.traditional"
+  },
+  {
+    "name": "Resistance band",
+    "icon": "waveform.path"
+  },
+  {
+    "name": "SZ-Bar",
+    "icon": "dumbbell.fill"
+  },
+  {
+    "name": "Swiss Ball",
+    "icon": "circle.fill"
+  }
 ]

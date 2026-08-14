@@ -8,8 +8,14 @@ final class Equipment: SyncableModel {
     var iconSymbolName: String
     /// True for equipment the user created themselves, vs. seeded catalog equipment.
     var isCustom: Bool
-    /// "In my gym" — favoriting a catalog item, or auto-set when the item is custom-created.
+    /// Deprecated — replaced by `isAtHome`/`isAtGym`. Kept only so
+    /// `EquipmentHomeGymMigration` can read its old value once; nothing else
+    /// reads or writes it anymore.
     var isFavorited: Bool
+    var isAtHome: Bool = false
+    var isAtGym: Bool = false
+    /// nil = use the global `AppSettings.weightUnit` default.
+    var preferredWeightUnit: String?
     var updatedAt: Date
     var deletedAt: Date?
     var isDirty: Bool
@@ -18,12 +24,23 @@ final class Equipment: SyncableModel {
     @Relationship(deleteRule: .cascade, inverse: \WeightCombo.equipment)
     var weightCombos: [WeightCombo] = []
 
-    init(id: UUID = UUID(), name: String, iconSymbolName: String, isCustom: Bool = false, isFavorited: Bool = false) {
+    init(
+        id: UUID = UUID(),
+        name: String,
+        iconSymbolName: String,
+        isCustom: Bool = false,
+        isAtHome: Bool = false,
+        isAtGym: Bool = false,
+        preferredWeightUnit: String? = nil
+    ) {
         self.id = id
         self.name = name
         self.iconSymbolName = iconSymbolName
         self.isCustom = isCustom
-        self.isFavorited = isFavorited || isCustom
+        self.isFavorited = false
+        self.isAtHome = isAtHome
+        self.isAtGym = isAtGym
+        self.preferredWeightUnit = preferredWeightUnit
         self.updatedAt = .now
         self.deletedAt = nil
         self.isDirty = true
@@ -34,5 +51,9 @@ final class Equipment: SyncableModel {
         weightCombos
             .filter { $0.deletedAt == nil }
             .sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    var effectiveWeightUnit: String {
+        preferredWeightUnit ?? AppSettings.weightUnit
     }
 }

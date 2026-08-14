@@ -37,7 +37,7 @@ struct RecordsListView: View {
         }
 
         private func formattedWeight(_ value: Double) -> String {
-            let unit = AppSettings.weightUnit
+            let unit = exercise.equipment?.effectiveWeightUnit ?? AppSettings.weightUnit
             return value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value)) \(unit)" : "\(value) \(unit)"
         }
     }

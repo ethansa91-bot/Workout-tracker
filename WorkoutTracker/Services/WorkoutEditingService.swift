@@ -31,6 +31,13 @@ enum WorkoutEditingService {
         try context.save()
     }
 
+    static func updateNotes(_ workout: Workout, to notes: String?, context: ModelContext) throws {
+        try requireUnlocked(workout)
+        workout.notes = notes
+        workout.markDirty()
+        try context.save()
+    }
+
     // MARK: - Blocks
 
     static func addBlock(to workout: Workout, type: WorkoutBlockType, context: ModelContext) throws -> WorkoutBlock {

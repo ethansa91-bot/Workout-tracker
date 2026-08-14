@@ -29,7 +29,7 @@ struct SyncStatusView: View {
                         Text("Sync Everything")
                     }
                 }
-                .disabled(isSyncing)
+                .disabled(true)
             }
         }
         .alert("Sync failed", isPresented: Binding(

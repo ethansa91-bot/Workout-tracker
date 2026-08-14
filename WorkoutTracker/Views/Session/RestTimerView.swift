@@ -10,6 +10,9 @@ import Combine
 struct RestTimerView: View {
     let totalSeconds: Int
     let soundProfile: TimerSoundProfile
+    /// `session.status == .inProgress` — the timer freezes while the overall
+    /// workout is paused, same as the step countdown in `TimeSessionRunnerView`.
+    let isSessionActive: Bool
     @Binding var startSignal: Int
     @Binding var stopSignal: Int
 
@@ -19,9 +22,10 @@ struct RestTimerView: View {
     // Must be @State, not `let` — see TimeSessionRunnerView for why.
     @State private var ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    init(totalSeconds: Int, soundProfile: TimerSoundProfile, startSignal: Binding<Int>, stopSignal: Binding<Int>) {
+    init(totalSeconds: Int, soundProfile: TimerSoundProfile, isSessionActive: Bool, startSignal: Binding<Int>, stopSignal: Binding<Int>) {
         self.totalSeconds = totalSeconds
         self.soundProfile = soundProfile
+        self.isSessionActive = isSessionActive
         _startSignal = startSignal
         _stopSignal = stopSignal
         _remainingSeconds = State(initialValue: totalSeconds)
@@ -42,9 +46,14 @@ struct RestTimerView: View {
             VStack(spacing: 2) {
                 Text(timeString)
                     .font(.title3.monospacedDigit().bold())
-                Text(isRunning ? "Resting" : "Tap to rest")
+                Text(isRunning ? "Tap to pause" : "Tap to start")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+                if !isRunning {
+                    Text("Hold to reset")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .frame(width: 88, height: 88)
@@ -57,7 +66,7 @@ struct RestTimerView: View {
             remainingSeconds = totalSeconds
         }
         .onReceive(ticker) { _ in
-            guard isRunning else { return }
+            guard isRunning && isSessionActive else { return }
             if remainingSeconds > 0 {
                 remainingSeconds -= 1
                 SoundPlayer.playWarningIfNeeded(remainingSeconds: remainingSeconds, profile: soundProfile)

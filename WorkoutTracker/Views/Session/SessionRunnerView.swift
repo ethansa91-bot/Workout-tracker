@@ -9,7 +9,6 @@ struct SessionRunnerView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showingPauseSheet = false
-    @State private var showingStopConfirm = false
     @State private var showingSummary = false
     @State private var elapsedDisplay = "0:00:00"
 
@@ -50,28 +49,22 @@ struct SessionRunnerView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    pauseSession()
-                } label: {
-                    Label("Pause", systemImage: "pause.circle")
-                }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(role: .destructive) {
-                    showingStopConfirm = true
-                } label: {
-                    Label("Stop", systemImage: "xmark.circle")
+            if !showingPauseSheet {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        pauseSession()
+                    } label: {
+                        Label("Pause", systemImage: "pause.circle")
+                    }
                 }
             }
         }
         .onReceive(ticker) { _ in updateElapsedDisplay() }
         .onAppear { updateElapsedDisplay() }
-        .sheet(isPresented: $showingPauseSheet) {
-            pauseSheet
-        }
-        .confirmationDialog("End this workout as unfinished?", isPresented: $showingStopConfirm, titleVisibility: .visible) {
-            Button("End as Unfinished", role: .destructive) { stopSession() }
+        .overlay {
+            if showingPauseSheet {
+                pauseOverlay
+            }
         }
         .fullScreenCover(isPresented: $showingSummary) {
             if let workout {
@@ -105,35 +98,45 @@ struct SessionRunnerView: View {
         .background(Color.appSurface)
     }
 
-    private var pauseSheet: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "pause.circle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(.tint)
-            Text("Workout Paused")
-                .font(.title2.bold())
+    // A translucent overlay, not a sheet — the paused session stays visible
+    // (dimmed) behind it instead of being fully covered. No dismiss path except
+    // its own three buttons; tapping the dimmed background does nothing, same
+    // guarantee `.interactiveDismissDisabled()` gave the sheet this replaced.
+    private var pauseOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.75)
+                .ignoresSafeArea()
 
-            Button {
-                resumeSession()
-            } label: {
-                Text("Resume").frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
+            VStack(spacing: 24) {
+                Text("Workout Paused")
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
 
-            Button("Exit — Resume Later") {
-                showingPauseSheet = false
-                dismiss()
-            }
-            .buttonStyle(.bordered)
+                Button {
+                    resumeSession()
+                } label: {
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 72))
+                }
+                .tint(.white)
 
-            Button("End as Unfinished", role: .destructive) {
-                stopSession()
+                VStack(spacing: 12) {
+                    Button("Exit — Resume Later") {
+                        showingPauseSheet = false
+                        dismiss()
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.white)
+
+                    Button("End as Unfinished", role: .destructive) {
+                        stopSession()
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Color.appDanger)
+                }
             }
+            .padding(32)
         }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.appBackground)
-        .interactiveDismissDisabled()
     }
 
     private var totalItems: Int {

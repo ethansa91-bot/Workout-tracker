@@ -26,6 +26,8 @@ struct WorkoutTrackerApp: App {
             StepLog.self,
             SetLog.self,
             PersonalRecord.self,
+            RecurringWorkoutSchedule.self,
+            ScheduledWorkout.self,
         ])
         // cloudKitDatabase: .none is required, not optional — SwiftData otherwise tries to
         // prepare the store for CloudKit sync, which rejects @Attribute(.unique) fields
@@ -49,6 +51,11 @@ struct WorkoutTrackerApp: App {
         FavoriteExercisesCorrection.correctIfNeeded(context: sharedModelContainer.mainContext)
         GetReadyStepMigration.migrateIfNeeded(context: sharedModelContainer.mainContext)
         ExerciseImageMigration.migrateIfNeeded(context: sharedModelContainer.mainContext)
+        ExerciseImageRemovalMigration.migrateIfNeeded(context: sharedModelContainer.mainContext)
+        WgerCatalogMigration.migrateIfNeeded(context: sharedModelContainer.mainContext)
+        WgerCatalogCorrection.correctIfNeeded(context: sharedModelContainer.mainContext)
+        WgerCategoryRevert.revertIfNeeded(context: sharedModelContainer.mainContext)
+        EquipmentHomeGymMigration.migrateIfNeeded(context: sharedModelContainer.mainContext)
     }
 
     var body: some Scene {

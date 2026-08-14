@@ -31,6 +31,11 @@ extension Color {
     /// (TabView tint doesn't reliably pick up AccentColor on every iOS version).
     static let appAccent = Color(light: UIColor(red: 0.169, green: 0.431, blue: 0.306, alpha: 1),
                                   dark: UIColor(red: 0.361, green: 0.663, blue: 0.529, alpha: 1))
+    /// Destructive actions — a muted brick red in the same tonal family as
+    /// `appAccent` (comparably deep/desaturated, not a stark system red), so
+    /// destructive buttons read as part of this palette instead of clashing with it.
+    static let appDanger = Color(light: UIColor(red: 0.780, green: 0.325, blue: 0.298, alpha: 1),
+                                  dark: UIColor(red: 0.867, green: 0.494, blue: 0.463, alpha: 1))
 
     fileprivate init(light: UIColor, dark: UIColor) {
         self.init(uiColor: UIColor { $0.userInterfaceStyle == .dark ? dark : light })

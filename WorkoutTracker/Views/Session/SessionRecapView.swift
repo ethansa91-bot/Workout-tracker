@@ -23,6 +23,8 @@ struct SessionRecapView: View {
     @State private var editMode: EditMode = .inactive
     @State private var blockPendingDeletion: WorkoutBlock?
     @State private var manageExercisesBlock: WorkoutBlock?
+    @State private var showingDescriptionEditor = false
+    @State private var descriptionText = ""
 
     private var activeSoundProfile: TimerSoundProfile {
         sessionSoundProfile ?? AppSettings.timerSoundProfile
@@ -111,6 +113,9 @@ struct SessionRecapView: View {
             Button("Cancel", role: .cancel) {}
             Button("Save") { renameWorkout() }
         }
+        .sheet(isPresented: $showingDescriptionEditor) {
+            descriptionEditorSheet
+        }
         .alert("Error", isPresented: Binding(
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } }
@@ -137,6 +142,7 @@ struct SessionRecapView: View {
                     showingSupersedeConfirm = true
                 }
                 .font(.footnote)
+                .tint(Color.appDanger)
             }
             .padding()
             .background(Color.appSurface)
@@ -199,10 +205,42 @@ struct SessionRecapView: View {
             Text(heroInfoLine)
                 .font(.subheadline)
                 .foregroundStyle(Color.appInkMuted)
+
+            descriptionRow
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
         .cardStyle()
+    }
+
+    @ViewBuilder
+    private var descriptionRow: some View {
+        if let notes = workout.notes, !notes.isEmpty {
+            HStack(alignment: .top, spacing: 8) {
+                Text(notes)
+                    .font(.footnote)
+                    .foregroundStyle(Color.appInkMuted)
+                if !isLocked {
+                    Button {
+                        descriptionText = notes
+                        showingDescriptionEditor = true
+                    } label: {
+                        Image(systemName: "pencil")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.appInkMuted)
+                }
+            }
+            .padding(.top, 2)
+        } else if !isLocked {
+            Button("Add Description") {
+                descriptionText = ""
+                showingDescriptionEditor = true
+            }
+            .font(.footnote)
+            .foregroundStyle(Color.appAccent)
+            .padding(.top, 2)
+        }
     }
 
     private var heroInfoLine: String {
@@ -289,7 +327,7 @@ struct SessionRecapView: View {
                         Image(systemName: "trash")
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(Color.appDanger)
                 }
 
                 // A plain Button here, not NavigationLink — List auto-adds a trailing
@@ -379,6 +417,36 @@ struct SessionRecapView: View {
         guard !trimmed.isEmpty else { return }
         do {
             try WorkoutEditingService.rename(workout, to: trimmed, context: context)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private var descriptionEditorSheet: some View {
+        NavigationStack {
+            Form {
+                TextEditor(text: $descriptionText)
+                    .frame(minHeight: 160)
+            }
+            .themedListBackground()
+            .navigationTitle("Description")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showingDescriptionEditor = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { saveDescription() }
+                }
+            }
+        }
+    }
+
+    private func saveDescription() {
+        let trimmed = descriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            try WorkoutEditingService.updateNotes(workout, to: trimmed.isEmpty ? nil : trimmed, context: context)
+            showingDescriptionEditor = false
         } catch {
             errorMessage = error.localizedDescription
         }

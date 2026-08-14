@@ -92,7 +92,7 @@ struct WorkoutListView: View {
                 case .workout(let workout):
                     SessionRecapView(workout: workout)
                 case .block(let block):
-                    BlockEditorView(block: block)
+                    BlockEditorView(block: block, onSaveNavigatesToRecap: true)
                 }
             }
         }
@@ -104,6 +104,12 @@ struct WorkoutListView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(workout.name)
                 StatusPill(text: workout.listTypeLabel, tint: .accentColor)
+                if let notes = workout.notes, !notes.isEmpty {
+                    Text(notes)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
             Spacer()
             if workout.isLocked {

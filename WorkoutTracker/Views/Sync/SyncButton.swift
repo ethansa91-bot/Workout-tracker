@@ -1,38 +1,18 @@
 import SwiftUI
 
-/// Reflects the states a syncable item can be in: nothing to push, online with pending
-/// changes, or offline — shown as a plain label when offline, never a disabled button,
-/// per spec.
+/// Supabase sync is disconnected for now (see `SyncEngine.isDisabled`) — shown as a
+/// permanently disabled button rather than removed, so it's ready to come back once
+/// CloudKit sync replaces it. Previously reflected online/dirty/syncing state; that
+/// logic is dormant, not deleted, since `isDirty`/`sync` are still threaded through
+/// from every call site.
 struct SyncButton: View {
     let isDirty: Bool
     let sync: () async -> Void
 
-    @State private var isSyncing = false
-
-    private var isOnline: Bool { NetworkReachability.shared.isOnline }
-
     var body: some View {
-        if !isOnline {
-            Text("Offline")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        } else if isSyncing {
-            ProgressView()
-                .controlSize(.small)
-        } else if isDirty {
-            Button("Sync") {
-                Task {
-                    isSyncing = true
-                    await sync()
-                    isSyncing = false
-                }
-            }
+        Button("Sync") {}
             .font(.subheadline.weight(.medium))
             .buttonStyle(.bordered)
-        } else {
-            Label("Synced", systemImage: "checkmark.circle.fill")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
+            .disabled(true)
     }
 }

@@ -226,6 +226,44 @@ struct PersonalRecordDTO: Codable {
     }
 }
 
+struct RecurringWorkoutScheduleDTO: Codable {
+    let id: UUID
+    let workoutId: UUID?
+    let weekdays: [Int]
+    let endDate: Date
+    let updatedAt: Date
+    let deletedAt: Date?
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(workoutId, forKey: .workoutId)
+        try c.encode(weekdays, forKey: .weekdays)
+        try c.encode(endDate, forKey: .endDate)
+        try c.encode(updatedAt, forKey: .updatedAt)
+        try c.encode(deletedAt, forKey: .deletedAt)
+    }
+}
+
+struct ScheduledWorkoutDTO: Codable {
+    let id: UUID
+    let workoutId: UUID?
+    let date: Date
+    let recurringScheduleId: UUID?
+    let updatedAt: Date
+    let deletedAt: Date?
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(workoutId, forKey: .workoutId)
+        try c.encode(date, forKey: .date)
+        try c.encode(recurringScheduleId, forKey: .recurringScheduleId)
+        try c.encode(updatedAt, forKey: .updatedAt)
+        try c.encode(deletedAt, forKey: .deletedAt)
+    }
+}
+
 // MARK: - Adapters
 
 enum WorkoutSyncAdapter: CatalogSyncAdapter {
@@ -527,6 +565,65 @@ enum PersonalRecordSyncAdapter: CatalogSyncAdapter {
         model.holdSeconds = dto.holdSeconds
         if model.exercise?.id != dto.exerciseId {
             model.exercise = dto.exerciseId.flatMap { ExerciseSyncAdapter.fetchLocal(id: $0, context: context) }
+        }
+    }
+}
+
+enum RecurringWorkoutScheduleSyncAdapter: CatalogSyncAdapter {
+    static let tableName = "recurring_workout_schedules"
+    static func dto(from model: RecurringWorkoutSchedule) -> RecurringWorkoutScheduleDTO {
+        RecurringWorkoutScheduleDTO(id: model.id, workoutId: model.workout?.id, weekdays: model.weekdays, endDate: model.endDate, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
+    }
+    static func id(of dto: RecurringWorkoutScheduleDTO) -> UUID { dto.id }
+    static func updatedAt(of dto: RecurringWorkoutScheduleDTO) -> Date { dto.updatedAt }
+    static func deletedAt(of dto: RecurringWorkoutScheduleDTO) -> Date? { dto.deletedAt }
+    static func fetchLocal(id: UUID, context: ModelContext) -> RecurringWorkoutSchedule? {
+        var descriptor = FetchDescriptor<RecurringWorkoutSchedule>(predicate: #Predicate { $0.id == id })
+        descriptor.fetchLimit = 1
+        return try? context.fetch(descriptor).first
+    }
+    static func insertLocal(from dto: RecurringWorkoutScheduleDTO, context: ModelContext) -> RecurringWorkoutSchedule {
+        let workout = dto.workoutId.flatMap { WorkoutSyncAdapter.fetchLocal(id: $0, context: context) }
+        let model = RecurringWorkoutSchedule(id: dto.id, workout: workout, weekdays: dto.weekdays, endDate: dto.endDate)
+        context.insert(model)
+        return model
+    }
+    static func applyRemote(_ dto: RecurringWorkoutScheduleDTO, to model: RecurringWorkoutSchedule, context: ModelContext) {
+        model.weekdays = dto.weekdays
+        model.endDate = dto.endDate
+        if model.workout?.id != dto.workoutId {
+            model.workout = dto.workoutId.flatMap { WorkoutSyncAdapter.fetchLocal(id: $0, context: context) }
+        }
+    }
+}
+
+enum ScheduledWorkoutSyncAdapter: CatalogSyncAdapter {
+    static let tableName = "scheduled_workouts"
+    static func dto(from model: ScheduledWorkout) -> ScheduledWorkoutDTO {
+        ScheduledWorkoutDTO(id: model.id, workoutId: model.workout?.id, date: model.date, recurringScheduleId: model.recurringSchedule?.id, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
+    }
+    static func id(of dto: ScheduledWorkoutDTO) -> UUID { dto.id }
+    static func updatedAt(of dto: ScheduledWorkoutDTO) -> Date { dto.updatedAt }
+    static func deletedAt(of dto: ScheduledWorkoutDTO) -> Date? { dto.deletedAt }
+    static func fetchLocal(id: UUID, context: ModelContext) -> ScheduledWorkout? {
+        var descriptor = FetchDescriptor<ScheduledWorkout>(predicate: #Predicate { $0.id == id })
+        descriptor.fetchLimit = 1
+        return try? context.fetch(descriptor).first
+    }
+    static func insertLocal(from dto: ScheduledWorkoutDTO, context: ModelContext) -> ScheduledWorkout {
+        let workout = dto.workoutId.flatMap { WorkoutSyncAdapter.fetchLocal(id: $0, context: context) }
+        let schedule = dto.recurringScheduleId.flatMap { RecurringWorkoutScheduleSyncAdapter.fetchLocal(id: $0, context: context) }
+        let model = ScheduledWorkout(id: dto.id, workout: workout, date: dto.date, recurringSchedule: schedule)
+        context.insert(model)
+        return model
+    }
+    static func applyRemote(_ dto: ScheduledWorkoutDTO, to model: ScheduledWorkout, context: ModelContext) {
+        model.date = dto.date
+        if model.workout?.id != dto.workoutId {
+            model.workout = dto.workoutId.flatMap { WorkoutSyncAdapter.fetchLocal(id: $0, context: context) }
+        }
+        if model.recurringSchedule?.id != dto.recurringScheduleId {
+            model.recurringSchedule = dto.recurringScheduleId.flatMap { RecurringWorkoutScheduleSyncAdapter.fetchLocal(id: $0, context: context) }
         }
     }
 }

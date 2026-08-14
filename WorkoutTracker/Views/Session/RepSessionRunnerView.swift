@@ -34,7 +34,17 @@ struct RepSessionRunnerView: View {
             }
             .background(Color.appBackground)
             .safeAreaInset(edge: .bottom) {
-                navigationBar(entry: entry)
+                VStack(spacing: 8) {
+                    if loggedSets(for: entry).count < entry.targetSets {
+                        Button("Skip the Rest of This Exercise", role: .destructive) {
+                            goToNext(entry: entry, force: true)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color.appDanger)
+                        .scaleEffect(0.8)
+                    }
+                    navigationBar(entry: entry)
+                }
             }
             .onAppear { primeDrafts(for: entry, exercise: exercise) }
             .onChange(of: entry.id) { _, _ in primeDrafts(for: entry, exercise: exercise) }
@@ -50,6 +60,7 @@ struct RepSessionRunnerView: View {
             RestTimerView(
                 totalSeconds: entry.customRestSeconds ?? AppSettings.defaultRestSeconds,
                 soundProfile: soundProfile,
+                isSessionActive: session.status == .inProgress,
                 startSignal: $restStartSignal,
                 stopSignal: $restStopSignal
             )
@@ -83,10 +94,10 @@ struct RepSessionRunnerView: View {
             let last = SetLogQueries.lastBestSet(exercise: exercise, excluding: session, context: context)
             HStack(spacing: 16) {
                 if let maxSet {
-                    Label("Max \(maxSet.reps) × \(formattedWeight(maxSet.weight))", systemImage: "trophy.fill")
+                    Label("Max \(maxSet.reps) × \(formattedWeight(maxSet.weight, exercise: exercise))", systemImage: "trophy.fill")
                 }
                 if let last {
-                    Label("Last \(last.reps) × \(formattedWeight(last.weight))", systemImage: "clock.arrow.circlepath")
+                    Label("Last \(last.reps) × \(formattedWeight(last.weight, exercise: exercise))", systemImage: "clock.arrow.circlepath")
                 }
                 if maxSet == nil && last == nil {
                     Text("No history yet for this exercise").italic()
@@ -141,7 +152,7 @@ struct RepSessionRunnerView: View {
                         SetRowView(
                             setNumber: setIndex + 1,
                             weightOptions: weightOptions,
-                            weightUnit: AppSettings.weightUnit,
+                            weightUnit: exercise.equipment?.effectiveWeightUnit ?? AppSettings.weightUnit,
                             reps: bindingReps(setIndex),
                             weight: bindingWeight(setIndex),
                             isLogged: false,
@@ -176,14 +187,6 @@ struct RepSessionRunnerView: View {
                         .id("\(entry.id)-\(setIndex)-pending")
                     }
                 }
-            }
-
-            if logs.count < entry.targetSets {
-                Button("Stop Sets", role: .destructive) {
-                    goToNext(entry: entry, force: true)
-                }
-                .font(.footnote)
-                .padding(.top, 4)
             }
         }
     }
@@ -236,8 +239,8 @@ struct RepSessionRunnerView: View {
         return false
     }
 
-    private func formattedWeight(_ value: Double) -> String {
-        let unit = AppSettings.weightUnit
+    private func formattedWeight(_ value: Double, exercise: Exercise) -> String {
+        let unit = exercise.equipment?.effectiveWeightUnit ?? AppSettings.weightUnit
         return value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value)) \(unit)" : "\(value) \(unit)"
     }
 
@@ -283,7 +286,7 @@ struct RepSessionRunnerView: View {
             setIndex: setIndex,
             reps: reps,
             weight: weight,
-            weightUnit: AppSettings.weightUnit
+            weightUnit: entry.exercise?.equipment?.effectiveWeightUnit ?? AppSettings.weightUnit
         )
         context.insert(log)
         session.markDirty()
@@ -301,7 +304,7 @@ struct RepSessionRunnerView: View {
             setIndex: setIndex,
             reps: 0,
             weight: 0,
-            weightUnit: AppSettings.weightUnit,
+            weightUnit: entry.exercise?.equipment?.effectiveWeightUnit ?? AppSettings.weightUnit,
             holdSeconds: holdSeconds
         )
         context.insert(log)

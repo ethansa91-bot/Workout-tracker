@@ -49,10 +49,17 @@ final class SyncEngine {
     static let shared = SyncEngine()
     private init() {}
 
+    /// Supabase sync is disconnected for now — backup/sync between devices is moving
+    /// to CloudKit once Apple Developer Program access is set up. Every public entry
+    /// point below is a no-op while this is `true`; flip it back to restore Supabase
+    /// sync without touching anything else in this file.
+    static let isDisabled = true
+
     /// Silent watermark check — never syncs by itself. True if Supabase has changes
     /// this device hasn't pulled yet, which the UI turns into an "Updates available —
     /// sync now?" prompt.
     func remoteHasUpdates() async -> Bool {
+        guard !Self.isDisabled else { return false }
         guard NetworkReachability.shared.isOnline else { return false }
         guard let watermarks = try? await SupabaseREST.fetchWatermarks() else { return false }
         guard let lastSyncedAt = SyncState.lastSyncedAt else { return !watermarks.isEmpty }
@@ -62,6 +69,7 @@ final class SyncEngine {
     /// Pushes one just-created/edited equipment item, plus any never-synced weight
     /// combos on it. Used by the per-creation "sync this" button.
     func syncSingle(equipment: Equipment) async throws {
+        guard !Self.isDisabled else { return }
         try await CatalogSync.push(EquipmentSyncAdapter.self, dirtyModels: [equipment])
         try await CatalogSync.push(WeightComboSyncAdapter.self, dirtyModels: equipment.weightCombos.filter(\.isDirty))
     }
@@ -69,6 +77,7 @@ final class SyncEngine {
     /// Pushes one just-created/edited exercise (and its never-synced equipment parent,
     /// if any) plus its full current muscle/category tag set.
     func syncSingle(exercise: Exercise) async throws {
+        guard !Self.isDisabled else { return }
         if let equipment = exercise.equipment, equipment.remoteSyncedAt == nil {
             try await syncSingle(equipment: equipment)
         }
@@ -83,6 +92,7 @@ final class SyncEngine {
     /// in the same order, then replace every join association set. Safe to retry —
     /// every step is idempotent by id.
     func syncAll(context: ModelContext) async throws {
+        guard !Self.isDisabled else { return }
         let watermark = SyncState.lastSyncedAt
 
         try await CatalogSync.pull(MuscleCategorySyncAdapter.self, since: watermark, context: context)
@@ -93,6 +103,8 @@ final class SyncEngine {
         try await CatalogSync.pull(ExerciseSyncAdapter.self, since: watermark, context: context)
         try await CatalogSync.pull(PersonalRecordSyncAdapter.self, since: watermark, context: context)
         try await CatalogSync.pull(WorkoutSyncAdapter.self, since: watermark, context: context)
+        try await CatalogSync.pull(RecurringWorkoutScheduleSyncAdapter.self, since: watermark, context: context)
+        try await CatalogSync.pull(ScheduledWorkoutSyncAdapter.self, since: watermark, context: context)
         try await CatalogSync.pull(WorkoutBlockSyncAdapter.self, since: watermark, context: context)
         try await CatalogSync.pull(TimeBlockStepSyncAdapter.self, since: watermark, context: context)
         try await CatalogSync.pull(RepBlockExerciseSyncAdapter.self, since: watermark, context: context)
@@ -108,6 +120,8 @@ final class SyncEngine {
         try await pushDirty(ExerciseSyncAdapter.self, context: context)
         try await pushDirty(PersonalRecordSyncAdapter.self, context: context)
         try await pushDirty(WorkoutSyncAdapter.self, context: context)
+        try await pushDirty(RecurringWorkoutScheduleSyncAdapter.self, context: context)
+        try await pushDirty(ScheduledWorkoutSyncAdapter.self, context: context)
         try await pushDirty(WorkoutBlockSyncAdapter.self, context: context)
         try await pushDirty(TimeBlockStepSyncAdapter.self, context: context)
         try await pushDirty(RepBlockExerciseSyncAdapter.self, context: context)

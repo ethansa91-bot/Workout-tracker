@@ -1,13 +1,14 @@
 import SwiftUI
 import SwiftData
 
-/// Creating custom equipment auto-favorites it, so the weight-combo editor is inline
+/// Creating custom equipment marks it "At Home", so the weight-combo editor is inline
 /// here rather than requiring a separate trip to the detail view afterward.
 struct CustomEquipmentFormView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
     @State private var name = ""
+    @State private var weightUnit = AppSettings.weightUnit
     @State private var weightValues: [Double] = []
     @State private var newWeightText = ""
     @State private var createdEquipment: Equipment?
@@ -25,6 +26,13 @@ struct CustomEquipmentFormView: View {
                 Form {
                     Section("Name") {
                         TextField("e.g. Adjustable Dumbbells", text: $name)
+                    }
+                    Section("Weight Unit") {
+                        Picker("Weight unit", selection: $weightUnit) {
+                            Text("kg").tag("kg")
+                            Text("lb").tag("lb")
+                        }
+                        .pickerStyle(.segmented)
                     }
                     Section("Available weights") {
                         ForEach(weightValues.indices, id: \.self) { index in
@@ -62,8 +70,8 @@ struct CustomEquipmentFormView: View {
 
     private func formatted(_ value: Double) -> String {
         value.truncatingRemainder(dividingBy: 1) == 0
-            ? "\(Int(value)) \(AppSettings.weightUnit)"
-            : "\(value) \(AppSettings.weightUnit)"
+            ? "\(Int(value)) \(weightUnit)"
+            : "\(value) \(weightUnit)"
     }
 
     private func save() {
@@ -71,7 +79,8 @@ struct CustomEquipmentFormView: View {
             name: name.trimmingCharacters(in: .whitespaces),
             iconSymbolName: IconSymbolMapping.defaultEquipmentSymbol,
             isCustom: true,
-            isFavorited: true
+            isAtHome: true,
+            preferredWeightUnit: weightUnit
         )
         context.insert(equipment)
         for (index, value) in weightValues.enumerated() {

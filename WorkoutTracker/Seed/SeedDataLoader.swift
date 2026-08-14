@@ -111,6 +111,7 @@ enum SeedDataLoader {
         let equipment: String?
         let muscles: [String]
         let categories: [String]
+        let notes: String?
     }
 
     private static func seedExercises(
@@ -123,7 +124,7 @@ enum SeedDataLoader {
         for seed in seeds {
             let equipment = seed.equipment.flatMap { equipmentByName[$0] }
             let symbol = IconSymbolMapping.defaultExerciseSymbol(forCategoryNames: seed.categories)
-            let exercise = Exercise(id: SeedIdentity.uuid("exercise", seed.name), name: seed.name, iconSymbolName: symbol, imageAssetName: ExerciseImageMapping.assetName[seed.name], equipment: equipment)
+            let exercise = Exercise(id: SeedIdentity.uuid("exercise", seed.name), name: seed.name, notes: seed.notes, iconSymbolName: symbol, imageAssetName: ExerciseImageMapping.assetName[seed.name], equipment: equipment)
             exercise.muscles = seed.muscles.compactMap { musclesByName[$0] }
             exercise.categories = seed.categories.compactMap { exerciseCategoriesByName[$0] }
             context.insert(exercise)

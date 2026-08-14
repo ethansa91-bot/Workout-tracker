@@ -34,7 +34,7 @@ struct SetRowView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
-                .tint(.red)
+                .tint(Color.appDanger)
             } else {
                 Button("Log", action: onLog)
                     .buttonStyle(.borderedProminent)
