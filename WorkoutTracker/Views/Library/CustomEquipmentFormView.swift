@@ -8,6 +8,7 @@ struct CustomEquipmentFormView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var name = ""
+    @State private var isWeighted = false
     @State private var weightUnit = AppSettings.weightUnit
     @State private var weightValues: [Double] = []
     @State private var newWeightText = ""
@@ -27,29 +28,38 @@ struct CustomEquipmentFormView: View {
                     Section("Name") {
                         TextField("e.g. Adjustable Dumbbells", text: $name)
                     }
-                    Section("Weight Unit") {
-                        Picker("Weight unit", selection: $weightUnit) {
-                            Text("kg").tag("kg")
-                            Text("lb").tag("lb")
-                        }
-                        .pickerStyle(.segmented)
+                    Section {
+                        Toggle("Weighted", isOn: $isWeighted)
+                    } footer: {
+                        Text(isWeighted
+                            ? "Weighted equipment (dumbbells, vests) can have available weights and a unit."
+                            : "Passive equipment (mats, benches, rings) has no adjustable weight.")
                     }
-                    Section("Available weights") {
-                        ForEach(weightValues.indices, id: \.self) { index in
-                            Text(formatted(weightValues[index]))
-                        }
-                        .onDelete { weightValues.remove(atOffsets: $0) }
-
-                        HStack {
-                            TextField("Add weight", text: $newWeightText)
-                                .keyboardType(.decimalPad)
-                            Button("Add") {
-                                if let value = Double(newWeightText) {
-                                    weightValues.append(value)
-                                    newWeightText = ""
-                                }
+                    if isWeighted {
+                        Section("Weight Unit") {
+                            Picker("Weight unit", selection: $weightUnit) {
+                                Text("kg").tag("kg")
+                                Text("lb").tag("lb")
                             }
-                            .disabled(Double(newWeightText) == nil)
+                            .pickerStyle(.segmented)
+                        }
+                        Section("Available weights") {
+                            ForEach(weightValues.indices, id: \.self) { index in
+                                Text(formatted(weightValues[index]))
+                            }
+                            .onDelete { weightValues.remove(atOffsets: $0) }
+
+                            HStack {
+                                TextField("Add weight", text: $newWeightText)
+                                    .keyboardType(.decimalPad)
+                                Button("Add") {
+                                    if let value = Double(newWeightText) {
+                                        weightValues.append(value)
+                                        newWeightText = ""
+                                    }
+                                }
+                                .disabled(Double(newWeightText) == nil)
+                            }
                         }
                     }
                 }
@@ -80,12 +90,15 @@ struct CustomEquipmentFormView: View {
             iconSymbolName: IconSymbolMapping.defaultEquipmentSymbol,
             isCustom: true,
             isAtHome: true,
-            preferredWeightUnit: weightUnit
+            isWeighted: isWeighted,
+            preferredWeightUnit: isWeighted ? weightUnit : nil
         )
         context.insert(equipment)
-        for (index, value) in weightValues.enumerated() {
-            let combo = WeightCombo(equipment: equipment, value: value, sortOrder: index)
-            context.insert(combo)
+        if isWeighted {
+            for (index, value) in weightValues.enumerated() {
+                let combo = WeightCombo(equipment: equipment, value: value, sortOrder: index)
+                context.insert(combo)
+            }
         }
         try? context.save()
         createdEquipment = equipment

@@ -41,6 +41,7 @@ struct WorkoutSectionDTO: Codable {
     let sortOrder: Int
     let sectionType: String
     let name: String?
+    let description: String?
     let updatedAt: Date
     let deletedAt: Date?
 
@@ -51,6 +52,7 @@ struct WorkoutSectionDTO: Codable {
         try c.encode(sortOrder, forKey: .sortOrder)
         try c.encode(sectionType, forKey: .sectionType)
         try c.encode(name, forKey: .name)
+        try c.encode(description, forKey: .description)
         try c.encode(updatedAt, forKey: .updatedAt)
         try c.encode(deletedAt, forKey: .deletedAt)
     }
@@ -300,7 +302,7 @@ enum WorkoutSyncAdapter: CatalogSyncAdapter {
 enum WorkoutSectionSyncAdapter: CatalogSyncAdapter {
     static let tableName = "workout_sections"
     static func dto(from model: WorkoutSection) -> WorkoutSectionDTO {
-        WorkoutSectionDTO(id: model.id, workoutId: model.workout?.id, sortOrder: model.sortOrder, sectionType: model.sectionTypeRaw, name: model.name, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
+        WorkoutSectionDTO(id: model.id, workoutId: model.workout?.id, sortOrder: model.sortOrder, sectionType: model.sectionTypeRaw, name: model.name, description: model.sectionDescription, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
     }
     static func id(of dto: WorkoutSectionDTO) -> UUID { dto.id }
     static func updatedAt(of dto: WorkoutSectionDTO) -> Date { dto.updatedAt }
@@ -312,7 +314,7 @@ enum WorkoutSectionSyncAdapter: CatalogSyncAdapter {
     }
     static func insertLocal(from dto: WorkoutSectionDTO, context: ModelContext) -> WorkoutSection {
         let workout = dto.workoutId.flatMap { WorkoutSyncAdapter.fetchLocal(id: $0, context: context) }
-        let model = WorkoutSection(id: dto.id, workout: workout, sortOrder: dto.sortOrder, sectionType: WorkoutSectionType(rawValue: dto.sectionType) ?? .time, name: dto.name)
+        let model = WorkoutSection(id: dto.id, workout: workout, sortOrder: dto.sortOrder, sectionType: WorkoutSectionType(rawValue: dto.sectionType) ?? .time, name: dto.name, description: dto.description)
         context.insert(model)
         return model
     }
@@ -320,6 +322,7 @@ enum WorkoutSectionSyncAdapter: CatalogSyncAdapter {
         model.sortOrder = dto.sortOrder
         model.sectionTypeRaw = dto.sectionType
         model.name = dto.name
+        model.sectionDescription = dto.description
         if model.workout?.id != dto.workoutId {
             model.workout = dto.workoutId.flatMap { WorkoutSyncAdapter.fetchLocal(id: $0, context: context) }
         }

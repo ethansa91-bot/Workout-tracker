@@ -16,7 +16,9 @@ struct QuickSectionEditorView: View {
     @State private var showingDeleteConfirm = false
     @State private var errorMessage: String?
     @State private var showingRecap = false
-    @State private var nameField: String = ""
+    @State private var showingEditSheet = false
+    @State private var nameText = ""
+    @State private var descriptionText = ""
 
     private var isLocked: Bool { section.isLocked }
     private var isEditing: Bool { editMode.isEditing }
@@ -24,7 +26,7 @@ struct QuickSectionEditorView: View {
     var body: some View {
         VStack(spacing: 0) {
             if !isLocked {
-                nameBar
+                heroCard
                 settingsBar
                 headerBar
                 Divider()
@@ -45,8 +47,6 @@ struct QuickSectionEditorView: View {
             }
         }
         .background(Color.appBackground)
-        .toolbar { mainToolbar }
-        .onAppear { nameField = section.name ?? "" }
         .navigationDestination(isPresented: $showingRecap) {
             if let workout = section.workout {
                 SessionRecapView(workout: workout)
@@ -64,6 +64,9 @@ struct QuickSectionEditorView: View {
         ) {
             Button("Delete", role: .destructive) { deleteSelection() }
         }
+        .sheet(isPresented: $showingEditSheet) {
+            editSheet
+        }
         .alert("Error", isPresented: Binding(
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } }
@@ -74,14 +77,69 @@ struct QuickSectionEditorView: View {
         }
     }
 
-    private var nameBar: some View {
-        TextField(section.sectionType.fallbackSectionName, text: $nameField)
-            .textFieldStyle(.roundedBorder)
-            .padding(.horizontal)
-            .padding(.top, 12)
-            .submitLabel(.done)
-            .onSubmit { renameSection() }
-            .onDisappear { renameSection() }
+    /// Same hero-card treatment as `SessionRecapView`'s workout header — name + a
+    /// single pencil opening one sheet that edits both name and description together.
+    private var heroCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(section.name?.isEmpty == false ? section.name! : section.sectionType.fallbackSectionName)
+                    .font(.appSerif(.title2))
+                    .foregroundStyle(Color.appInk)
+                Button {
+                    nameText = section.name ?? ""
+                    descriptionText = section.sectionDescription ?? ""
+                    showingEditSheet = true
+                } label: {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.appInkMuted)
+            }
+            if let description = section.sectionDescription, !description.isEmpty {
+                Text(description)
+                    .font(.footnote)
+                    .foregroundStyle(Color.appInkMuted)
+            }
+
+            Text(heroInfoLine)
+                .font(.subheadline)
+                .foregroundStyle(Color.appInkMuted)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .background(.thickMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(.horizontal)
+        .padding(.top, 12)
+    }
+
+    private var heroInfoLine: String {
+        let count = section.sortedQuickExercises.count
+        return "\(section.sectionType.pillLabel) · \(count) Exercise\(count == 1 ? "" : "s")"
+    }
+
+    private var editSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Name") {
+                    TextField("Name", text: $nameText)
+                }
+                Section("Description") {
+                    TextEditor(text: $descriptionText)
+                        .frame(minHeight: 160)
+                }
+            }
+            .themedListBackground()
+            .navigationTitle("Edit Section")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showingEditSheet = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { saveEdits() }
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -108,53 +166,67 @@ struct QuickSectionEditorView: View {
         Binding(get: { section.amrapDurationSeconds / 60 }, set: { updateAmrapDuration($0 * 60) })
     }
 
+    /// Save (left) / Add Exercises (centered) / Edit (right) when browsing; Delete
+    /// (centered) when in multi-select mode — all in the same glass style as
+    /// `SessionRecapView`'s "New Section" row, grouped in one `GlassEffectContainer` so
+    /// nearby glass buttons render as a single coherent pass.
     @ViewBuilder
     private var headerBar: some View {
-        if isEditing {
-            HStack {
-                Spacer()
-                Button("Delete", role: .destructive) { showingDeleteConfirm = true }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.appDanger)
-                    .disabled(selectedEntryIDs.isEmpty)
-            }
-            .padding()
-        } else {
-            HStack {
-                Button("Add Exercises") { showingAddExercises = true }
-                    .buttonStyle(.borderedProminent)
-                Spacer()
-                Button("Save") {
-                    renameSection()
-                    if onSaveNavigatesToRecap {
-                        showingRecap = true
-                    } else {
-                        dismiss()
+        GlassEffectContainer {
+            ZStack {
+                if !isEditing {
+                    HStack {
+                        Button {
+                            finishEditing()
+                        } label: {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(Color.appAccent)
+                        }
+                        .buttonStyle(.glass)
+                        Spacer()
                     }
                 }
-                .buttonStyle(.borderedProminent)
+
+                HStack {
+                    Spacer()
+                    if isEditing {
+                        Button(role: .destructive) {
+                            showingDeleteConfirm = true
+                        } label: {
+                            Text("Delete").foregroundStyle(Color.appDanger)
+                        }
+                        .buttonStyle(.glass)
+                        .disabled(selectedEntryIDs.isEmpty)
+                    } else {
+                        Button {
+                            showingAddExercises = true
+                        } label: {
+                            Text("Add Exercises").foregroundStyle(Color.appAccent)
+                        }
+                        .buttonStyle(.glass)
+                    }
+                    Spacer()
+                }
+
+                HStack {
+                    Spacer()
+                    Button {
+                        editMode = isEditing ? .inactive : .active
+                    } label: {
+                        Image(systemName: isEditing ? "xmark" : "pencil")
+                            .foregroundStyle(Color.appAccent)
+                    }
+                    .buttonStyle(.glass)
+                }
             }
-            .padding()
         }
+        .padding()
     }
 
     private var emptyState: some View {
         Text("No exercises yet")
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    @ToolbarContentBuilder
-    private var mainToolbar: some ToolbarContent {
-        if !isLocked {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    editMode = isEditing ? .inactive : .active
-                } label: {
-                    Image(systemName: isEditing ? "checkmark" : "pencil")
-                }
-            }
-        }
     }
 
     private var existingExerciseIDs: Set<UUID> {
@@ -164,7 +236,7 @@ struct QuickSectionEditorView: View {
     private func entryRow(_ entry: SectionExerciseEntry) -> some View {
         HStack(spacing: 12) {
             IconBadge(systemName: entry.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional")
-            Text(entry.exercise?.name ?? "Exercise")
+            Text(entry.exercise?.displayName ?? "Exercise")
         }
         .padding(.vertical, 2)
     }
@@ -209,11 +281,25 @@ struct QuickSectionEditorView: View {
         catch { errorMessage = error.localizedDescription }
     }
 
-    private func renameSection() {
-        let trimmed = nameField.trimmingCharacters(in: .whitespacesAndNewlines)
-        let newName = trimmed.isEmpty ? nil : trimmed
-        guard newName != section.name else { return }
-        do { try WorkoutEditingService.rename(section, to: newName, context: context) }
-        catch { errorMessage = error.localizedDescription }
+    private func finishEditing() {
+        if onSaveNavigatesToRecap {
+            showingRecap = true
+        } else {
+            dismiss()
+        }
+    }
+
+    private func saveEdits() {
+        let trimmedName = nameText.trimmingCharacters(in: .whitespaces)
+        let trimmedDescription = descriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            if !trimmedName.isEmpty {
+                try WorkoutEditingService.rename(section, to: trimmedName, context: context)
+            }
+            try WorkoutEditingService.updateDescription(section, to: trimmedDescription.isEmpty ? nil : trimmedDescription, context: context)
+            showingEditSheet = false
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }

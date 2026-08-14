@@ -193,6 +193,7 @@ struct EquipmentDTO: Codable {
     let isCustom: Bool
     let isAtHome: Bool
     let isAtGym: Bool
+    let isWeighted: Bool
     let preferredWeightUnit: String?
     let updatedAt: Date
     let deletedAt: Date?
@@ -205,6 +206,7 @@ struct EquipmentDTO: Codable {
         try c.encode(isCustom, forKey: .isCustom)
         try c.encode(isAtHome, forKey: .isAtHome)
         try c.encode(isAtGym, forKey: .isAtGym)
+        try c.encode(isWeighted, forKey: .isWeighted)
         try c.encode(preferredWeightUnit, forKey: .preferredWeightUnit)
         try c.encode(updatedAt, forKey: .updatedAt)
         try c.encode(deletedAt, forKey: .deletedAt)
@@ -253,7 +255,6 @@ struct ExerciseDTO: Codable {
     let iconAssetIdentifier: String
     let isCustom: Bool
     let isFavorited: Bool
-    let equipmentId: UUID?
     let updatedAt: Date
     let deletedAt: Date?
 
@@ -266,7 +267,6 @@ struct ExerciseDTO: Codable {
         try c.encode(iconAssetIdentifier, forKey: .iconAssetIdentifier)
         try c.encode(isCustom, forKey: .isCustom)
         try c.encode(isFavorited, forKey: .isFavorited)
-        try c.encode(equipmentId, forKey: .equipmentId)
         try c.encode(updatedAt, forKey: .updatedAt)
         try c.encode(deletedAt, forKey: .deletedAt)
     }
@@ -340,7 +340,7 @@ enum MuscleSyncAdapter: CatalogSyncAdapter {
 enum EquipmentSyncAdapter: CatalogSyncAdapter {
     static let tableName = "equipment"
     static func dto(from model: Equipment) -> EquipmentDTO {
-        EquipmentDTO(id: model.id, name: model.name, iconAssetIdentifier: model.iconSymbolName, isCustom: model.isCustom, isAtHome: model.isAtHome, isAtGym: model.isAtGym, preferredWeightUnit: model.preferredWeightUnit, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
+        EquipmentDTO(id: model.id, name: model.name, iconAssetIdentifier: model.iconSymbolName, isCustom: model.isCustom, isAtHome: model.isAtHome, isAtGym: model.isAtGym, isWeighted: model.isWeighted, preferredWeightUnit: model.preferredWeightUnit, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
     }
     static func id(of dto: EquipmentDTO) -> UUID { dto.id }
     static func updatedAt(of dto: EquipmentDTO) -> Date { dto.updatedAt }
@@ -351,7 +351,7 @@ enum EquipmentSyncAdapter: CatalogSyncAdapter {
         return try? context.fetch(descriptor).first
     }
     static func insertLocal(from dto: EquipmentDTO, context: ModelContext) -> Equipment {
-        let model = Equipment(id: dto.id, name: dto.name, iconSymbolName: dto.iconAssetIdentifier, isCustom: dto.isCustom, isAtHome: dto.isAtHome, isAtGym: dto.isAtGym, preferredWeightUnit: dto.preferredWeightUnit)
+        let model = Equipment(id: dto.id, name: dto.name, iconSymbolName: dto.iconAssetIdentifier, isCustom: dto.isCustom, isAtHome: dto.isAtHome, isAtGym: dto.isAtGym, isWeighted: dto.isWeighted, preferredWeightUnit: dto.preferredWeightUnit)
         context.insert(model)
         return model
     }
@@ -361,6 +361,7 @@ enum EquipmentSyncAdapter: CatalogSyncAdapter {
         model.isCustom = dto.isCustom
         model.isAtHome = dto.isAtHome
         model.isAtGym = dto.isAtGym
+        model.isWeighted = dto.isWeighted
         model.preferredWeightUnit = dto.preferredWeightUnit
     }
 }
@@ -419,7 +420,7 @@ enum ExerciseCategorySyncAdapter: CatalogSyncAdapter {
 enum ExerciseSyncAdapter: CatalogSyncAdapter {
     static let tableName = "exercises"
     static func dto(from model: Exercise) -> ExerciseDTO {
-        ExerciseDTO(id: model.id, name: model.name, label: model.label, notes: model.notes, iconAssetIdentifier: model.iconSymbolName, isCustom: model.isCustom, isFavorited: model.isFavorited, equipmentId: model.equipment?.id, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
+        ExerciseDTO(id: model.id, name: model.name, label: model.label, notes: model.notes, iconAssetIdentifier: model.iconSymbolName, isCustom: model.isCustom, isFavorited: model.isFavorited, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
     }
     static func id(of dto: ExerciseDTO) -> UUID { dto.id }
     static func updatedAt(of dto: ExerciseDTO) -> Date { dto.updatedAt }
@@ -430,10 +431,10 @@ enum ExerciseSyncAdapter: CatalogSyncAdapter {
         return try? context.fetch(descriptor).first
     }
     static func insertLocal(from dto: ExerciseDTO, context: ModelContext) -> Exercise {
-        let equipment = dto.equipmentId.flatMap { EquipmentSyncAdapter.fetchLocal(id: $0, context: context) }
         // imageAssetName isn't part of the sync payload — it's a local-only reference
-        // photo derived from the exercise's name, the same on every device.
-        let model = Exercise(id: dto.id, name: dto.name, label: dto.label, notes: dto.notes, iconSymbolName: dto.iconAssetIdentifier, imageAssetName: ExerciseImageMapping.assetName[dto.name], isCustom: dto.isCustom, isFavorited: dto.isFavorited, equipment: equipment)
+        // photo derived from the exercise's name, the same on every device. Equipment
+        // associations arrive separately via the `exercise_equipment` join sync.
+        let model = Exercise(id: dto.id, name: dto.name, label: dto.label, notes: dto.notes, iconSymbolName: dto.iconAssetIdentifier, imageAssetName: ExerciseImageMapping.assetName[dto.name], isCustom: dto.isCustom, isFavorited: dto.isFavorited)
         context.insert(model)
         return model
     }
@@ -444,9 +445,6 @@ enum ExerciseSyncAdapter: CatalogSyncAdapter {
         model.iconSymbolName = dto.iconAssetIdentifier
         model.isCustom = dto.isCustom
         model.isFavorited = dto.isFavorited
-        if model.equipment?.id != dto.equipmentId {
-            model.equipment = dto.equipmentId.flatMap { EquipmentSyncAdapter.fetchLocal(id: $0, context: context) }
-        }
     }
 }
 
@@ -486,6 +484,14 @@ enum JoinSync {
             table: "exercise_exercise_categories",
             parentColumn: "exercise_id", parentID: exercise.id,
             childColumn: "exercise_category_id", childIDs: exercise.categories.map(\.id)
+        )
+    }
+
+    static func pushExerciseEquipment(for exercise: Exercise) async throws {
+        try await replace(
+            table: "exercise_equipment",
+            parentColumn: "exercise_id", parentID: exercise.id,
+            childColumn: "equipment_id", childIDs: exercise.equipmentItems.map(\.id)
         )
     }
 

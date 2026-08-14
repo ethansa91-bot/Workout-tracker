@@ -77,7 +77,7 @@ struct MuscleDetailView: View {
                     ForEach(targetingExercises) { exercise in
                         HStack(spacing: 12) {
                             IconBadge(systemName: exercise.iconSymbolName, size: 28)
-                            Text(exercise.name)
+                            Text(exercise.displayName)
                         }
                     }
                 }

@@ -93,8 +93,9 @@ enum PersonalEquipmentUpdate {
             guard let exercise = exercisesByName[override.name] else { continue }
             var didChange = false
             let newEquipment = override.equipment.flatMap { equipmentByName[$0] }
-            if exercise.equipment?.id != newEquipment?.id {
-                exercise.equipment = newEquipment
+            let newEquipmentItems = newEquipment.map { [$0] } ?? []
+            if Set(exercise.equipmentItems.map(\.id)) != Set(newEquipmentItems.map(\.id)) {
+                exercise.equipmentItems = newEquipmentItems
                 didChange = true
             }
             if let label = override.label, exercise.label == nil {
@@ -118,6 +119,7 @@ enum PersonalEquipmentUpdate {
             let combo = WeightCombo(equipment: equipment, value: value, sortOrder: index)
             context.insert(combo)
         }
+        equipment.isWeighted = true
         equipment.markDirty()
     }
 

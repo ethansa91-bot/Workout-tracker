@@ -241,7 +241,7 @@ enum WgerCatalogMigration {
                 notes: seed.notes,
                 iconSymbolName: symbol,
                 imageAssetName: ExerciseImageMapping.assetName[seed.name],
-                equipment: equipment
+                equipmentItems: equipment.map { [$0] } ?? []
             )
             exercise.muscles = seed.muscles.compactMap { musclesByName[$0] }
             exercise.categories = seed.categories.compactMap { categoriesByName[$0] }

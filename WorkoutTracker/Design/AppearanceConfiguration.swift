@@ -18,5 +18,11 @@ enum AppearanceConfiguration {
         UITableView.appearance().backgroundColor = .appBackground
         UITableView.appearance().separatorColor = UIColor.appInk.withAlphaComponent(0.08)
         UICollectionView.appearance().backgroundColor = .appBackground
+
+        // SwiftUI's `.tint(_:)` on a `Picker(.segmented)` doesn't reliably reach the
+        // underlying UISegmentedControl's selected-segment color on every iOS version,
+        // so it's set directly here instead — same deep green as the tab bar.
+        UISegmentedControl.appearance().selectedSegmentTintColor = .appAccent
+        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
     }
 }

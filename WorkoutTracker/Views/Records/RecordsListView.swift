@@ -37,7 +37,7 @@ struct RecordsListView: View {
         }
 
         private func formattedWeight(_ value: Double) -> String {
-            let unit = exercise.equipment?.effectiveWeightUnit ?? AppSettings.weightUnit
+            let unit = exercise.equipmentItems.first(where: \.isWeighted)?.effectiveWeightUnit ?? AppSettings.weightUnit
             return value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value)) \(unit)" : "\(value) \(unit)"
         }
     }
@@ -77,7 +77,10 @@ struct RecordsListView: View {
             guard record != nil || derivedBestSet != nil || derivedHold != nil else { return nil }
             return Row(exercise: exercise, record: record, derivedBestSet: derivedBestSet, derivedHold: derivedHold)
         }
-        .filter { searchText.isEmpty || $0.exercise.name.localizedCaseInsensitiveContains(searchText) }
+        .filter { searchText.isEmpty
+            || $0.exercise.name.localizedCaseInsensitiveContains(searchText)
+            || ($0.exercise.label?.localizedCaseInsensitiveContains(searchText) ?? false)
+        }
     }
 
     private var exerciseIDsWithRecord: Set<UUID> {
@@ -136,7 +139,7 @@ struct RecordsListView: View {
         HStack(spacing: 12) {
             IconBadge(systemName: row.exercise.iconSymbolName)
             VStack(alignment: .leading, spacing: 2) {
-                Text(row.exercise.name)
+                Text(row.exercise.displayName)
                 Text(row.summary)
                     .font(.caption)
                     .foregroundStyle(.secondary)

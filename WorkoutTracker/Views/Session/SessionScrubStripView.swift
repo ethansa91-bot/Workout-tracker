@@ -51,7 +51,7 @@ struct SessionScrubStripView: View {
 
     private func chipTitle(_ step: TimeSectionStep) -> String {
         switch step.stepType {
-        case .exercise: return step.exercise?.name ?? "Exercise"
+        case .exercise: return step.exercise?.displayName ?? "Exercise"
         case .rest: return "Rest"
         case .getReady: return "Get Ready"
         }

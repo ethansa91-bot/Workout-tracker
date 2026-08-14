@@ -4,6 +4,7 @@ import SwiftData
 struct ExerciseDetailView: View {
     @Bindable var exercise: Exercise
     @Environment(\.modelContext) private var context
+    @State private var showingEdit = false
 
     var body: some View {
         List {
@@ -21,7 +22,7 @@ struct ExerciseDetailView: View {
 
                 DetailHeader(
                     systemName: exercise.iconSymbolName,
-                    title: exercise.name,
+                    title: exercise.displayName,
                     subtitle: exercise.isCustom ? "Custom exercise" : nil
                 )
 
@@ -35,9 +36,11 @@ struct ExerciseDetailView: View {
                 ))
             }
 
-            if let equipmentName = exercise.equipment?.name {
+            if !exercise.equipmentItems.isEmpty {
                 Section("Equipment") {
-                    Text(equipmentName)
+                    ForEach(exercise.equipmentItems.sorted { $0.name < $1.name }) { equipment in
+                        Text(equipment.name)
+                    }
                 }
             }
 
@@ -74,7 +77,19 @@ struct ExerciseDetailView: View {
             }
         }
         .themedListBackground()
-        .navigationTitle(exercise.name)
+        .navigationTitle(exercise.displayName)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingEdit = true
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+            }
+        }
+        .sheet(isPresented: $showingEdit) {
+            CustomExerciseFormView(existingExercise: exercise)
+        }
     }
 }

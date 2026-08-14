@@ -23,13 +23,16 @@ struct EquipmentDetailView: View {
                     toggleChip(icon: "building.2", label: "At the Gym", isOn: equipment.isAtGym, tint: .orange) {
                         toggleGym()
                     }
+                    toggleChip(icon: "dumbbell", label: "Weighted", isOn: equipment.isWeighted, tint: Color.appRust) {
+                        toggleWeighted()
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
                 .listRowSeparator(.hidden)
                 .padding(.vertical, 4)
             }
 
-            if equipment.isAtHome || equipment.isAtGym {
+            if equipment.isWeighted {
                 Section("Weight Unit") {
                     Picker("Weight unit", selection: Binding(
                         get: { equipment.effectiveWeightUnit },
@@ -60,7 +63,7 @@ struct EquipmentDetailView: View {
                 }
             } else {
                 Section {
-                    Text("Add to your equipment to personalize its available weights.")
+                    Text("Turn on Weighted to add available weights and a unit for this equipment.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -104,6 +107,12 @@ struct EquipmentDetailView: View {
 
     private func toggleGym() {
         equipment.isAtGym.toggle()
+        equipment.markDirty()
+        try? context.save()
+    }
+
+    private func toggleWeighted() {
+        equipment.isWeighted.toggle()
         equipment.markDirty()
         try? context.save()
     }

@@ -40,10 +40,10 @@ enum WorkoutEditingService {
 
     // MARK: - Sections
 
-    static func addSection(to workout: Workout, type: WorkoutSectionType, context: ModelContext) throws -> WorkoutSection {
+    static func addSection(to workout: Workout, type: WorkoutSectionType, name: String? = nil, description: String? = nil, context: ModelContext) throws -> WorkoutSection {
         try requireUnlocked(workout)
         let nextOrder = (workout.sections.map(\.sortOrder).max() ?? -1) + 1
-        let section = WorkoutSection(workout: workout, sortOrder: nextOrder, sectionType: type)
+        let section = WorkoutSection(workout: workout, sortOrder: nextOrder, sectionType: type, name: name, description: description)
         context.insert(section)
         if type == .time {
             let getReady = TimeSectionStep(section: section, sortOrder: 0, stepType: .getReady, exercise: nil, durationSeconds: 15)
@@ -74,8 +74,8 @@ enum WorkoutEditingService {
     /// Creates a standalone template section (`workout == nil`) — reachable from the
     /// Section Templates screen's "+" button, not from any workout. Never locked, so
     /// no guard needed.
-    static func createTemplate(name: String, type: WorkoutSectionType, context: ModelContext) -> WorkoutSection {
-        let section = WorkoutSection(workout: nil, sortOrder: 0, sectionType: type, name: name)
+    static func createTemplate(name: String, type: WorkoutSectionType, description: String? = nil, context: ModelContext) -> WorkoutSection {
+        let section = WorkoutSection(workout: nil, sortOrder: 0, sectionType: type, name: name, description: description)
         context.insert(section)
         if type == .time {
             let getReady = TimeSectionStep(section: section, sortOrder: 0, stepType: .getReady, exercise: nil, durationSeconds: 15)
@@ -93,6 +93,14 @@ enum WorkoutEditingService {
         section.name = name
         section.markDirty()
         workout?.markDirty()
+        try context.save()
+    }
+
+    /// Sets a template's description — shown in the templates list and the "Import
+    /// Template" picker. Templates are never locked, so no guard needed.
+    static func updateDescription(_ section: WorkoutSection, to description: String?, context: ModelContext) throws {
+        section.sectionDescription = description
+        section.markDirty()
         try context.save()
     }
 

@@ -10,7 +10,14 @@ enum SeedDataError: Error {
 /// other locally-created row, so it flows through the normal "sync everything" path the
 /// first time the user pushes to Supabase — no special-casing needed in the sync engine.
 enum SeedDataLoader {
-    private static let seededFlagKey = "seed.didSeedCatalogV1"
+    /// Not private — `CatalogSeedLoader` (the newer, consolidated fresh-install path)
+    /// shares this same flag, so `hasSeeded` is one signal regardless of which loader
+    /// actually populated the catalog.
+    static let seededFlagKey = "seed.didSeedCatalogV1"
+
+    static var hasSeeded: Bool {
+        UserDefaults.standard.bool(forKey: seededFlagKey)
+    }
 
     static func seedIfNeeded(context: ModelContext) {
         guard !UserDefaults.standard.bool(forKey: seededFlagKey) else { return }
@@ -91,13 +98,14 @@ enum SeedDataLoader {
     private struct EquipmentSeed: Decodable {
         let name: String
         let icon: String
+        let weighted: Bool
     }
 
     private static func seedEquipment(context: ModelContext) throws -> [String: Equipment] {
         let seeds: [EquipmentSeed] = try loadJSON("equipment")
         var result: [String: Equipment] = [:]
         for seed in seeds {
-            let equipment = Equipment(id: SeedIdentity.uuid("equipment", seed.name), name: seed.name, iconSymbolName: seed.icon)
+            let equipment = Equipment(id: SeedIdentity.uuid("equipment", seed.name), name: seed.name, iconSymbolName: seed.icon, isWeighted: seed.weighted)
             context.insert(equipment)
             result[seed.name] = equipment
         }
@@ -128,7 +136,7 @@ enum SeedDataLoader {
         for seed in seeds {
             let equipment = seed.equipment.flatMap { equipmentByName[$0] }
             let symbol = IconSymbolMapping.defaultExerciseSymbol(forCategoryNames: seed.categories)
-            let exercise = Exercise(id: SeedIdentity.uuid("exercise", seed.name), name: seed.name, notes: seed.notes, iconSymbolName: symbol, imageAssetName: ExerciseImageMapping.assetName[seed.name], equipment: equipment)
+            let exercise = Exercise(id: SeedIdentity.uuid("exercise", seed.name), name: seed.name, notes: seed.notes, iconSymbolName: symbol, imageAssetName: ExerciseImageMapping.assetName[seed.name], equipmentItems: equipment.map { [$0] } ?? [])
             exercise.muscles = seed.muscles.compactMap { musclesByName[$0] }
             exercise.categories = seed.categories.compactMap { exerciseCategoriesByName[$0] }
             context.insert(exercise)

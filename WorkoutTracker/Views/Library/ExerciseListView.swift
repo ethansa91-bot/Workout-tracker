@@ -12,7 +12,9 @@ struct ExerciseListView: View {
     private var filtered: [Exercise] {
         allExercises.filter { exercise in
             exercise.deletedAt == nil
-                && (searchText.isEmpty || exercise.name.localizedCaseInsensitiveContains(searchText))
+                && (searchText.isEmpty
+                    || exercise.name.localizedCaseInsensitiveContains(searchText)
+                    || (exercise.label?.localizedCaseInsensitiveContains(searchText) ?? false))
                 && filter.matches(exercise)
         }
     }
@@ -52,9 +54,11 @@ struct ExerciseListView: View {
         HStack(spacing: 12) {
             IconBadge(systemName: exercise.iconSymbolName)
             VStack(alignment: .leading, spacing: 2) {
-                Text(exercise.name)
-                if let equipmentName = exercise.equipment?.name {
-                    Text(equipmentName).font(.caption).foregroundStyle(.secondary)
+                Text(exercise.displayName)
+                if !exercise.equipmentItems.isEmpty {
+                    Text(exercise.equipmentItems.map(\.name).joined(separator: ", "))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             Spacer()

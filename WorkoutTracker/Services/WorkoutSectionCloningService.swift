@@ -88,7 +88,7 @@ enum WorkoutSectionCloningService {
     /// every clone/template/import path needs this same construction, just with a
     /// different destination workout/sortOrder/name.
     private static func makeSectionCopy(of source: WorkoutSection, workout: Workout?, sortOrder: Int, name: String?) -> WorkoutSection {
-        let copy = WorkoutSection(workout: workout, sortOrder: sortOrder, sectionType: source.sectionType, name: name)
+        let copy = WorkoutSection(workout: workout, sortOrder: sortOrder, sectionType: source.sectionType, name: name, description: source.sectionDescription)
         copy.emomRoundCount = source.emomRoundCount
         copy.amrapDurationSeconds = source.amrapDurationSeconds
         return copy

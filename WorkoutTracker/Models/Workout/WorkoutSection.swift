@@ -23,6 +23,17 @@ extension WorkoutSectionType {
         case .amrap: return "AMRAP Section"
         }
     }
+
+    /// Short label for a type pill/badge — e.g. `SectionTemplatesView`'s row pill and
+    /// the section editors' header.
+    var pillLabel: String {
+        switch self {
+        case .time: return "Follow Along"
+        case .rep: return "Rep"
+        case .emom: return "EMOM"
+        case .amrap: return "AMRAP"
+        }
+    }
 }
 
 @Model
@@ -31,6 +42,11 @@ final class WorkoutSection: SyncableModel, Orderable {
     var workout: Workout?
     var sortOrder: Int
     var name: String?
+    /// Optional description, editable on any section — in-workout or template alike.
+    /// Shown in the templates list and the "Import Template" picker for templates.
+    /// Named `sectionDescription`, not `description` — SwiftData's `@Model` macro
+    /// reserves the `description` property name.
+    var sectionDescription: String?
     var sectionTypeRaw: String
     var updatedAt: Date
     var deletedAt: Date?
@@ -62,12 +78,13 @@ final class WorkoutSection: SyncableModel, Orderable {
         set { sectionTypeRaw = newValue.rawValue }
     }
 
-    init(id: UUID = UUID(), workout: Workout? = nil, sortOrder: Int, sectionType: WorkoutSectionType, name: String? = nil) {
+    init(id: UUID = UUID(), workout: Workout? = nil, sortOrder: Int, sectionType: WorkoutSectionType, name: String? = nil, description: String? = nil) {
         self.id = id
         self.workout = workout
         self.sortOrder = sortOrder
         self.sectionTypeRaw = sectionType.rawValue
         self.name = name
+        self.sectionDescription = description
         self.updatedAt = .now
         self.deletedAt = nil
         self.isDirty = true

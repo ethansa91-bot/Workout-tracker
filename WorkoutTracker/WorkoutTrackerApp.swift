@@ -46,22 +46,61 @@ struct WorkoutTrackerApp: App {
 
     init() {
         AppearanceConfiguration.apply()
-        SeedDataLoader.seedIfNeeded(context: sharedModelContainer.mainContext)
-        MuscleTaxonomyMigration.migrateIfNeeded(context: sharedModelContainer.mainContext)
-        FavoriteExercisesImport.importIfNeeded(context: sharedModelContainer.mainContext)
-        FavoriteExercisesCorrection.correctIfNeeded(context: sharedModelContainer.mainContext)
-        GetReadyStepMigration.migrateIfNeeded(context: sharedModelContainer.mainContext)
-        ExerciseImageMigration.migrateIfNeeded(context: sharedModelContainer.mainContext)
-        ExerciseImageRemovalMigration.migrateIfNeeded(context: sharedModelContainer.mainContext)
-        WgerCatalogMigration.migrateIfNeeded(context: sharedModelContainer.mainContext)
-        WgerCatalogCorrection.correctIfNeeded(context: sharedModelContainer.mainContext)
-        WgerCategoryRevert.revertIfNeeded(context: sharedModelContainer.mainContext)
-        EquipmentHomeGymMigration.migrateIfNeeded(context: sharedModelContainer.mainContext)
-        WgerNoPhotoCleanup.migrateIfNeeded(context: sharedModelContainer.mainContext)
-        PersonalExerciseImport.importIfNeeded(context: sharedModelContainer.mainContext)
-        ExerciseReviewFavoritesImport.importIfNeeded(context: sharedModelContainer.mainContext)
-        PersonalEquipmentUpdate.migrateIfNeeded(context: sharedModelContainer.mainContext)
+        let context = sharedModelContainer.mainContext
+
+        if SeedDataLoader.hasSeeded {
+            // Device already has a catalog — from the old multi-step pipeline, or from
+            // CatalogSeedLoader (which pre-marks every one of these flags done, making
+            // this whole branch a no-op there). Kept exactly as-is so any device still
+            // mid-pipeline keeps advancing normally; nothing here is ever run twice.
+            SeedDataLoader.seedIfNeeded(context: context)
+            MuscleTaxonomyMigration.migrateIfNeeded(context: context)
+            FavoriteExercisesImport.importIfNeeded(context: context)
+            FavoriteExercisesCorrection.correctIfNeeded(context: context)
+            ExerciseImageMigration.migrateIfNeeded(context: context)
+            ExerciseImageRemovalMigration.migrateIfNeeded(context: context)
+            WgerCatalogMigration.migrateIfNeeded(context: context)
+            WgerCatalogCorrection.correctIfNeeded(context: context)
+            WgerCategoryRevert.revertIfNeeded(context: context)
+            EquipmentHomeGymMigration.migrateIfNeeded(context: context)
+            EquipmentWeightedMigration.migrateIfNeeded(context: context)
+            ExerciseEquipmentMigration.migrateIfNeeded(context: context)
+            WgerNoPhotoCleanup.migrateIfNeeded(context: context)
+            PersonalExerciseImport.importIfNeeded(context: context)
+            ExerciseReviewFavoritesImport.importIfNeeded(context: context)
+            PersonalEquipmentUpdate.migrateIfNeeded(context: context)
+        } else {
+            // Fresh install — one consolidated catalog load (see CatalogSeedLoader)
+            // instead of the legacy chain above, which the loader marks fully done so
+            // no future launch on this device ever runs it.
+            CatalogSeedLoader.seedIfNeeded(context: context)
+            for key in Self.legacyMigrationFlagKeys {
+                UserDefaults.standard.set(true, forKey: key)
+            }
+        }
+
+        GetReadyStepMigration.migrateIfNeeded(context: context)
     }
+
+    /// Flags for every legacy migration superseded by `CatalogSeedLoader` on a fresh
+    /// install — pre-marked done so a device seeded this way never runs them later.
+    private static let legacyMigrationFlagKeys = [
+        "migration.muscleTaxonomyV1",
+        "import.favoriteExercisesV1",
+        "import.favoriteExercisesCorrectionV1",
+        "migration.exerciseImagesV1",
+        "migration.exerciseImageRemovalV1",
+        "migration.wgerCatalogV1",
+        "migration.wgerCatalogCorrectionV1",
+        "migration.wgerCategoryRevertV1",
+        "migration.equipmentHomeGymV1",
+        "migration.equipmentWeightedV1",
+        "migration.exerciseEquipmentV1",
+        "migration.wgerNoPhotoCleanupV1",
+        "import.personalExercisesV1",
+        "import.exerciseReviewFavoritesV1",
+        "migration.personalEquipmentUpdateV1",
+    ]
 
     var body: some Scene {
         WindowGroup {

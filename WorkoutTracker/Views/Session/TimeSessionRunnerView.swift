@@ -68,7 +68,7 @@ struct TimeSessionRunnerView: View {
                 Image(systemName: step.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional")
                     .font(.system(size: 64))
                     .foregroundStyle(.tint)
-                Text(step.exercise?.name ?? "Exercise")
+                Text(step.exercise?.displayName ?? "Exercise")
                     .font(.title.bold())
                     .multilineTextAlignment(.center)
             case .rest:
@@ -122,7 +122,7 @@ struct TimeSessionRunnerView: View {
 
     private func nextStepTitle(_ step: TimeSectionStep) -> String {
         switch step.stepType {
-        case .exercise: return step.exercise?.name ?? "Exercise"
+        case .exercise: return step.exercise?.displayName ?? "Exercise"
         case .rest: return "Rest"
         case .getReady: return "Get Ready"
         }
@@ -171,7 +171,7 @@ struct TimeSessionRunnerView: View {
         let log = StepLog(
             session: session,
             timeSectionStep: step,
-            stepExerciseNameSnapshot: step.exercise?.name,
+            stepExerciseNameSnapshot: step.exercise?.displayName,
             plannedDurationSeconds: step.durationSeconds,
             actualDurationSeconds: max(0, actualDuration),
             outcome: outcome,

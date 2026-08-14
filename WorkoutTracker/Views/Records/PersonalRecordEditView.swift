@@ -36,7 +36,7 @@ struct PersonalRecordEditView: View {
         NavigationStack {
             Form {
                 Section {
-                    DetailHeader(systemName: exercise.iconSymbolName, title: exercise.name)
+                    DetailHeader(systemName: exercise.iconSymbolName, title: exercise.displayName)
                 }
 
                 Picker("Record type", selection: $trackingMode) {
@@ -53,7 +53,7 @@ struct PersonalRecordEditView: View {
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
                             .frame(width: 100)
-                        Text(exercise.equipment?.effectiveWeightUnit ?? AppSettings.weightUnit).foregroundStyle(.secondary)
+                        Text(exercise.equipmentItems.first(where: \.isWeighted)?.effectiveWeightUnit ?? AppSettings.weightUnit).foregroundStyle(.secondary)
                     }
                     Stepper("Reps: \(reps)", value: $reps, in: 0...200)
                 } else {

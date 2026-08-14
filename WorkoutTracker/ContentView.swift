@@ -11,23 +11,23 @@ import SwiftData
 struct ContentView: View {
     var body: some View {
         // iOS only collapses tabs into an automatic "More" tab once there are more
-        // than 5 — five items (Library folded into My Workouts as a horizontal
+        // than 5 — five items (Library folded into Overview as a horizontal
         // pane selector instead of its own tab) all show directly, no "More".
         TabView {
             ScheduleListView()
                 .tabItem { Label("Schedule", systemImage: "calendar") }
 
             WorkoutListView()
-                .tabItem { Label("My Workouts", systemImage: "list.bullet.rectangle") }
+                .tabItem { Label("Overview", systemImage: "list.bullet.rectangle") }
 
             RecordsListView()
                 .tabItem { Label("Records", systemImage: "trophy.fill") }
 
-            SettingsView()
-                .tabItem { Label("Settings", systemImage: "gearshape") }
-
             SessionHistoryListView()
                 .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
+
+            SettingsView()
+                .tabItem { Label("Settings", systemImage: "gearshape") }
         }
         .tint(Color.appAccent)
     }

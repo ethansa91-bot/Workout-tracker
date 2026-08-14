@@ -10,11 +10,13 @@ struct TimeSectionEditorView: View {
     @State private var editMode: EditMode = .inactive
     @State private var selectedStepIDs: Set<UUID> = []
     @State private var showingAddExercises = false
-    @State private var editingStep: TimeSectionStep?
+    @State private var expandedStepID: UUID?
     @State private var showingDeleteConfirm = false
     @State private var errorMessage: String?
     @State private var showingRecap = false
-    @State private var nameField: String = ""
+    @State private var showingEditSheet = false
+    @State private var nameText = ""
+    @State private var descriptionText = ""
 
     private var isLocked: Bool { section.isLocked }
     private var isEditing: Bool { editMode.isEditing }
@@ -22,7 +24,7 @@ struct TimeSectionEditorView: View {
     var body: some View {
         VStack(spacing: 0) {
             if !isLocked {
-                nameBar
+                heroCard
                 headerBar
                 Divider()
             }
@@ -44,8 +46,6 @@ struct TimeSectionEditorView: View {
             }
         }
         .background(Color.appBackground)
-        .toolbar { mainToolbar }
-        .onAppear { nameField = section.name ?? "" }
         .navigationDestination(isPresented: $showingRecap) {
             if let workout = section.workout {
                 SessionRecapView(workout: workout)
@@ -56,15 +56,15 @@ struct TimeSectionEditorView: View {
                 addExercises(exercises)
             }
         }
-        .sheet(item: $editingStep) { step in
-            TimeStepFormView(section: section, stepType: step.stepType, editingStep: step)
-        }
         .confirmationDialog(
             "Delete \(selectedStepIDs.count) selected step\(selectedStepIDs.count == 1 ? "" : "s")?",
             isPresented: $showingDeleteConfirm,
             titleVisibility: .visible
         ) {
             Button("Delete", role: .destructive) { deleteSelection() }
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            editSheet
         }
         .alert("Error", isPresented: Binding(
             get: { errorMessage != nil },
@@ -76,47 +76,134 @@ struct TimeSectionEditorView: View {
         }
     }
 
-    private var nameBar: some View {
-        TextField(section.sectionType == .time ? "Follow Along Section" : "Section Name", text: $nameField)
-            .textFieldStyle(.roundedBorder)
-            .padding(.horizontal)
-            .padding(.top, 12)
-            .submitLabel(.done)
-            .onSubmit { renameSection() }
-            .onDisappear { renameSection() }
+    /// Same hero-card treatment as `SessionRecapView`'s workout header — name + a
+    /// single pencil opening one sheet that edits both name and description together.
+    private var heroCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(section.name?.isEmpty == false ? section.name! : section.sectionType.fallbackSectionName)
+                    .font(.appSerif(.title2))
+                    .foregroundStyle(Color.appInk)
+                Button {
+                    nameText = section.name ?? ""
+                    descriptionText = section.sectionDescription ?? ""
+                    showingEditSheet = true
+                } label: {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.appInkMuted)
+            }
+            if let description = section.sectionDescription, !description.isEmpty {
+                Text(description)
+                    .font(.footnote)
+                    .foregroundStyle(Color.appInkMuted)
+            }
+
+            Text(heroInfoLine)
+                .font(.subheadline)
+                .foregroundStyle(Color.appInkMuted)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .background(.thickMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(.horizontal)
+        .padding(.top, 12)
     }
 
+    private var heroInfoLine: String {
+        let count = section.sortedTimeSteps.filter { $0.stepType == .exercise }.count
+        return "\(section.sectionType.pillLabel) · \(count) Exercise\(count == 1 ? "" : "s")"
+    }
+
+    private var editSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Name") {
+                    TextField("Name", text: $nameText)
+                }
+                Section("Description") {
+                    TextEditor(text: $descriptionText)
+                        .frame(minHeight: 160)
+                }
+            }
+            .themedListBackground()
+            .navigationTitle("Edit Section")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showingEditSheet = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { saveEdits() }
+                }
+            }
+        }
+    }
+
+    /// Save (left) / Add Exercises (centered) / Edit (right) when browsing; Clone +
+    /// Delete (centered) when in multi-select mode — all in the same glass style as
+    /// `SessionRecapView`'s "New Section" row, grouped in one `GlassEffectContainer` so
+    /// nearby glass buttons render as a single coherent pass.
     @ViewBuilder
     private var headerBar: some View {
-        if isEditing {
-            HStack {
-                Button("Clone") { cloneSelection() }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!isContiguousSelection)
-                Spacer()
-                Button("Delete", role: .destructive) { showingDeleteConfirm = true }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.appDanger)
-                    .disabled(selectedStepIDs.isEmpty)
-            }
-            .padding()
-        } else {
-            HStack {
-                Button("Add Exercises") { showingAddExercises = true }
-                    .buttonStyle(.borderedProminent)
-                Spacer()
-                Button("Save") {
-                    renameSection()
-                    if onSaveNavigatesToRecap {
-                        showingRecap = true
-                    } else {
-                        dismiss()
+        GlassEffectContainer {
+            ZStack {
+                if !isEditing {
+                    HStack {
+                        Button {
+                            finishEditing()
+                        } label: {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(Color.appAccent)
+                        }
+                        .buttonStyle(.glass)
+                        Spacer()
                     }
                 }
-                .buttonStyle(.borderedProminent)
+
+                HStack {
+                    Spacer()
+                    if isEditing {
+                        Button {
+                            cloneSelection()
+                        } label: {
+                            Text("Clone").foregroundStyle(Color.appAccent)
+                        }
+                        .buttonStyle(.glass)
+                        .disabled(!isContiguousSelection)
+
+                        Button(role: .destructive) {
+                            showingDeleteConfirm = true
+                        } label: {
+                            Text("Delete").foregroundStyle(Color.appDanger)
+                        }
+                        .buttonStyle(.glass)
+                        .disabled(selectedStepIDs.isEmpty)
+                    } else {
+                        Button {
+                            showingAddExercises = true
+                        } label: {
+                            Text("Add Exercises").foregroundStyle(Color.appAccent)
+                        }
+                        .buttonStyle(.glass)
+                    }
+                    Spacer()
+                }
+
+                HStack {
+                    Spacer()
+                    Button {
+                        editMode = isEditing ? .inactive : .active
+                    } label: {
+                        Image(systemName: isEditing ? "xmark" : "pencil")
+                            .foregroundStyle(Color.appAccent)
+                    }
+                    .buttonStyle(.glass)
+                }
             }
-            .padding()
         }
+        .padding()
     }
 
     private var emptyState: some View {
@@ -125,39 +212,37 @@ struct TimeSectionEditorView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    @ToolbarContentBuilder
-    private var mainToolbar: some ToolbarContent {
-        if !isLocked {
-            ToolbarItem(placement: .topBarTrailing) {
-                // A plain custom Button that mutates our own `@State editMode`
-                // directly — the system `EditButton()` was found (via live device
-                // testing) to toggle its own label without ever writing through to
-                // our `.environment(\.editMode, $editMode)` binding, leaving the
-                // List/header permanently stuck in the non-editing state.
-                Button {
-                    editMode = isEditing ? .inactive : .active
-                } label: {
-                    Image(systemName: isEditing ? "checkmark" : "pencil")
-                }
-            }
-        }
-    }
-
     private var existingExerciseIDs: Set<UUID> {
         Set(section.sortedTimeSteps.compactMap { $0.exercise?.id })
     }
 
     @ViewBuilder
     private func stepRow(_ step: TimeSectionStep) -> some View {
-        if isEditing {
-            stepRowContent(step)
-        } else {
-            stepRowContent(step)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    if !isLocked { editingStep = step }
-                }
+        let isExpanded = !isEditing && expandedStepID == step.id
+        VStack(alignment: .leading, spacing: 0) {
+            if isEditing {
+                stepRowContent(step)
+            } else {
+                stepRowContent(step)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        guard !isLocked else { return }
+                        withAnimation {
+                            expandedStepID = (expandedStepID == step.id) ? nil : step.id
+                        }
+                    }
+            }
+            if isExpanded {
+                TimeStepInlineEditor(step: step, context: context, onAddRest: { addRest(after: step) })
+                    .padding(.top, 8)
+                    .padding(.bottom, 10)
+            }
         }
+        .padding(.horizontal, isExpanded ? 8 : 0)
+        .background(
+            isExpanded ? Color.appAccent.opacity(0.07) : Color.clear,
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+        )
     }
 
     private func stepRowContent(_ step: TimeSectionStep) -> some View {
@@ -166,46 +251,31 @@ struct TimeSectionEditorView: View {
             case .exercise:
                 IconBadge(systemName: step.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional")
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(step.exercise?.name ?? "Exercise")
-                    Text("\(step.durationSeconds)s").font(.caption).foregroundStyle(.secondary)
+                    Text(step.exercise?.displayName ?? "Exercise")
+                    Text("\(step.durationSeconds)s").font(.caption).foregroundStyle(Color.appRust)
                 }
             case .rest:
                 IconBadge(systemName: "pause.circle", tint: .secondary)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Rest")
-                    Text("\(step.durationSeconds)s").font(.caption).foregroundStyle(.secondary)
+                    Text("\(step.durationSeconds)s").font(.caption).foregroundStyle(Color.appRust)
                 }
             case .getReady:
                 IconBadge(systemName: "hourglass", tint: .secondary)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Get Ready")
-                    Text("\(step.durationSeconds)s").font(.caption).foregroundStyle(.secondary)
+                    Text("\(step.durationSeconds)s").font(.caption).foregroundStyle(Color.appRust)
                 }
             }
             Spacer()
-            if step.stepType == .exercise && !isEditing && !isLocked {
-                addRestButton(after: step)
+            if !isEditing {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(expandedStepID == step.id ? 90 : 0))
             }
         }
         .padding(.vertical, 2)
-    }
-
-    private func addRestButton(after step: TimeSectionStep) -> some View {
-        Button {
-            addRest(after: step)
-        } label: {
-            Label("Add Rest", systemImage: "plus.circle")
-                .labelStyle(.iconOnly)
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(hasRestAfter(step) ? Color.secondary.opacity(0.4) : Color.accentColor)
-        .disabled(hasRestAfter(step))
-    }
-
-    private func hasRestAfter(_ step: TimeSectionStep) -> Bool {
-        let steps = section.sortedTimeSteps
-        guard let index = steps.firstIndex(where: { $0.id == step.id }), index + 1 < steps.count else { return false }
-        return steps[index + 1].stepType == .rest
     }
 
     private var moveStepsAction: ((IndexSet, Int) -> Void)? {
@@ -262,11 +332,84 @@ struct TimeSectionEditorView: View {
         selectedStepIDs.removeAll()
     }
 
-    private func renameSection() {
-        let trimmed = nameField.trimmingCharacters(in: .whitespacesAndNewlines)
-        let newName = trimmed.isEmpty ? nil : trimmed
-        guard newName != section.name else { return }
-        do { try WorkoutEditingService.rename(section, to: newName, context: context) }
-        catch { errorMessage = error.localizedDescription }
+    private func finishEditing() {
+        if onSaveNavigatesToRecap {
+            showingRecap = true
+        } else {
+            dismiss()
+        }
+    }
+
+    private func saveEdits() {
+        let trimmedName = nameText.trimmingCharacters(in: .whitespaces)
+        let trimmedDescription = descriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            if !trimmedName.isEmpty {
+                try WorkoutEditingService.rename(section, to: trimmedName, context: context)
+            }
+            try WorkoutEditingService.updateDescription(section, to: trimmedDescription.isEmpty ? nil : trimmedDescription, context: context)
+            showingEditSheet = false
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+/// Inline accordion body shown beneath an expanded `TimeSectionStep` row — every field
+/// saves immediately on change, rather than requiring an explicit Save button.
+private struct TimeStepInlineEditor: View {
+    @Bindable var step: TimeSectionStep
+    let context: ModelContext
+    let onAddRest: () -> Void
+
+    @State private var showingExercisePicker = false
+
+    private var durationRange: ClosedRange<Int> {
+        step.stepType == .getReady ? 0...300 : 5...600
+    }
+
+    private var hasRestAfter: Bool {
+        guard let steps = step.section?.sortedTimeSteps,
+              let index = steps.firstIndex(where: { $0.id == step.id }),
+              index + 1 < steps.count
+        else { return false }
+        return steps[index + 1].stepType == .rest
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if step.stepType == .exercise {
+                Button("Change Exercise") {
+                    showingExercisePicker = true
+                }
+                .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity, alignment: .center)
+            }
+
+            Stepper("Duration: \(step.durationSeconds)s", value: Binding(
+                get: { step.durationSeconds },
+                set: { step.durationSeconds = $0; save() }
+            ), in: durationRange, step: 5)
+
+            if step.stepType == .exercise {
+                Button("Add Rest", action: onAddRest)
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .disabled(hasRestAfter)
+            }
+        }
+        .padding(.leading, 40)
+        .padding(.trailing, 4)
+        .sheet(isPresented: $showingExercisePicker) {
+            ExercisePickerView { exercise in
+                step.exercise = exercise
+                save()
+            }
+        }
+    }
+
+    private func save() {
+        step.markDirty()
+        try? context.save()
     }
 }

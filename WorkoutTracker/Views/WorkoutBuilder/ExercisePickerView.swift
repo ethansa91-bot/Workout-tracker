@@ -18,7 +18,9 @@ struct ExercisePickerView: View {
         allExercises.filter { exercise in
             exercise.deletedAt == nil
                 && !excluding.contains(exercise.id)
-                && (searchText.isEmpty || exercise.name.localizedCaseInsensitiveContains(searchText))
+                && (searchText.isEmpty
+                    || exercise.name.localizedCaseInsensitiveContains(searchText)
+                    || (exercise.label?.localizedCaseInsensitiveContains(searchText) ?? false))
                 && filter.matches(exercise)
         }
     }
@@ -38,9 +40,11 @@ struct ExercisePickerView: View {
                                 .foregroundStyle(.tint)
                                 .frame(width: 28)
                             VStack(alignment: .leading) {
-                                Text(exercise.name)
-                                if let equipmentName = exercise.equipment?.name {
-                                    Text(equipmentName).font(.caption).foregroundStyle(.secondary)
+                                Text(exercise.displayName)
+                                if !exercise.equipmentItems.isEmpty {
+                                    Text(exercise.equipmentItems.map(\.name).joined(separator: ", "))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                         }

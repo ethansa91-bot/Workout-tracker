@@ -65,9 +65,9 @@ struct RepSessionRunnerView: View {
                 stopSignal: $restStopSignal
             )
             VStack(alignment: .leading, spacing: 6) {
-                Text(exercise.name).font(.appSerif(.title3))
-                if let equipmentName = exercise.equipment?.name {
-                    Label(equipmentName, systemImage: "dumbbell.fill")
+                Text(exercise.displayName).font(.appSerif(.title3))
+                if !exercise.equipmentItems.isEmpty {
+                    Label(exercise.equipmentItems.map(\.name).joined(separator: ", "), systemImage: "dumbbell.fill")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -125,7 +125,7 @@ struct RepSessionRunnerView: View {
     }
 
     private func setsSection(entry: RepSectionExercise, exercise: Exercise) -> some View {
-        let weightOptions = exercise.equipment?.sortedWeightCombos.map(\.value) ?? []
+        let weightOptions = exercise.weightedEquipment?.sortedWeightCombos.map(\.value) ?? []
         let logs = loggedSets(for: entry)
         let last = SetLogQueries.lastBestSet(exercise: exercise, excluding: session, context: context)
         let bestHold = entry.trackingMode == .maxHoldTime
@@ -152,7 +152,7 @@ struct RepSessionRunnerView: View {
                         SetRowView(
                             setNumber: setIndex + 1,
                             weightOptions: weightOptions,
-                            weightUnit: exercise.equipment?.effectiveWeightUnit ?? AppSettings.weightUnit,
+                            weightUnit: exercise.weightedEquipment?.effectiveWeightUnit ?? AppSettings.weightUnit,
                             reps: bindingReps(setIndex),
                             weight: bindingWeight(setIndex),
                             isLogged: false,
@@ -202,7 +202,7 @@ struct RepSessionRunnerView: View {
 
             Spacer()
 
-            Text(entry.exercise?.name ?? "")
+            Text(entry.exercise?.displayName ?? "")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -240,7 +240,7 @@ struct RepSessionRunnerView: View {
     }
 
     private func formattedWeight(_ value: Double, exercise: Exercise) -> String {
-        let unit = exercise.equipment?.effectiveWeightUnit ?? AppSettings.weightUnit
+        let unit = exercise.weightedEquipment?.effectiveWeightUnit ?? AppSettings.weightUnit
         return value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value)) \(unit)" : "\(value) \(unit)"
     }
 
@@ -250,7 +250,7 @@ struct RepSessionRunnerView: View {
         draftHoldSeconds.removeAll()
         let record = PersonalRecordQueries.current(for: exercise, context: context)
         let best = SetLogQueries.lastBestSet(exercise: exercise, excluding: session, context: context)
-        let weightOptions = exercise.equipment?.sortedWeightCombos.map(\.value) ?? []
+        let weightOptions = exercise.weightedEquipment?.sortedWeightCombos.map(\.value) ?? []
         let defaultWeight: Double = record?.weight ?? best?.weight ?? weightOptions.first ?? 0
         let defaultReps: Int = record?.reps ?? best?.reps ?? 8
         for index in 0..<entry.targetSets {
@@ -282,11 +282,11 @@ struct RepSessionRunnerView: View {
             session: session,
             repSectionExercise: entry,
             exercise: entry.exercise,
-            exerciseNameSnapshot: entry.exercise?.name,
+            exerciseNameSnapshot: entry.exercise?.displayName,
             setIndex: setIndex,
             reps: reps,
             weight: weight,
-            weightUnit: entry.exercise?.equipment?.effectiveWeightUnit ?? AppSettings.weightUnit
+            weightUnit: entry.exercise?.weightedEquipment?.effectiveWeightUnit ?? AppSettings.weightUnit
         )
         context.insert(log)
         session.markDirty()
@@ -300,11 +300,11 @@ struct RepSessionRunnerView: View {
             session: session,
             repSectionExercise: entry,
             exercise: entry.exercise,
-            exerciseNameSnapshot: entry.exercise?.name,
+            exerciseNameSnapshot: entry.exercise?.displayName,
             setIndex: setIndex,
             reps: 0,
             weight: 0,
-            weightUnit: entry.exercise?.equipment?.effectiveWeightUnit ?? AppSettings.weightUnit,
+            weightUnit: entry.exercise?.weightedEquipment?.effectiveWeightUnit ?? AppSettings.weightUnit,
             holdSeconds: holdSeconds
         )
         context.insert(log)

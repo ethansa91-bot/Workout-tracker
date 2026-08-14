@@ -55,7 +55,7 @@ struct EmomSessionRunnerView: View {
                     Image(systemName: entry.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional")
                         .font(.title2)
                         .foregroundStyle(.tint)
-                    Text(entry.exercise?.name ?? "Exercise")
+                    Text(entry.exercise?.displayName ?? "Exercise")
                         .font(.title3.weight(.semibold))
                 }
             }

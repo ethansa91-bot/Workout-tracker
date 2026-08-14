@@ -5,18 +5,18 @@ import SwiftData
 /// set the workout builder's exercise search will reuse in Phase 3.
 struct ExerciseFilter: Equatable {
     var favoritedOnly = false
-    var equipmentID: UUID?
+    var equipmentIDs: Set<UUID> = []
     var muscleCategoryName: String?
     var exerciseCategoryNames: Set<String> = []
     var muscleID: UUID?
 
     var isEmpty: Bool {
-        !favoritedOnly && equipmentID == nil && muscleCategoryName == nil && exerciseCategoryNames.isEmpty && muscleID == nil
+        !favoritedOnly && equipmentIDs.isEmpty && muscleCategoryName == nil && exerciseCategoryNames.isEmpty && muscleID == nil
     }
 
     func matches(_ exercise: Exercise) -> Bool {
         if favoritedOnly && !exercise.isFavorited { return false }
-        if let equipmentID, exercise.equipment?.id != equipmentID { return false }
+        if !equipmentIDs.isEmpty && Set(exercise.equipmentItems.map(\.id)).isDisjoint(with: equipmentIDs) { return false }
         if let muscleID, !exercise.muscles.contains(where: { $0.id == muscleID }) { return false }
         if let muscleCategoryName,
            !exercise.muscles.contains(where: { muscle in muscle.categories.contains { $0.name == muscleCategoryName } }) {
@@ -45,11 +45,14 @@ struct ExerciseFilterView: View {
                 Toggle("Favorites only", isOn: $filter.favoritedOnly)
 
                 Section("Equipment") {
-                    Picker("Equipment", selection: $filter.equipmentID) {
-                        Text("Any").tag(UUID?.none)
-                        ForEach(allEquipment) { equipment in
-                            Text(equipment.name).tag(Optional(equipment.id))
-                        }
+                    ForEach(allEquipment) { equipment in
+                        Toggle(equipment.name, isOn: Binding(
+                            get: { filter.equipmentIDs.contains(equipment.id) },
+                            set: { isOn in
+                                if isOn { filter.equipmentIDs.insert(equipment.id) }
+                                else { filter.equipmentIDs.remove(equipment.id) }
+                            }
+                        ))
                     }
                 }
 

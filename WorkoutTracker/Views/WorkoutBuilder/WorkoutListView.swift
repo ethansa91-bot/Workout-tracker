@@ -20,7 +20,8 @@ struct WorkoutListView: View {
     @Query(sort: \Workout.createdAt, order: .reverse) private var allWorkouts: [Workout]
 
     @State private var selectedPane: WorkoutsPane = .workouts
-    @State private var showingNewWorkoutSheet = false
+    @State private var showingNewWorkoutAlert = false
+    @State private var newWorkoutName = ""
     @State private var showingNewTemplateSheet = false
     @State private var newWorkoutDestination: WorkoutEditDestination?
     @State private var newTemplateDestination: WorkoutSection?
@@ -42,7 +43,8 @@ struct WorkoutListView: View {
                 }
             }
             .background(Color.appBackground)
-            .navigationTitle(navigationTitleText)
+            .navigationTitle("Overview")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if selectedPane == .workouts {
                     ToolbarItem(placement: .topBarLeading) {
@@ -57,7 +59,8 @@ struct WorkoutListView: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
                             if selectedPane == .workouts {
-                                showingNewWorkoutSheet = true
+                                newWorkoutName = ""
+                                showingNewWorkoutAlert = true
                             } else {
                                 showingNewTemplateSheet = true
                             }
@@ -67,8 +70,14 @@ struct WorkoutListView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingNewWorkoutSheet) {
-                NewWorkoutSheet(onCreate: createWorkout)
+            .alert("New Workout", isPresented: $showingNewWorkoutAlert) {
+                TextField("Workout name", text: $newWorkoutName)
+                Button("Cancel", role: .cancel) {}
+                Button("Create") {
+                    let trimmed = newWorkoutName.trimmingCharacters(in: .whitespaces)
+                    guard !trimmed.isEmpty else { return }
+                    createWorkout(name: trimmed, kind: .personalized)
+                }
             }
             .sheet(isPresented: $showingNewTemplateSheet) {
                 NewSectionTemplateSheet(onCreate: createTemplate)
@@ -87,42 +96,18 @@ struct WorkoutListView: View {
         }
     }
 
-    private var navigationTitleText: String {
-        switch selectedPane {
-        case .workouts: return "My Workouts"
-        case .templates: return "Section Templates"
-        case .library: return "Library"
-        }
-    }
-
+    /// Same look as the Settings weight-unit selector — a native segmented `Picker`,
+    /// with the selected segment tinted in the app's green accent.
     private var paneSelector: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(WorkoutsPane.allCases) { pane in
-                    paneChip(pane)
-                }
+        Picker("View", selection: $selectedPane) {
+            ForEach(WorkoutsPane.allCases) { pane in
+                Text(pane.label).tag(pane)
             }
-            .padding(.horizontal, 16)
         }
+        .pickerStyle(.segmented)
+        .tint(Color.appAccent)
+        .padding(.horizontal, 16)
         .padding(.vertical, 8)
-    }
-
-    private func paneChip(_ pane: WorkoutsPane) -> some View {
-        let isSelected = selectedPane == pane
-        return Button {
-            selectedPane = pane
-        } label: {
-            Text(pane.label)
-                .font(.caption.weight(.semibold))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .foregroundStyle(isSelected ? Color.white : Color.appAccent)
-                .background(isSelected ? Color.appAccent : Color.appAccent.opacity(0.12), in: Capsule())
-                .overlay(
-                    Capsule().stroke(isSelected ? Color.clear : Color.appAccent.opacity(0.35), lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -230,8 +215,8 @@ struct WorkoutListView: View {
         }
     }
 
-    private func createTemplate(name: String, type: WorkoutSectionType) {
-        let section = WorkoutEditingService.createTemplate(name: name, type: type, context: context)
+    private func createTemplate(name: String, description: String?, type: WorkoutSectionType) {
+        let section = WorkoutEditingService.createTemplate(name: name, type: type, description: description, context: context)
         newTemplateDestination = section
     }
 }

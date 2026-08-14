@@ -74,16 +74,17 @@ final class SyncEngine {
         try await CatalogSync.push(WeightComboSyncAdapter.self, dirtyModels: equipment.weightCombos.filter(\.isDirty))
     }
 
-    /// Pushes one just-created/edited exercise (and its never-synced equipment parent,
-    /// if any) plus its full current muscle/category tag set.
+    /// Pushes one just-created/edited exercise (and any never-synced equipment it's
+    /// attached to) plus its full current muscle/category/equipment tag sets.
     func syncSingle(exercise: Exercise) async throws {
         guard !Self.isDisabled else { return }
-        if let equipment = exercise.equipment, equipment.remoteSyncedAt == nil {
+        for equipment in exercise.equipmentItems where equipment.remoteSyncedAt == nil {
             try await syncSingle(equipment: equipment)
         }
         try await CatalogSync.push(ExerciseSyncAdapter.self, dirtyModels: [exercise])
         try await JoinSync.pushExerciseMuscles(for: exercise)
         try await JoinSync.pushExerciseCategories(for: exercise)
+        try await JoinSync.pushExerciseEquipment(for: exercise)
     }
 
     /// Full bidirectional diff across catalog + workouts + session history: pull
@@ -146,6 +147,7 @@ final class SyncEngine {
         for exercise in try context.fetch(FetchDescriptor<Exercise>()) {
             try await JoinSync.pushExerciseMuscles(for: exercise)
             try await JoinSync.pushExerciseCategories(for: exercise)
+            try await JoinSync.pushExerciseEquipment(for: exercise)
         }
     }
 }

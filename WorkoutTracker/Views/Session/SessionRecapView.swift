@@ -28,6 +28,7 @@ struct SessionRecapView: View {
     @State private var sectionPendingSaveAsTemplate: WorkoutSection?
     @State private var templateNameText = ""
     @State private var showingImportTemplateSheet = false
+    @State private var showingNewSectionSheet = false
 
     private var activeSoundProfile: TimerSoundProfile {
         sessionSoundProfile ?? AppSettings.timerSoundProfile
@@ -136,6 +137,9 @@ struct SessionRecapView: View {
                 importTemplate(template)
             }
         }
+        .sheet(isPresented: $showingNewSectionSheet) {
+            NewSectionTemplateSheet(title: "New Section", onCreate: createSection)
+        }
         .alert("Error", isPresented: Binding(
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } }
@@ -172,12 +176,18 @@ struct SessionRecapView: View {
                 Button {
                     startNewSession()
                 } label: {
-                    Text("Start Workout").frame(maxWidth: .infinity)
+                    Text("Start Workout")
+                        .foregroundStyle(Color.appAccent)
+                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.glassProminent)
+                .tint(Color.appAccent.opacity(0.25))
             }
             .padding()
-            .background(Color.appSurface)
+            .background(.thickMaterial)
+            .overlay(alignment: .top) {
+                Rectangle().fill(Color.appHairline).frame(height: 1)
+            }
         }
     }
 
@@ -402,37 +412,49 @@ struct SessionRecapView: View {
 
     @ViewBuilder
     private var sectionListControls: some View {
-        HStack(spacing: 16) {
-            Spacer()
-
-            Menu {
-                Button("Follow Along Section") { addSection(.time) }
-                Button("Rep Section") { addSection(.rep) }
-                Button("EMOM Section") { addSection(.emom) }
-                Button("AMRAP Section") { addSection(.amrap) }
-                Button("Import Template…") { showingImportTemplateSheet = true }
-            } label: {
-                Text("Add a Section")
-            }
-            .buttonStyle(.borderedProminent)
-
-            if workout.sortedSections.count > 1 {
-                Button {
-                    editMode = editMode.isEditing ? .inactive : .active
-                } label: {
-                    Text(editMode.isEditing ? "Done" : "Rearrange Sections")
+        // Grouped in a GlassEffectContainer so the two nearby glass buttons render as
+        // one coherent glass pass instead of each casting its own overlapping
+        // shadow/highlight — two ungrouped glass shapes this close together produced a
+        // visible smudge behind them.
+        GlassEffectContainer {
+            ZStack {
+                HStack {
+                    Spacer()
+                    Menu {
+                        Button("Create New Section") { showingNewSectionSheet = true }
+                        Button("Import Template…") { showingImportTemplateSheet = true }
+                    } label: {
+                        Text("New Section")
+                            .foregroundStyle(Color.appAccent)
+                    }
+                    .buttonStyle(.glass)
+                    Spacer()
                 }
-                .buttonStyle(.borderedProminent)
-            }
 
-            Spacer()
+                if workout.sortedSections.count > 1 {
+                    HStack {
+                        Spacer()
+                        Button {
+                            editMode = editMode.isEditing ? .inactive : .active
+                        } label: {
+                            Image(systemName: editMode.isEditing ? "checkmark" : "arrow.up.arrow.down")
+                                .foregroundStyle(Color.appAccent)
+                        }
+                        .buttonStyle(.glass)
+                    }
+                }
+            }
         }
         .padding(.horizontal, 4)
     }
 
-    private func addSection(_ type: WorkoutSectionType) {
-        do { _ = try WorkoutEditingService.addSection(to: workout, type: type, context: context) }
-        catch { errorMessage = error.localizedDescription }
+    private func createSection(name: String, description: String?, type: WorkoutSectionType) {
+        do {
+            let section = try WorkoutEditingService.addSection(to: workout, type: type, name: name, description: description, context: context)
+            manageExercisesSection = section
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func cloneSection(_ section: WorkoutSection) {
@@ -535,7 +557,7 @@ struct SessionRecapView: View {
                 SessionOverviewItem(
                     id: entry.id,
                     iconName: entry.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional",
-                    title: entry.exercise?.name ?? "Exercise",
+                    title: entry.exercise?.displayName ?? "Exercise",
                     detail: repExerciseDetail(for: entry)
                 )
             }
@@ -544,7 +566,7 @@ struct SessionRecapView: View {
                 SessionOverviewItem(
                     id: entry.id,
                     iconName: entry.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional",
-                    title: entry.exercise?.name ?? "Exercise",
+                    title: entry.exercise?.displayName ?? "Exercise",
                     detail: ""
                 )
             }
@@ -570,7 +592,7 @@ struct SessionRecapView: View {
 
     private func overviewTitle(for step: TimeSectionStep) -> String {
         switch step.stepType {
-        case .exercise: return step.exercise?.name ?? "Exercise"
+        case .exercise: return step.exercise?.displayName ?? "Exercise"
         case .rest: return "Rest"
         case .getReady: return "Get Ready"
         }
@@ -617,8 +639,16 @@ private struct TemplatePickerSheet: View {
                         } label: {
                             HStack(spacing: 12) {
                                 IconBadge(systemName: template.sectionType.iconSymbolName)
-                                Text(template.name?.isEmpty == false ? template.name! : template.sectionType.fallbackSectionName)
-                                    .foregroundStyle(Color.appInk)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(template.name?.isEmpty == false ? template.name! : template.sectionType.fallbackSectionName)
+                                        .foregroundStyle(Color.appInk)
+                                    if let description = template.sectionDescription, !description.isEmpty {
+                                        Text(description)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                    }
+                                }
                             }
                         }
                     }

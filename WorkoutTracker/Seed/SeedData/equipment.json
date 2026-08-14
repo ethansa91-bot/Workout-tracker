@@ -1,46 +1,57 @@
 [
   {
     "name": "Barbell",
-    "icon": "dumbbell.fill"
+    "icon": "dumbbell.fill",
+    "weighted": true
   },
   {
     "name": "Bench",
-    "icon": "rectangle.fill"
+    "icon": "rectangle.fill",
+    "weighted": false
   },
   {
     "name": "Cable machine",
-    "icon": "figure.strengthtraining.functional"
+    "icon": "figure.strengthtraining.functional",
+    "weighted": true
   },
   {
     "name": "Dumbbell",
-    "icon": "dumbbell.fill"
+    "icon": "dumbbell.fill",
+    "weighted": true
   },
   {
     "name": "Gym mat",
-    "icon": "rectangle.fill"
+    "icon": "rectangle.fill",
+    "weighted": false
   },
   {
     "name": "Incline bench",
-    "icon": "rectangle.fill"
+    "icon": "rectangle.fill",
+    "weighted": false
   },
   {
     "name": "Kettlebell",
-    "icon": "dumbbell.fill"
+    "icon": "dumbbell.fill",
+    "weighted": true
   },
   {
     "name": "Pull-up bar",
-    "icon": "figure.strengthtraining.traditional"
+    "icon": "figure.strengthtraining.traditional",
+    "weighted": false
   },
   {
     "name": "Resistance band",
-    "icon": "waveform.path"
+    "icon": "waveform.path",
+    "weighted": false
   },
   {
     "name": "SZ-Bar",
-    "icon": "dumbbell.fill"
+    "icon": "dumbbell.fill",
+    "weighted": true
   },
   {
     "name": "Swiss Ball",
-    "icon": "circle.fill"
+    "icon": "circle.fill",
+    "weighted": false
   }
 ]

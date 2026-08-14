@@ -19,10 +19,28 @@ final class Exercise: SyncableModel {
     var isDirty: Bool
     var remoteSyncedAt: Date?
 
-    /// nil = bodyweight, no equipment needed.
+    /// Deprecated — replaced by `equipmentItems`. Kept under its original name/type so
+    /// SwiftData preserves existing on-disk data; a rename would make SwiftData treat it
+    /// as an unrelated new relationship and silently drop everyone's existing link.
+    /// Read once by `ExerciseEquipmentMigration`; nothing else reads or writes it anymore.
     var equipment: Equipment?
+    /// Empty = bodyweight, no equipment needed. Can mix passive and weighted equipment.
+    var equipmentItems: [Equipment] = []
     var muscles: [Muscle] = []
     var categories: [ExerciseCategory] = []
+
+    /// The user's personal nickname when set, falling back to the catalog `name`.
+    var displayName: String {
+        let trimmed = label?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (trimmed?.isEmpty == false) ? trimmed! : name
+    }
+
+    /// The weighted item among `equipmentItems`, if any — used to resolve weight
+    /// options/unit. If more than one is attached, the first is used; logging weight
+    /// against multiple simultaneous equipment per set isn't supported.
+    var weightedEquipment: Equipment? {
+        equipmentItems.first(where: \.isWeighted)
+    }
 
     init(
         id: UUID = UUID(),
@@ -33,7 +51,7 @@ final class Exercise: SyncableModel {
         imageAssetName: String? = nil,
         isCustom: Bool = false,
         isFavorited: Bool = false,
-        equipment: Equipment? = nil
+        equipmentItems: [Equipment] = []
     ) {
         self.id = id
         self.name = name
@@ -43,7 +61,8 @@ final class Exercise: SyncableModel {
         self.imageAssetName = imageAssetName
         self.isCustom = isCustom
         self.isFavorited = isFavorited || isCustom
-        self.equipment = equipment
+        self.equipment = nil
+        self.equipmentItems = equipmentItems
         self.updatedAt = .now
         self.deletedAt = nil
         self.isDirty = true

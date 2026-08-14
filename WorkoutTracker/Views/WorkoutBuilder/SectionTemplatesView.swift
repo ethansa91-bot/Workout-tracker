@@ -50,20 +50,18 @@ struct SectionTemplatesView: View {
             IconBadge(systemName: section.sectionType.iconSymbolName)
             VStack(alignment: .leading, spacing: 3) {
                 Text(section.name?.isEmpty == false ? section.name! : section.sectionType.fallbackSectionName)
-                StatusPill(text: pillLabel(for: section.sectionType), tint: .accentColor)
+                StatusPill(text: section.sectionType.pillLabel, tint: .accentColor)
+                if let description = section.sectionDescription, !description.isEmpty {
+                    Text(description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
         }
         .padding(.vertical, 2)
     }
 
-    private func pillLabel(for type: WorkoutSectionType) -> String {
-        switch type {
-        case .time: return "Follow Along"
-        case .rep: return "Rep"
-        case .emom: return "EMOM"
-        case .amrap: return "AMRAP"
-        }
-    }
 
     private func deleteTemplate(_ section: WorkoutSection) {
         SyncDeletion.delete(section, context: context)
@@ -71,11 +69,16 @@ struct SectionTemplatesView: View {
     }
 }
 
+/// Also reused by `SessionRecapView`'s "Create New Section" (with `title: "New
+/// Section"`) to build a section attached to that workout instead of a standalone
+/// template — same fields, same layout, just a different destination for `onCreate`.
 struct NewSectionTemplateSheet: View {
-    let onCreate: (String, WorkoutSectionType) -> Void
+    var title: String = "New Template"
+    let onCreate: (String, String?, WorkoutSectionType) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
+    @State private var description = ""
     @State private var type: WorkoutSectionType = .time
 
     var body: some View {
@@ -84,18 +87,22 @@ struct NewSectionTemplateSheet: View {
                 Section("Name") {
                     TextField("Section name", text: $name)
                 }
+                Section("Description") {
+                    TextField("Optional description", text: $description, axis: .vertical)
+                }
                 Section("Type") {
-                    Picker("Type", selection: $type) {
-                        Text("Follow Along").tag(WorkoutSectionType.time)
-                        Text("Rep").tag(WorkoutSectionType.rep)
-                        Text("EMOM").tag(WorkoutSectionType.emom)
-                        Text("AMRAP").tag(WorkoutSectionType.amrap)
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                        ForEach([WorkoutSectionType.time, .rep, .emom, .amrap], id: \.self) { option in
+                            typeButton(option)
+                        }
                     }
-                    .pickerStyle(.segmented)
+                    .padding(.vertical, 8)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                 }
             }
             .themedListBackground()
-            .navigationTitle("New Template")
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -103,7 +110,8 @@ struct NewSectionTemplateSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") {
-                        onCreate(trimmedName, type)
+                        let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+                        onCreate(trimmedName, trimmedDescription.isEmpty ? nil : trimmedDescription, type)
                         dismiss()
                     }
                     .disabled(trimmedName.isEmpty)
@@ -114,5 +122,31 @@ struct NewSectionTemplateSheet: View {
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespaces)
+    }
+
+    private func typeButton(_ option: WorkoutSectionType) -> some View {
+        let isSelected = type == option
+        return Button {
+            type = option
+        } label: {
+            VStack(spacing: 8) {
+                Image(systemName: option.iconSymbolName)
+                    .font(.title2)
+                Text(option.pillLabel)
+                    .font(.subheadline.weight(.semibold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
+            .foregroundStyle(isSelected ? Color.white : Color.appAccent)
+            .background(
+                isSelected ? Color.appAccent : Color.appAccent.opacity(0.1),
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(isSelected ? Color.clear : Color.appAccent.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }

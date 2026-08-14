@@ -50,8 +50,8 @@ enum PersonalExerciseImport {
                     existing.label = label
                     didChangeExisting = true
                 }
-                if existing.equipment == nil, let equipmentName = entry.equipment, let equipment = equipmentByName[equipmentName] {
-                    existing.equipment = equipment
+                if existing.equipmentItems.isEmpty, let equipmentName = entry.equipment, let equipment = equipmentByName[equipmentName] {
+                    existing.equipmentItems = [equipment]
                     didChangeExisting = true
                 }
                 if didChangeExisting {
@@ -80,7 +80,7 @@ enum PersonalExerciseImport {
                 iconSymbolName: symbol,
                 isCustom: true,
                 isFavorited: true,
-                equipment: equipment
+                equipmentItems: equipment.map { [$0] } ?? []
             )
             exercise.muscles = entry.muscles.compactMap { musclesByName[$0] }
             exercise.categories = entry.categories.compactMap { categoriesByName[$0] }

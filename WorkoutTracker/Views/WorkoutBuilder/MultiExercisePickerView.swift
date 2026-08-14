@@ -21,7 +21,9 @@ struct MultiExercisePickerView: View {
     private var filtered: [Exercise] {
         allExercises.filter { exercise in
             exercise.deletedAt == nil
-                && (searchText.isEmpty || exercise.name.localizedCaseInsensitiveContains(searchText))
+                && (searchText.isEmpty
+                    || exercise.name.localizedCaseInsensitiveContains(searchText)
+                    || (exercise.label?.localizedCaseInsensitiveContains(searchText) ?? false))
                 && filter.matches(exercise)
         }
     }
@@ -68,13 +70,15 @@ struct MultiExercisePickerView: View {
             IconBadge(systemName: exercise.iconSymbolName)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(exercise.name)
+                    Text(exercise.displayName)
                     if alreadyInSection {
                         StatusPill(text: "In workout", tint: .secondary)
                     }
                 }
-                if let equipmentName = exercise.equipment?.name {
-                    Text(equipmentName).font(.caption).foregroundStyle(.secondary)
+                if !exercise.equipmentItems.isEmpty {
+                    Text(exercise.equipmentItems.map(\.name).joined(separator: ", "))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             Spacer()

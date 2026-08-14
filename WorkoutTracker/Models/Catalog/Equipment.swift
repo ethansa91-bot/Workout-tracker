@@ -14,6 +14,10 @@ final class Equipment: SyncableModel {
     var isFavorited: Bool
     var isAtHome: Bool = false
     var isAtGym: Bool = false
+    /// On = variable-weight equipment (dumbbells, vests) that exposes weight-unit and
+    /// available-weight settings. Off = passive equipment (mats, benches) needed to
+    /// perform an exercise but with no adjustable weight of its own.
+    var isWeighted: Bool = false
     /// nil = use the global `AppSettings.weightUnit` default.
     var preferredWeightUnit: String?
     var updatedAt: Date
@@ -31,6 +35,7 @@ final class Equipment: SyncableModel {
         isCustom: Bool = false,
         isAtHome: Bool = false,
         isAtGym: Bool = false,
+        isWeighted: Bool = false,
         preferredWeightUnit: String? = nil
     ) {
         self.id = id
@@ -40,6 +45,7 @@ final class Equipment: SyncableModel {
         self.isFavorited = false
         self.isAtHome = isAtHome
         self.isAtGym = isAtGym
+        self.isWeighted = isWeighted
         self.preferredWeightUnit = preferredWeightUnit
         self.updatedAt = .now
         self.deletedAt = nil

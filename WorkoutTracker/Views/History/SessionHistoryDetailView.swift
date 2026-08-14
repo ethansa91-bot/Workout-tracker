@@ -24,7 +24,7 @@ struct SessionHistoryDetailView: View {
                     ForEach(sortedSetLogs) { log in
                         HStack {
                             VStack(alignment: .leading) {
-                                Text(log.exerciseNameSnapshot ?? log.exercise?.name ?? "Exercise")
+                                Text(log.exerciseNameSnapshot ?? log.exercise?.displayName ?? "Exercise")
                                 Text("Set \(log.setIndex + 1)")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
