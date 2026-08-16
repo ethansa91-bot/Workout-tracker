@@ -15,7 +15,7 @@ struct MultiExercisePickerView: View {
     @Query(sort: \Exercise.name) private var allExercises: [Exercise]
 
     @State private var searchText = ""
-    @State private var filter = ExerciseFilter()
+    @State private var filter = ExerciseFilter(favoritedOnly: true)
     @State private var selectedExercises: [Exercise] = []
 
     private var filtered: [Exercise] {
@@ -50,14 +50,19 @@ struct MultiExercisePickerView: View {
                         Image(systemName: "xmark")
                     }
                 }
-                ToolbarItem(placement: .confirmationAction) {
+            }
+            .safeAreaInset(edge: .bottom) {
+                if !selectedExercises.isEmpty {
                     Button {
                         onDone(selectedExercises)
                         dismiss()
                     } label: {
-                        Image(systemName: "checkmark")
+                        Text("Add \(selectedExercises.count) Exercise\(selectedExercises.count == 1 ? "" : "s")")
+                            .frame(maxWidth: .infinity)
                     }
-                    .disabled(selectedExercises.isEmpty)
+                    .buttonStyle(.borderedProminent)
+                    .padding()
+                    .background(.thickMaterial)
                 }
             }
         }
@@ -74,6 +79,11 @@ struct MultiExercisePickerView: View {
                     if alreadyInSection {
                         StatusPill(text: "In workout", tint: .secondary)
                     }
+                }
+                if exercise.showsSecondaryName {
+                    Text(exercise.name)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 if !exercise.equipmentItems.isEmpty {
                     Text(exercise.equipmentItems.map(\.name).joined(separator: ", "))

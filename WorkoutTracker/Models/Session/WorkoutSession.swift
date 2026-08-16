@@ -41,6 +41,9 @@ final class WorkoutSession: SyncableModel {
     @Relationship(deleteRule: .cascade, inverse: \SetLog.session)
     var setLogs: [SetLog] = []
 
+    @Relationship(deleteRule: .cascade, inverse: \ExerciseSessionNote.session)
+    var exerciseNotes: [ExerciseSessionNote] = []
+
     var status: SessionStatus {
         get { SessionStatus(rawValue: statusRaw) ?? .inProgress }
         set { statusRaw = newValue.rawValue }

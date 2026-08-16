@@ -56,12 +56,12 @@ struct TimeSectionEditorView: View {
                 addExercises(exercises)
             }
         }
-        .confirmationDialog(
+        .alert(
             "Delete \(selectedStepIDs.count) selected step\(selectedStepIDs.count == 1 ? "" : "s")?",
-            isPresented: $showingDeleteConfirm,
-            titleVisibility: .visible
+            isPresented: $showingDeleteConfirm
         ) {
             Button("Delete", role: .destructive) { deleteSelection() }
+            Button("Cancel", role: .cancel) { }
         }
         .sheet(isPresented: $showingEditSheet) {
             editSheet
@@ -238,11 +238,7 @@ struct TimeSectionEditorView: View {
                     .padding(.bottom, 10)
             }
         }
-        .padding(.horizontal, isExpanded ? 8 : 0)
-        .background(
-            isExpanded ? Color.appAccent.opacity(0.07) : Color.clear,
-            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-        )
+        .listRowBackground(isExpanded ? Color.appHighlightGray : nil)
     }
 
     private func stepRowContent(_ step: TimeSectionStep) -> some View {
@@ -378,14 +374,6 @@ private struct TimeStepInlineEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            if step.stepType == .exercise {
-                Button("Change Exercise") {
-                    showingExercisePicker = true
-                }
-                .buttonStyle(.bordered)
-                .frame(maxWidth: .infinity, alignment: .center)
-            }
-
             Stepper("Duration: \(step.durationSeconds)s", value: Binding(
                 get: { step.durationSeconds },
                 set: { step.durationSeconds = $0; save() }

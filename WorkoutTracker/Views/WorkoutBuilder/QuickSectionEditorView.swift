@@ -57,12 +57,12 @@ struct QuickSectionEditorView: View {
                 addExercises(exercises)
             }
         }
-        .confirmationDialog(
+        .alert(
             "Delete \(selectedEntryIDs.count) selected exercise\(selectedEntryIDs.count == 1 ? "" : "s")?",
-            isPresented: $showingDeleteConfirm,
-            titleVisibility: .visible
+            isPresented: $showingDeleteConfirm
         ) {
             Button("Delete", role: .destructive) { deleteSelection() }
+            Button("Cancel", role: .cancel) { }
         }
         .sheet(isPresented: $showingEditSheet) {
             editSheet

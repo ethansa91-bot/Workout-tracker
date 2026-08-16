@@ -55,6 +55,11 @@ struct ExerciseListView: View {
             IconBadge(systemName: exercise.iconSymbolName)
             VStack(alignment: .leading, spacing: 2) {
                 Text(exercise.displayName)
+                if exercise.showsSecondaryName {
+                    Text(exercise.name)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 if !exercise.equipmentItems.isEmpty {
                     Text(exercise.equipmentItems.map(\.name).joined(separator: ", "))
                         .font(.caption)

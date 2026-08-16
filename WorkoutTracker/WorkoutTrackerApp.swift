@@ -26,6 +26,7 @@ struct WorkoutTrackerApp: App {
             WorkoutSession.self,
             StepLog.self,
             SetLog.self,
+            ExerciseSessionNote.self,
             PersonalRecord.self,
             RecurringWorkoutSchedule.self,
             ScheduledWorkout.self,
@@ -84,7 +85,9 @@ struct WorkoutTrackerApp: App {
 
     /// Flags for every legacy migration superseded by `CatalogSeedLoader` on a fresh
     /// install — pre-marked done so a device seeded this way never runs them later.
-    private static let legacyMigrationFlagKeys = [
+    /// Not private — `DataResetService` replays this same "fresh install" bookkeeping
+    /// after a manual reset, so a reset device behaves identically to a real one.
+    static let legacyMigrationFlagKeys = [
         "migration.muscleTaxonomyV1",
         "import.favoriteExercisesV1",
         "import.favoriteExercisesCorrectionV1",

@@ -27,8 +27,12 @@ struct RepSessionRunnerView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     header(exercise: exercise, entry: entry)
+                    ExerciseMediaView(exercise: exercise, mode: .autoplayWorkout(maxSeconds: 30))
+                        .id(exercise.id)
                     historyRow(entry: entry, exercise: exercise)
                     setsSection(entry: entry, exercise: exercise)
+                    ExerciseNoteControl(session: session, exercise: exercise)
+                        .id(exercise.id)
                 }
                 .padding()
             }

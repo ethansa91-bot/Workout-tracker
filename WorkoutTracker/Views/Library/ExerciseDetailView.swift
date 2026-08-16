@@ -9,7 +9,16 @@ struct ExerciseDetailView: View {
     var body: some View {
         List {
             Section {
-                if let imageAssetName = exercise.imageAssetName {
+                if let generatedFileName = exercise.generatedImageFileName, let uiImage = GeneratedExerciseImageStore.load(fileName: generatedFileName) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 220)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .listRowInsets(EdgeInsets())
+                        .padding(.bottom, 8)
+                } else if let imageAssetName = exercise.imageAssetName {
                     Image(imageAssetName)
                         .resizable()
                         .aspectRatio(contentMode: .fill)

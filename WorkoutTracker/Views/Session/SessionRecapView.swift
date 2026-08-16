@@ -104,15 +104,15 @@ struct SessionRecapView: View {
         ) {
             Button("Start New", role: .destructive) { startNewSession() }
         }
-        .confirmationDialog(
+        .alert(
             "Delete \"\(sectionPendingDeletion.map { sectionTitle($0) } ?? "")\"? Its exercises will be removed too.",
             isPresented: Binding(
                 get: { sectionPendingDeletion != nil },
                 set: { if !$0 { sectionPendingDeletion = nil } }
-            ),
-            titleVisibility: .visible
+            )
         ) {
             Button("Delete", role: .destructive) { confirmDeleteSection() }
+            Button("Cancel", role: .cancel) { }
         }
         .alert("Rename Workout", isPresented: $showingRenamePrompt) {
             TextField("Name", text: $renameText)

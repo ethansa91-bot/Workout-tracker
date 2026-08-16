@@ -17,19 +17,27 @@ enum CatalogSeedLoader {
     static func seedIfNeeded(context: ModelContext) {
         guard !SeedDataLoader.hasSeeded else { return }
         do {
-            let catalog: Catalog = try loadJSON("catalog")
-
-            let muscleCategoriesByName = seedMuscleCategories(context: context)
-            let exerciseCategoriesByName = seedExerciseCategories(context: context)
-            let musclesByName = seedMuscles(catalog.muscles, categoriesByName: muscleCategoriesByName, context: context)
-            let equipmentByName = seedEquipment(catalog.equipment, context: context)
-            seedExercises(catalog.exercises, musclesByName: musclesByName, equipmentByName: equipmentByName, categoriesByName: exerciseCategoriesByName, context: context)
-
-            try context.save()
-            UserDefaults.standard.set(true, forKey: SeedDataLoader.seededFlagKey)
+            try seed(context: context)
         } catch {
             print("CatalogSeedLoader: load failed: \(error)")
         }
+    }
+
+    /// The actual seeding work, without the `hasSeeded` guard or silent error-swallowing
+    /// — used directly by `DataResetService`, whose caller surfaces failures to the user
+    /// instead of logging them. A reset that appears to succeed but leaves the catalog
+    /// empty would be far more confusing than a visible error.
+    static func seed(context: ModelContext) throws {
+        let catalog: Catalog = try loadJSON("catalog")
+
+        let muscleCategoriesByName = seedMuscleCategories(context: context)
+        let exerciseCategoriesByName = seedExerciseCategories(context: context)
+        let musclesByName = seedMuscles(catalog.muscles, categoriesByName: muscleCategoriesByName, context: context)
+        let equipmentByName = seedEquipment(catalog.equipment, context: context)
+        seedExercises(catalog.exercises, musclesByName: musclesByName, equipmentByName: equipmentByName, categoriesByName: exerciseCategoriesByName, context: context)
+
+        try context.save()
+        UserDefaults.standard.set(true, forKey: SeedDataLoader.seededFlagKey)
     }
 
     // MARK: - JSON schema
@@ -54,6 +62,25 @@ enum CatalogSeedLoader {
         let weighted: Bool
         let unit: String?
         let weights: [Double]
+
+        /// Passive equipment (a bench, a pull-up bar) has no weight combinations, so
+        /// `catalog.json` simply omits `weights` for those entries rather than writing
+        /// out an empty array — this defaults it to `[]` instead of failing to decode.
+        enum CodingKeys: String, CodingKey {
+            case name, icon, isCustom, isAtHome, isAtGym, weighted, unit, weights
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            name = try container.decode(String.self, forKey: .name)
+            icon = try container.decode(String.self, forKey: .icon)
+            isCustom = try container.decode(Bool.self, forKey: .isCustom)
+            isAtHome = try container.decode(Bool.self, forKey: .isAtHome)
+            isAtGym = try container.decode(Bool.self, forKey: .isAtGym)
+            weighted = try container.decode(Bool.self, forKey: .weighted)
+            unit = try container.decodeIfPresent(String.self, forKey: .unit)
+            weights = try container.decodeIfPresent([Double].self, forKey: .weights) ?? []
+        }
     }
 
     private struct ExerciseEntry: Decodable {
@@ -66,6 +93,9 @@ enum CatalogSeedLoader {
         let equipment: [String]
         let muscles: [String]
         let categories: [String]
+        /// Matches the JSON key exactly — most `catalog.json` exercises simply omit
+        /// this key, which decodes to `nil` for free since it's Optional.
+        let videolink: String?
     }
 
     // MARK: - Fixed taxonomy (same lists as SeedDataLoader/WgerCategoryRevert)
@@ -146,6 +176,7 @@ enum CatalogSeedLoader {
                 name: entry.name,
                 label: entry.label,
                 notes: entry.notes,
+                videoURL: normalizedVideoURL(entry.videolink),
                 iconSymbolName: entry.icon,
                 imageAssetName: ExerciseImageMapping.assetName[entry.name],
                 isCustom: entry.isCustom,
@@ -156,6 +187,21 @@ enum CatalogSeedLoader {
             exercise.categories = entry.categories.compactMap { categoriesByName[$0] }
             context.insert(exercise)
         }
+    }
+
+    /// `catalog.json` links a mix of `/shorts/<id>` and `/watch?v=<id>&pp=<tracking
+    /// junk>` URLs; normalize to a clean canonical form on import — Shorts (and
+    /// already-`/embed/` links) become `/embed/<id>`, everything else becomes a bare
+    /// `/watch?v=<id>` with no tracking params. `YouTubeURL.videoID` extracts the same
+    /// id regardless of source format, so this doesn't change which videos actually
+    /// embed successfully (a video with embedding disabled fails the same way either
+    /// way) — it just keeps the stored link tidy. Falls back to the raw string
+    /// unchanged if no id can be extracted, rather than silently dropping a link we
+    /// don't recognize.
+    private static func normalizedVideoURL(_ raw: String?) -> String? {
+        guard let raw, let id = YouTubeURL.videoID(from: raw) else { return raw }
+        let isShortsOrEmbed = raw.contains("/shorts/") || raw.contains("/embed/")
+        return isShortsOrEmbed ? "https://www.youtube.com/embed/\(id)" : "https://www.youtube.com/watch?v=\(id)"
     }
 
     // MARK: - JSON loading

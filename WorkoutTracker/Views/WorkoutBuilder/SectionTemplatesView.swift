@@ -9,6 +9,7 @@ import SwiftData
 struct SectionTemplatesView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \WorkoutSection.name) private var allSections: [WorkoutSection]
+    @State private var templatePendingDeletion: WorkoutSection?
 
     private var templates: [WorkoutSection] {
         allSections.filter { $0.workout == nil && $0.deletedAt == nil }
@@ -32,10 +33,11 @@ struct SectionTemplatesView: View {
                         }
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
-                                deleteTemplate(section)
+                                templatePendingDeletion = section
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
+                            .tint(Color.appDanger)
                         }
                     }
                 }
@@ -43,6 +45,21 @@ struct SectionTemplatesView: View {
             }
         }
         .background(Color.appBackground)
+        .alert(
+            "Delete \"\(templatePendingDeletion?.name ?? "")\"?",
+            isPresented: Binding(
+                get: { templatePendingDeletion != nil },
+                set: { if !$0 { templatePendingDeletion = nil } }
+            )
+        ) {
+            Button("Delete", role: .destructive) {
+                if let section = templatePendingDeletion {
+                    deleteTemplate(section)
+                }
+                templatePendingDeletion = nil
+            }
+            Button("Cancel", role: .cancel) { templatePendingDeletion = nil }
+        }
     }
 
     private func templateRow(_ section: WorkoutSection) -> some View {

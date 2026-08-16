@@ -28,6 +28,13 @@ final class Equipment: SyncableModel {
     @Relationship(deleteRule: .cascade, inverse: \WeightCombo.equipment)
     var weightCombos: [WeightCombo] = []
 
+    /// Explicit inverse of `Exercise.equipmentItems` — without this, SwiftData doesn't
+    /// reliably treat the relationship as true many-to-many; each `Equipment` instance
+    /// could only actually stay linked to one `Exercise` at a time, silently dropping
+    /// every other exercise's link to the same equipment as later ones were seeded.
+    @Relationship(inverse: \Exercise.equipmentItems)
+    var exercises: [Exercise] = []
+
     init(
         id: UUID = UUID(),
         name: String,

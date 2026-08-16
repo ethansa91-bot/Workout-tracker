@@ -54,12 +54,12 @@ struct RepSectionEditorView: View {
                 addExercises(exercises)
             }
         }
-        .confirmationDialog(
+        .alert(
             "Delete \(selectedEntryIDs.count) selected exercise\(selectedEntryIDs.count == 1 ? "" : "s")?",
-            isPresented: $showingDeleteConfirm,
-            titleVisibility: .visible
+            isPresented: $showingDeleteConfirm
         ) {
             Button("Delete", role: .destructive) { deleteSelection() }
+            Button("Cancel", role: .cancel) { }
         }
         .sheet(isPresented: $showingEditSheet) {
             editSheet
@@ -236,11 +236,7 @@ struct RepSectionEditorView: View {
                     .padding(.bottom, 10)
             }
         }
-        .padding(.horizontal, isExpanded ? 8 : 0)
-        .background(
-            isExpanded ? Color.appAccent.opacity(0.07) : Color.clear,
-            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-        )
+        .listRowBackground(isExpanded ? Color.appHighlightGray : nil)
     }
 
     private func entryRowContent(_ entry: RepSectionExercise) -> some View {
@@ -365,12 +361,6 @@ private struct RepEntryInlineEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Button("Change Exercise") {
-                showingExercisePicker = true
-            }
-            .buttonStyle(.bordered)
-            .frame(maxWidth: .infinity, alignment: .center)
-
             Stepper("Sets: \(entry.targetSets)", value: Binding(
                 get: { entry.targetSets },
                 set: { entry.targetSets = $0; save() }

@@ -252,6 +252,7 @@ struct ExerciseDTO: Codable {
     let name: String
     let label: String?
     let notes: String?
+    let videoURL: String?
     let iconAssetIdentifier: String
     let isCustom: Bool
     let isFavorited: Bool
@@ -264,6 +265,7 @@ struct ExerciseDTO: Codable {
         try c.encode(name, forKey: .name)
         try c.encode(label, forKey: .label)
         try c.encode(notes, forKey: .notes)
+        try c.encode(videoURL, forKey: .videoURL)
         try c.encode(iconAssetIdentifier, forKey: .iconAssetIdentifier)
         try c.encode(isCustom, forKey: .isCustom)
         try c.encode(isFavorited, forKey: .isFavorited)
@@ -420,7 +422,7 @@ enum ExerciseCategorySyncAdapter: CatalogSyncAdapter {
 enum ExerciseSyncAdapter: CatalogSyncAdapter {
     static let tableName = "exercises"
     static func dto(from model: Exercise) -> ExerciseDTO {
-        ExerciseDTO(id: model.id, name: model.name, label: model.label, notes: model.notes, iconAssetIdentifier: model.iconSymbolName, isCustom: model.isCustom, isFavorited: model.isFavorited, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
+        ExerciseDTO(id: model.id, name: model.name, label: model.label, notes: model.notes, videoURL: model.videoURL, iconAssetIdentifier: model.iconSymbolName, isCustom: model.isCustom, isFavorited: model.isFavorited, updatedAt: model.updatedAt, deletedAt: model.deletedAt)
     }
     static func id(of dto: ExerciseDTO) -> UUID { dto.id }
     static func updatedAt(of dto: ExerciseDTO) -> Date { dto.updatedAt }
@@ -434,7 +436,7 @@ enum ExerciseSyncAdapter: CatalogSyncAdapter {
         // imageAssetName isn't part of the sync payload — it's a local-only reference
         // photo derived from the exercise's name, the same on every device. Equipment
         // associations arrive separately via the `exercise_equipment` join sync.
-        let model = Exercise(id: dto.id, name: dto.name, label: dto.label, notes: dto.notes, iconSymbolName: dto.iconAssetIdentifier, imageAssetName: ExerciseImageMapping.assetName[dto.name], isCustom: dto.isCustom, isFavorited: dto.isFavorited)
+        let model = Exercise(id: dto.id, name: dto.name, label: dto.label, notes: dto.notes, videoURL: dto.videoURL, iconSymbolName: dto.iconAssetIdentifier, imageAssetName: ExerciseImageMapping.assetName[dto.name], isCustom: dto.isCustom, isFavorited: dto.isFavorited)
         context.insert(model)
         return model
     }
@@ -442,6 +444,7 @@ enum ExerciseSyncAdapter: CatalogSyncAdapter {
         model.name = dto.name
         model.label = dto.label
         model.notes = dto.notes
+        model.videoURL = dto.videoURL
         model.iconSymbolName = dto.iconAssetIdentifier
         model.isCustom = dto.isCustom
         model.isFavorited = dto.isFavorited

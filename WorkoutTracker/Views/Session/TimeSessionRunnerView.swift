@@ -33,9 +33,14 @@ struct TimeSessionRunnerView: View {
 
     var body: some View {
         if let currentStep {
-            VStack(spacing: 20) {
-                mainStepView(currentStep)
-                nextStepPreview
+            VStack(spacing: 12) {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        mainStepView(currentStep)
+                        nextStepPreview
+                    }
+                    .padding(.vertical)
+                }
                 SessionScrubStripView(
                     steps: steps,
                     currentIndex: currentIndex,
@@ -43,7 +48,6 @@ struct TimeSessionRunnerView: View {
                     onSelect: requestJump
                 )
             }
-            .padding(.vertical)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.appBackground)
             .onAppear { remainingSeconds = currentStep.durationSeconds }
@@ -65,9 +69,11 @@ struct TimeSessionRunnerView: View {
         VStack(spacing: 12) {
             switch step.stepType {
             case .exercise:
-                Image(systemName: step.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional")
-                    .font(.system(size: 64))
-                    .foregroundStyle(.tint)
+                if let exercise = step.exercise {
+                    ExerciseMediaView(exercise: exercise, mode: .autoplayWorkout(maxSeconds: min(30, Double(step.durationSeconds))))
+                        .id(exercise.id)
+                        .padding(.horizontal)
+                }
                 Text(step.exercise?.displayName ?? "Exercise")
                     .font(.title.bold())
                     .multilineTextAlignment(.center)

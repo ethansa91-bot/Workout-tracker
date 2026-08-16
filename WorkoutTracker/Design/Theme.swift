@@ -36,6 +36,10 @@ extension Color {
     /// destructive buttons read as part of this palette instead of clashing with it.
     static let appDanger = Color(light: UIColor(red: 0.780, green: 0.325, blue: 0.298, alpha: 1),
                                   dark: UIColor(red: 0.867, green: 0.494, blue: 0.463, alpha: 1))
+    /// Light neutral gray for expanded/highlighted list rows — a subtle, non-branded
+    /// highlight, used instead of a heavier accent tint (e.g. an expanded accordion row).
+    static let appHighlightGray = Color(light: UIColor(white: 0.91, alpha: 1),
+                                         dark: UIColor(white: 0.24, alpha: 1))
 
     fileprivate init(light: UIColor, dark: UIColor) {
         self.init(uiColor: UIColor { $0.userInterfaceStyle == .dark ? dark : light })

@@ -19,6 +19,7 @@ struct CustomExerciseFormView: View {
     @State private var name = ""
     @State private var label = ""
     @State private var notes = ""
+    @State private var videoURLText = ""
     @State private var selectedEquipmentIDs: Set<UUID> = []
     @State private var selectedMuscleIDs: Set<UUID> = []
     @State private var selectedCategoryNames: Set<String> = []
@@ -32,6 +33,7 @@ struct CustomExerciseFormView: View {
         _name = State(initialValue: existingExercise?.name ?? "")
         _label = State(initialValue: existingExercise?.label ?? "")
         _notes = State(initialValue: existingExercise?.notes ?? "")
+        _videoURLText = State(initialValue: existingExercise?.videoURL ?? "")
         _selectedEquipmentIDs = State(initialValue: Set(existingExercise?.equipmentItems.map(\.id) ?? []))
         _selectedMuscleIDs = State(initialValue: Set(existingExercise?.muscles.map(\.id) ?? []))
         _selectedCategoryNames = State(initialValue: Set(existingExercise?.categories.map(\.name) ?? []))
@@ -62,6 +64,22 @@ struct CustomExerciseFormView: View {
                         Text("Personal Label")
                     } footer: {
                         Text("Optional. Once set, this shows in place of the name everywhere.")
+                    }
+
+                    Section {
+                        if YouTubeURL.videoID(from: videoURLText) != nil {
+                            YouTubeThumbnailButton(urlString: videoURLText, title: name)
+                                .frame(height: 160)
+                                .listRowInsets(EdgeInsets())
+                        }
+                        TextField("YouTube link", text: $videoURLText)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .keyboardType(.URL)
+                    } header: {
+                        Text("Video")
+                    } footer: {
+                        Text("Paste a YouTube link. Shown as a thumbnail here — tap to play. Auto-plays muted during workouts.")
                     }
 
                     Section("Passive Equipment") {
@@ -133,6 +151,7 @@ struct CustomExerciseFormView: View {
         let categories = allCategories.filter { selectedCategoryNames.contains($0.name) }
         let trimmedLabel = label.trimmingCharacters(in: .whitespaces)
         let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedVideoURL = videoURLText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if let existingExercise {
             if canEditName {
@@ -140,6 +159,7 @@ struct CustomExerciseFormView: View {
             }
             existingExercise.label = trimmedLabel.isEmpty ? nil : trimmedLabel
             existingExercise.notes = trimmedNotes.isEmpty ? nil : trimmedNotes
+            existingExercise.videoURL = trimmedVideoURL.isEmpty ? nil : trimmedVideoURL
             existingExercise.equipmentItems = equipment
             existingExercise.muscles = muscles
             existingExercise.categories = categories
@@ -152,6 +172,7 @@ struct CustomExerciseFormView: View {
                 name: name.trimmingCharacters(in: .whitespaces),
                 label: trimmedLabel.isEmpty ? nil : trimmedLabel,
                 notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
+                videoURL: trimmedVideoURL.isEmpty ? nil : trimmedVideoURL,
                 iconSymbolName: symbol,
                 isCustom: true,
                 isFavorited: true,

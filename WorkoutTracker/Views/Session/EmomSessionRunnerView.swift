@@ -34,8 +34,6 @@ struct EmomSessionRunnerView: View {
                     .font(.system(size: 64, weight: .bold, design: .rounded).monospacedDigit())
 
                 exerciseList
-
-                Spacer()
             }
             .padding(.top, 32)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -49,19 +47,22 @@ struct EmomSessionRunnerView: View {
     }
 
     private var exerciseList: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            ForEach(exercises) { entry in
-                HStack(spacing: 12) {
-                    Image(systemName: entry.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional")
-                        .font(.title2)
-                        .foregroundStyle(.tint)
-                    Text(entry.exercise?.displayName ?? "Exercise")
-                        .font(.title3.weight(.semibold))
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                ForEach(exercises) { entry in
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(entry.exercise?.displayName ?? "Exercise")
+                            .font(.title3.weight(.semibold))
+                        if let exercise = entry.exercise {
+                            ExerciseMediaView(exercise: exercise, mode: .photoOnly)
+                                .id(exercise.id)
+                        }
+                    }
                 }
             }
+            .padding(.horizontal, 32)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 32)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func tick() {

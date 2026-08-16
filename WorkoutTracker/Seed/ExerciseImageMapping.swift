@@ -7,6 +7,14 @@ import Foundation
 enum ExerciseImageMapping {
     static let assetName: [String: String] = [
         "Ab wheel": "ab_wheel",
+        "Active Hip Flexor to Hamstring Stretch": "active_hip_flexor_to_hamstring_stretch",
+        "Arnold Shoulder Press": "arnold_shoulder_press",
+        "B-Stance Reciprocal Single-Arm Row": "b_stance_reciprocal_single_arm_row",
+        "Banana Kicks": "banana_kicks",
+        "Banded Cat-Cow": "banded_cat_cow",
+        "Banded Eccentric Single-Leg Slider Hamstring Curl": "banded_eccentric_single_leg_slider_hamstring_curl",
+        "Barbell Hip Thrust": "barbell_hip_thrust",
+        "90° Rotational Lunge to Box Step-Up": "90_rotational_lunge_to_box_step_up",
         "Alternating Biceps Curls With Dumbbell": "alternating_biceps_curls_with_dumbbell",
         "Alternating bicep curls": "alternating_bicep_curls",
         "Alternating dumbbell hammer curl": "alternating_dumbbell_hammer_curl",

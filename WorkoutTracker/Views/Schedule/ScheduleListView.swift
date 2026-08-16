@@ -84,20 +84,21 @@ struct ScheduleListView: View {
             .sheet(item: $movingOccurrence) { occurrence in
                 moveSheet(for: occurrence)
             }
-            .confirmationDialog(
+            .alert(
                 cancelDialogTitle,
                 isPresented: Binding(
                     get: { occurrencePendingCancel != nil },
                     set: { if !$0 { occurrencePendingCancel = nil } }
-                ),
-                titleVisibility: .visible
+                )
             ) {
                 if let occurrence = occurrencePendingCancel {
                     if occurrence.recurringSchedule != nil {
                         Button("Cancel This Occurrence", role: .destructive) { cancelOccurrence(occurrence) }
                         Button("Cancel Entire Series", role: .destructive) { cancelSeries(occurrence) }
+                        Button("Keep", role: .cancel) { }
                     } else {
                         Button("Cancel", role: .destructive) { cancelOccurrence(occurrence) }
+                        Button("Keep", role: .cancel) { }
                     }
                 }
             }

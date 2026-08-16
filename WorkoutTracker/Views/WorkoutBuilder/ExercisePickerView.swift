@@ -12,7 +12,7 @@ struct ExercisePickerView: View {
     @Query(sort: \Exercise.name) private var allExercises: [Exercise]
 
     @State private var searchText = ""
-    @State private var filter = ExerciseFilter()
+    @State private var filter = ExerciseFilter(favoritedOnly: true)
 
     private var filtered: [Exercise] {
         allExercises.filter { exercise in
@@ -41,6 +41,11 @@ struct ExercisePickerView: View {
                                 .frame(width: 28)
                             VStack(alignment: .leading) {
                                 Text(exercise.displayName)
+                                if exercise.showsSecondaryName {
+                                    Text(exercise.name)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                                 if !exercise.equipmentItems.isEmpty {
                                     Text(exercise.equipmentItems.map(\.name).joined(separator: ", "))
                                         .font(.caption)

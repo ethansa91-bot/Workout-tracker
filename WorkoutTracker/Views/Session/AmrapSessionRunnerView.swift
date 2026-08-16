@@ -61,12 +61,13 @@ struct AmrapSessionRunnerView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 ForEach(exercises) { entry in
-                    HStack(spacing: 12) {
-                        Image(systemName: entry.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional")
-                            .font(.title2)
-                            .foregroundStyle(.tint)
+                    VStack(alignment: .leading, spacing: 10) {
                         Text(entry.exercise?.displayName ?? "Exercise")
                             .font(.title3.weight(.semibold))
+                        if let exercise = entry.exercise {
+                            ExerciseMediaView(exercise: exercise, mode: .photoOnly)
+                                .id(exercise.id)
+                        }
                     }
                 }
             }

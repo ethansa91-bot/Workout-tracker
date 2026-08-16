@@ -56,12 +56,12 @@ struct MissedWorkoutsView: View {
                 }
             }
         }
-        .confirmationDialog(
+        .alert(
             "Cancel \(selectedIDs.count) scheduled workout\(selectedIDs.count == 1 ? "" : "s")?",
-            isPresented: $showingCancelConfirm,
-            titleVisibility: .visible
+            isPresented: $showingCancelConfirm
         ) {
             Button("Cancel Selected", role: .destructive) { cancelSelected() }
+            Button("Keep", role: .cancel) { }
         }
     }
 
