@@ -537,9 +537,7 @@
         "calisthenics",
         "strength"
       ],
-      "equipment": [
-        "Dumbbell"
-      ],
+      "equipment": [],
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
@@ -555,10 +553,7 @@
       "categories": [
         "strength"
       ],
-      "equipment": [
-        "Dumbbell",
-        "Bench"
-      ],
+      "equipment": [],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
@@ -642,9 +637,7 @@
       "categories": [
         "strength"
       ],
-      "equipment": [
-        "Resistance band"
-      ],
+      "equipment": [],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": false,
@@ -689,9 +682,7 @@
       "categories": [
         "physio"
       ],
-      "equipment": [
-        "Resistance band"
-      ],
+      "equipment": [],
       "icon": "figure.flexibility",
       "isCustom": true,
       "isFavorited": true,
@@ -707,9 +698,7 @@
       "categories": [
         "physio"
       ],
-      "equipment": [
-        "Resistance band"
-      ],
+      "equipment": [],
       "icon": "figure.flexibility",
       "isCustom": true,
       "isFavorited": true,
@@ -725,8 +714,7 @@
         "physio"
       ],
       "equipment": [
-        "Roman Chair",
-        "Resistance band"
+        "Roman Chair"
       ],
       "icon": "figure.flexibility",
       "isCustom": true,
@@ -742,9 +730,7 @@
       "categories": [
         "strength"
       ],
-      "equipment": [
-        "Barbell"
-      ],
+      "equipment": [],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": false,
@@ -795,8 +781,7 @@
         "strength"
       ],
       "equipment": [
-        "Barbell",
-        "Bench"
+        "Barbell"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": true,
@@ -935,9 +920,7 @@
       "categories": [
         "strength"
       ],
-      "equipment": [
-        "Barbell"
-      ],
+      "equipment": [],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
@@ -954,8 +937,7 @@
         "strength"
       ],
       "equipment": [
-        "Dumbbell",
-        "Bench"
+        "Dumbbell"
       ],
       "icon": "figure.cooldown",
       "isCustom": false,
@@ -970,9 +952,7 @@
       "categories": [
         "strength"
       ],
-      "equipment": [
-        "Dumbbell"
-      ],
+      "equipment": [],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
@@ -987,8 +967,7 @@
         "strength"
       ],
       "equipment": [
-        "Dumbbell",
-        "Incline bench"
+        "Dumbbell"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
@@ -1501,8 +1480,7 @@
         "strength"
       ],
       "equipment": [
-        "Dumbbell",
-        "Bench"
+        "Dumbbell"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
@@ -1868,8 +1846,7 @@
         "strength"
       ],
       "equipment": [
-        "Dumbbell",
-        "Discs"
+        "Dumbbell"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
