@@ -245,7 +245,7 @@ struct TimeSectionEditorView: View {
         HStack(spacing: 12) {
             switch step.stepType {
             case .exercise:
-                IconBadge(systemName: step.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional")
+                IconBadge(systemName: step.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional", tint: step.effectiveColor?.color ?? .accentColor)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(step.exercise?.displayName ?? "Exercise")
                     Text("\(step.durationSeconds)s").font(.caption).foregroundStyle(Color.appRust)
@@ -384,6 +384,8 @@ private struct TimeStepInlineEditor: View {
                     .buttonStyle(.bordered)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .disabled(hasRestAfter)
+
+                colorPicker
             }
         }
         .padding(.leading, 40)
@@ -392,6 +394,38 @@ private struct TimeStepInlineEditor: View {
             ExercisePickerView { exercise in
                 step.exercise = exercise
                 save()
+            }
+        }
+    }
+
+    /// Every exercise step can have its own color, independent of every other step in
+    /// the section — this is what `SessionScrubStripView` highlights the step's chip
+    /// with while it's active. Tapping the already-selected color clears it back to
+    /// the default accent.
+    private var colorPicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Color")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 10) {
+                ForEach(TimeStepColor.allCases) { option in
+                    Button {
+                        step.color = (step.color == option) ? nil : option
+                        save()
+                    } label: {
+                        Circle()
+                            .fill(option.color)
+                            .frame(width: 28, height: 28)
+                            .overlay {
+                                if step.color == option {
+                                    Image(systemName: "checkmark")
+                                        .font(.caption.weight(.bold))
+                                        .foregroundStyle(.white)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
     }

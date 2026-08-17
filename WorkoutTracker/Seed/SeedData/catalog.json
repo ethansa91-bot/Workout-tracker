@@ -508,35 +508,6 @@
         "calisthenics",
         "strength"
       ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Calves",
-        "Soleus(lower calf)"
-      ],
-      "name": "ankle dorsiflexion rocks",
-      "notes": "Move your knee forward, keeping your heel on the ground. Hold the position for a couple of seconds and return to the starting position."
-    },
-    {
-      "categories": [
-        "calisthenics",
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Ankle Roll",
-      "notes": "View the video to undestand the exercise"
-    },
-    {
-      "categories": [
-        "calisthenics",
-        "strength"
-      ],
       "equipment": [
         "Dumbbell"
       ],
@@ -606,23 +577,6 @@
     },
     {
       "categories": [
-        "calisthenics",
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Serratus Anterior(side chest)",
-        "lower back",
-        "Lats"
-      ],
-      "name": "Back extensión",
-      "notes": ""
-    },
-    {
-      "categories": [
         "calisthenics"
       ],
       "equipment": [],
@@ -637,35 +591,6 @@
       "name": "Banana Kicks",
       "notes": "Arched hollow position, feet and shoulders off floor. Kick one leg up and down.",
       "videolink": "https://www.youtube.com/watch?v=cIN_v8JeIdc"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Resistance band"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Quads"
-      ],
-      "name": "Band Terminal Knee extension",
-      "notes": "This is an end range strengthening exercise for the knee extensors. Start by looping a band around the back of one knee and anchoring the other end to a stable surface in front of you. Stand in a split stance with the banded knee bent and placed as the front leg. Straighten the knee to pull against the bands resistance and maintain a contraction in your quadriceps for up to 5 seconds before releasing."
-    },
-    {
-      "categories": [
-        "calisthenics",
-        "mobility"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Banded Ankle Mobility",
-      "notes": "View the video to undestand the exercise"
     },
     {
       "categories": [
@@ -747,39 +672,6 @@
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Obliques"
-      ],
-      "name": "Barbell Ab Rollout",
-      "notes": "Place a barbell on the floor at your feet.\n\nBending at the waist, grip the barbell with a shoulder with overhand grip.\n\nWith a slow controlled motion, roll the bar out so that your back is straight.\n\nRoll back up raising your hips and butt as you return to the starting position."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest",
-        "Shoulders"
-      ],
-      "name": "Barbell Clean and press",
-      "notes": "This exercise involves lifting a barbell from the ground to the shoulders, then pressing it overhead. It is a compound movement that targets multiple muscle groups, including the legs, back, shoulders, and arms. It is often used in strength and conditioning programs to improve overall power and athleticism."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Barbell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
       "isFavorited": true,
       "label": "Barbell Squat",
       "muscles": [
@@ -807,39 +699,6 @@
         "lower back"
       ],
       "name": "Barbell Hip Thrust",
-      "notes": ""
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Barbell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Quads"
-      ],
-      "name": "Barbell Step Back Lunge",
-      "notes": "Step 1: Stand with your feet hip-width apart, holding a barbell on your upper back.\nStep 2: Keep your back straight, chest up, and core engaged.\nStep 3: Take a step back with one leg and lower your body by bending both knees. Ensure that your back knee nearly touches the ground.\nStep 4: Push off your back foot to return to the starting position.\nStep 5: Repeat the movement with the other leg.\nContinue alternating between legs for the desired repetitions."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Barbell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": true,
-      "isFavorited": false,
-      "label": "Sumo squat",
-      "muscles": [
-        "Glutes"
-      ],
-      "name": "Barbell Sumo Squat",
       "notes": ""
     },
     {
@@ -912,24 +771,6 @@
       ],
       "name": "Bench Glute Stretch with Contralateral Row",
       "notes": "One leg stretched on a bench in a glute stretch position. Row with the band using the opposite-side arm."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Barbell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest",
-        "Shoulders",
-        "Triceps"
-      ],
-      "name": "Bench Press",
-      "notes": "Lay down on a bench, the bar should be directly above your eyes, the knees are somewhat angled and the feet are firmly on the floor. Concentrate, breath deeply and grab the bar more than shoulder wide. Bring it slowly down till it briefly touches your chest at the height of your nipples. Push the bar up.\n\nIf you train with a high weight it is advisable to have a *spotter* that can help you up if you can't lift the weight on your own.\n\nWith the width of the grip you can also control which part of the chest is trained more:\n\n* wide grip: outer chest muscles\n* narrow grip: inner chest muscles and triceps"
     },
     {
       "categories": [
@@ -1084,37 +925,6 @@
       "categories": [
         "strength"
       ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Biceps"
-      ],
-      "name": "Biceps Curl With Cable",
-      "notes": "Stand around 30 - 40cm away from the cable, the feet are firmly on the floor. Take the bar and lift the weight with a fast movements. Lower the weight as with the dumbbell curls slowly and controlled."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Barbell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Biceps",
-        "Brachialis(lower bicep)"
-      ],
-      "name": "Biceps Curls With Barbell",
-      "notes": "Hold the Barbell shoulder-wide, the back is straight, the shoulders slightly back, the arms are streched. Bend the arms, bringing the weight up, with a fast movement. Without pausing, let down the bar with a slow and controlled movement.\n\nDon't allow your body to swing during the exercise, all work is done by the biceps, which are the only mucles that should move (pay attention to the elbows)."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
       "equipment": [
         "Dumbbell"
       ],
@@ -1184,45 +994,6 @@
     },
     {
       "categories": [
-        "mobility",
-        "physio"
-      ],
-      "equipment": [
-        "Gym mat"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Abs",
-        "Glutes",
-        "Shoulders"
-      ],
-      "name": "Bird Dog",
-      "notes": "The Bird Dog is a core stability exercise that enhances balance, coordination, and spinal alignment. It’s a low-impact movement ideal for strengthening the posterior chain and improving overall functional control.\n\n1. Begin on all fours with hands under shoulders and knees under hips, keeping your spine neutral.\n2. Extend your right arm forward and left leg backward simultaneously, keeping hips square.\n3. Pause briefly at full extension while engaging your core and glutes.\n4. Return to the starting position and repeat on the opposite side"
-    },
-    {
-      "categories": [
-        "calisthenics",
-        "strength"
-      ],
-      "equipment": [
-        "Barbell",
-        "Box"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Glutes",
-        "Quads",
-        "Soleus(lower calf)"
-      ],
-      "name": "Box squat",
-      "notes": "1. **Set up the box:** Position the box behind you, about 3 feet from a squat rack if you're using a barbell. Choose a height that allows you to squat down and gently tap your glutes on the box with your back straight.\n2. **Stand with proper form:** Stand with your feet shoulder-width apart, toes pointed slightly outward. Engage your core and keep your back neutral. If using a barbell, rack it at shoulder height.\n3. **Lower down:** Sit back as if going to sit on a chair, bending your knees and lowering your hips towards the box. Keep your core tight and back straight throughout the movement.\n4. **Controlled descent:** Descend in a controlled manner until your glutes gently touch the box. Don't plop down.\n5. **Pause and press up:** Briefly pause at the bottom with your back straight and core engaged. Then, press through your heels to drive yourself back up to the starting position.\n\nImprovements in coordination, balance and endurance, toning of the leg and buttock muscles and an overall increase in bone density eliminating the risk of osteoporosis."
-    },
-    {
-      "categories": [
         "strength"
       ],
       "equipment": [
@@ -1261,161 +1032,6 @@
     },
     {
       "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest",
-        "Shoulders"
-      ],
-      "name": "Butterfly",
-      "notes": "Sit on the butterfly machine, the feet have a good contact with the floor, the upper arms are parallel to the floor. Press your arms together till the handles are practically together (but aren't!). Go slowly back. The weights should stay all the time in the air."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Biceps",
-        "Brachialis(lower bicep)"
-      ],
-      "name": "Cable Concentration Curl",
-      "notes": "The concentration curl is a classic exercise for building the biceps one arm at a time. It can be performed bent over or kneeling, but is more often performed seated on a bench. It's great for emphasizing the biceps peak and is often used to finish a biceps workout"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Cable machine"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest",
-        "Shoulders"
-      ],
-      "name": "Cable Cross-over",
-      "notes": "Begin with cables at about shoulder height, one in each hand. Take a step forward so that one foot is in front of the other, for stability, and so that there is tension on the cables. Bring hands together in front of you. Try to make your hands overlap (so that the cables cross) a few inches."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Cable machine"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Shoulders"
-      ],
-      "name": "Cable Front Raise with a small bar",
-      "notes": "The Cable Front Raise with a small bar isolates your anterior deltoids (front shoulders) by providing constant tension, requiring you to stand facing away from a low pulley, grab the bar with an overhand grip, and lift it in front of you to shoulder height with slightly bent arms, avoiding swinging and keeping your core tight for controlled movement up and down. Use a light-to-moderate weight, focusing on slow, controlled reps to feel the muscle work, not momentum.\n\nHow to Perform the Cable Front Raise (Bar)\n\nSetup: Attach a small straight bar to a low cable pulley. Set the weight to a light or moderate setting.\n\nStarting Position: Stand with your back to the machine, holding the bar with an overhand grip (palms facing down) at hip level, arms extended but not locked. Feet shoulder-width apart, core braced, shoulders back and down.\n\nThe Lift: Exhale and slowly raise the bar straight up in front of you, keeping a slight bend in your elbows, until your hands reach shoulder height (or slightly below).\n\nThe Hold: Pause briefly at the top, squeezing your front delts.\n\nThe Lower: Inhale as you slowly and controllably lower the bar back to the starting position, maintaining tension."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Cable machine"
-      ],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Glutes"
-      ],
-      "name": "Cable glute extension",
-      "notes": "This exercise lets you work the upper, or larger, part of the glutes. For that reason, it should never be missing from your routine of isolated exercises for training the glutes.\nStand in front of a cable machine and locate the low pulley. Then attach the ankle strap to work on the low pulley. As for your posture, you should stay upright at all times. Pay special attention to your back to keep it straight and avoid injury.\nIt is advisable to hold on to the machine for better balance. With the leg that is holding the weight of the cable, perform a slow stretch backward without bending the knee."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Cable machine"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Shoulders"
-      ],
-      "name": "Cable Lateral Raises (Single Arm)",
-      "notes": "The single arm cable lateral raise is a variation of the lateral raise and an exercise used to build the muscles of the shoulders.\n\n1. Position a cable at the lowest position possible and attach a single handle.\n2. Reach across your body and grab the handle with a neutral grip.\n3. Keep the elbow slightly bent and pull the handle across your body and raise laterally.\n4. Slowly lower the handle back to the starting position under control."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Cable machine"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Shoulders",
-        "Traps",
-        "Triceps"
-      ],
-      "name": "Cable Rear Delt Fly",
-      "notes": "The reverse cable fly, also known as the cable rear delt fly, is a deltoid muscle strengthening and definition exercise. It’s one of the best isolation exercises for your back and posterior deltoid.This workout targets your posterior (back) deltoids while using a range of upper body muscles.\n\n1. Adjust the weight and the pulleys to the right height. You should be able to see the pulleys because they should be above your head.\n2. With your right hand, grab the left pulley, and with your left hand, grab the right pulley, crossing them in front of you. This is where you’ll begin your journey.\n3. Start the movement by moving your arms back and forth while keeping your arms straight.\n4. Pause at the finish of the move for a brief moment before returning the handles to their starting positions."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Calves",
-        "Soleus(lower calf)"
-      ],
-      "name": "Calf Press Using Leg Press Machine",
-      "notes": "Put  the balls of your feet on an extended leg press pad.  Use your calves to press the weight by flexing your feet/toes into a pointed position, and releasing back into a relaxed position.\n\nThis exercise builds mass and strength in the Gastrocnemius and Soleus muscles as well, if not better, than any calf exercise."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest"
-      ],
-      "name": "Chest Press",
-      "notes": "1. Adjust the seat height so that the grips are parallel to your chest.\n2. Use your legs to push the foot forward pedal.\n3. Bring the handles to the start position.\n4. Keep your back in contact with the back pad, press outwards.\n5. Press the handles away from your chest and exhale.\n6. Allow the handles to come in gently until they reach your chest.\n7. Allow the handles to return to your chest as you inhale."
-    },
-    {
-      "categories": [
-        "mobility",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Child's pose",
-      "notes": "Starting position:\n\nStart on all fours, knees, toes, and hands touching the ground. Your two big toes should be touching.\n\nSteps:\n\n1. Move your knees so that they're about hip-width apart.\n2. On an exhale, move your pelvis back to sit on your heels. Your hands should still be touching the ground.\n3. Relax your upper body, lowering your forehead to the floor and letting your hands move forward naturally.\n4. Stay in this pose.\n\nTips:\n\n* To leave the pose, walk your arms back under your shoulders and move your upper body up into a seated position."
-    },
-    {
-      "categories": [
         "strength",
         "calisthenics"
       ],
@@ -1433,68 +1049,6 @@
       ],
       "name": "Chin Up",
       "notes": "The chin-up (also known as a chin or chinup) is a strength training exercise. People frequently do this exercise with the intention of strengthening muscles such as the latissimus dorsi and biceps, which extend the shoulder and flex the elbow, respectively. In this maneuver, the palms are faced towards the body. It is a form of pull-up in which the range of motion is established in relation to a person's chin."
-    },
-    {
-      "categories": [
-        "calisthenics",
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.jumprope",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest",
-        "Shoulders",
-        "Triceps"
-      ],
-      "name": "Clap Push-UP",
-      "notes": "The clap push-up is an explosive upper body movement that builds power and fast-twitch muscle strength. It adds a plyometric challenge to the traditional push-up by requiring the hands to leave the ground mid-rep.\n\n1. Start in a strong push-up position with your hands slightly wider than shoulder-width and core engaged\n2. Lower your body explosively and push off the ground with enough force to lift your hands.\n3. Quickly clap your hands together at chest level before returning them to the floor.\n4. Land with soft elbows to absorb the impact and immediately move into the next rep"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Barbell"
-      ],
-      "icon": "figure.jumprope",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Quads",
-        "Shoulders"
-      ],
-      "name": "Clean and Press",
-      "notes": "* **The First Pull:** Lift the bar from the floor to knee-height by driving with the legs, keeping the angle of your back constant.\n* **The \"Power\" Position:** As the bar reaches mid-thigh, explosively shrug and extend your hips to create vertical momentum.\n* **The Quick Elbow Turnover:** In the catch phase, rotate your elbows rapidly under the bar to create a \"shelf\" on your front deltoids.\n* **The Vertical Press:** Press the bar in a straight line; your head should shift slightly forward once the bar clears your forehead to reach full lockout."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Lats"
-      ],
-      "name": "Close-grip Lat Pull Down",
-      "notes": "Grip the pull-down bar with your hands closer than shoulder width apart, with your palms facing away from you. Lean back slightly. Pull the bar down towards your chest, keeping your elbows close to your sides as you come down. Pull your shoulders back at the end of the motion."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Lats"
-      ],
-      "name": "Close-grip supinated lat pulldown",
-      "notes": "Downward movement\n•  Pull the bar down so that it passes close to your chin and touches the upper part of your chest.\n•  Keep the rest of your body still."
     },
     {
       "categories": [
@@ -1571,23 +1125,6 @@
         "strength"
       ],
       "equipment": [
-        "Bench",
-        "Barbell"
-      ],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "forearm"
-      ],
-      "name": "barbell wrist curl",
-      "notes": "This is a variation of the flat bench press designed to emphasize the clavicular head of the pectoralis major (the upper portion). By tilting the torso, the angle of the push changes, shifting more tension to the upper chest and shoulders, which helps achieve a more aesthetic, balanced, and three-dimensional development of the torso.\n\n1. Starting Position: Grip a bar with an overhand grip (palms facing up) at a width similar to your shoulders.\n\n2. Position on the Bench: Kneel in front of a flat bench and rest the backs of your forearms on it. Your wrists and hands should extend slightly beyond the edge of the bench to allow for a full range of motion.\n\n3. Eccentric Phase (Lowering): Lower the bar in a controlled manner by extending your wrists toward the floor. At the bottom of the movement, slightly spread your fingers to let the bar roll down a bit, maximizing the stretch.\n\n4. Concentric Phase (Lift): First, close your fingers to secure the bar, then flex your wrists upward explosively but in a controlled manner, bringing the bar as high as possible. Strongly contract your forearms at the top position for one second.\n\n5. Form: Keep your forearms firmly pressed against the bench throughout the exercise; only your wrists and fingers should move."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
         "Dumbbell"
       ],
       "icon": "figure.strengthtraining.traditional",
@@ -1599,39 +1136,6 @@
       ],
       "name": "Dumbbell Deadlifts",
       "notes": "Stand firmly, with your feet slightly more than shoulder wide apart. Stand directly behind the bar where it should barely touch your shin, your feet pointing a bit out. Bend down with a straight back, the knees also pointing somewhat out. Grab the bar with a shoulder wide grip, one overhand, one underhand (mixed grip).\n\nPull the weight up. At the highest point make a slight hollow back and pull the bar back. Hold 1 or 2 seconds that position. Go down, making sure the back is not bent. Once down you can either go back again as soon as the weights touch the floor, or make a pause, depending on the weight."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Incline bench"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Abs"
-      ],
-      "name": "Decline Bench Leg Raise",
-      "notes": "- **Setup**: Lie on a decline bench with your head at the top and grip the handles.\n- **The Start**: Extend legs fully, keeping them slightly elevated to engage your core.\n- **The Lift**: Raise your legs toward the ceiling using your abs, not momentum.\n- **The Squeeze**: Pause and contract your lower abdominals at the top.\n- **The Return**: Lower your legs slowly to the starting position with control."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Incline bench",
-        "Barbell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest"
-      ],
-      "name": "Decline Bench Press Barbell",
-      "notes": "Lay down on a decline bench, the bar should be directly above your eyes, the knees are somewhat angled and the feet are firmly on the floor. Concentrate, breath deeply and grab the bar more than shoulder wide. Bring it slowly down till it briefly touches your chest at the height of your nipples. Push the bar up."
     },
     {
       "categories": [
@@ -1831,26 +1335,6 @@
         "strength"
       ],
       "equipment": [
-        "Dumbbell",
-        "Gym mat"
-      ],
-      "icon": "figure.jumprope",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Biceps",
-        "Chest",
-        "Shoulders",
-        "Triceps"
-      ],
-      "name": "Dumbbell Floor Press",
-      "notes": "Grab your dumbbells and lay flat on your back with your knees bent and your feet flat on the ground (use a bench if you have one). Press the weights up, locking out your elbows (A). Lower them slowly until your upper arms are resting on the floor (B) close to your body. Pause here before explosively pressing back up. Squeeze your chest hard and repeat."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
         "Dumbbell"
       ],
       "icon": "figure.strengthtraining.traditional",
@@ -1879,26 +1363,6 @@
       ],
       "name": "Dumbbell Goblet Squat",
       "notes": "Grasp dumbbell with both hands at the sides of the upper plates. Hold dumbbell in front of chest, close to torso. Place feet about shoulderwide apart, keep knees slightly bent.\n\nSquat down until thighs are parallel to floor. Keep back straight, bend and move hips backward to keep knees above feet. Return, keep knees slightly flexed. Repeat.\n\nKeep bodyweight on heels and look ahead or slightly above to keep back straight."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell"
-      ],
-      "icon": "figure.jumprope",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Calves",
-        "Glutes",
-        "Hamstrings",
-        "Quads",
-        "Traps"
-      ],
-      "name": "Dumbbell Hang Power Cleans",
-      "notes": "On your feet, stand tall with your dumbbells, holding them at your sides. Hinge at the hips to lower them to your knees (picture 1). Stand back up with a slight jump, using the momentum to pull the dumbbells up on to your shoulders (picture 2). Stand up straight, then lower under control to your sides and repeat. Keep this fast and explosive; if your heart rate doesn’t hit the roof, you’re doing them wrong."
     },
     {
       "categories": [
@@ -2116,24 +1580,6 @@
       "equipment": [
         "Dumbbell"
       ],
-      "icon": "figure.jumprope",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Glutes",
-        "Hamstrings",
-        "Quads"
-      ],
-      "name": "dumbbell snatch",
-      "notes": "Key Steps to Execute Correctly:\n\nSetup: Place the dumbbell between your feet, with your shoulders above your hips, chest up, and back flat.\n\nThe Pull: Explosively extend your hips, knees, and ankles (triple extension) to drive the dumbbell upward, keeping your elbow high and the dumbbell close to your body.\n\nThe Catch: Quickly flex your hips and knees to drop under the dumbbell and receive it overhead with your arm locked in position, landing in a half-squat stance.\n\nCommon Mistakes: Using your arms too much to lift the weight instead of your legs, having a low elbow during the pull phase, and misaligning your shoulder, elbow, and wrist in the final position. For beginners, it’s recommended to start with light loads, focus on technique, and perform 3 to 5 sets of 3 to 5 reps per arm."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell"
-      ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
@@ -2160,26 +1606,6 @@
       ],
       "name": "Dumbbell wide bicep curls",
       "notes": "Hold a dumbbell in each hand with your hands slightly wider than shoulder-width apart and palms facing forward.\nBend your elbows and lift the dumbbells to your shoulders. Slowly return and repeat."
-    },
-    {
-      "categories": [
-        "mobility",
-        "warmups",
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell"
-      ],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "label": "shoulder prevention rotation ",
-      "muscles": [
-        "Shoulders",
-        "Traps"
-      ],
-      "name": "External Rotation Stretch",
-      "notes": "1. Sit with your feet pressed against each other, and one knee raised all the way out to the side of your body.\n2. Place your elbow on your raised knee, bend it at 90 degrees, and point your hand directly forward, holding your barbell/dumbbell.\n3. Keep your shoulder depressed and retracted, raise your hand until your forearm is vertical, as if you were about to wave at someone like a robot.\n4. Lower your hand to the original position and repeat."
     },
     {
       "categories": [
@@ -2340,23 +1766,6 @@
         "strength"
       ],
       "equipment": [
-        "Cable machine",
-        "Incline bench"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest"
-      ],
-      "name": "Fly With Cable",
-      "notes": "cable machine, two steps forward, straight back"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
         "Dumbbell",
         "Bench"
       ],
@@ -2497,86 +1906,6 @@
     },
     {
       "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Cable machine"
-      ],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Biceps",
-        "Brachialis(lower bicep)"
-      ],
-      "name": "Hammercurls on Cable",
-      "notes": "Take a cable in your hands (palms parallel, point to each other), the body is straight. Bend the arms and bring the weight up with a fast movement. Without any pause bring it back down with a slow, controlled movement, but don't stretch completely your arms.\n\nDon't swing your body during the exercise, the biceps should do all the work here. The elbows are at your side and don't move."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest",
-        "Shoulders",
-        "Triceps"
-      ],
-      "name": "Hammerstrength Decline Chest Press",
-      "notes": "1. Sit upright in a hammerstrength decline chest press machine while squeezing your shoulder blades together and placing your heels firmly on the ground underneath your knees.\n2. The back pad should be contact with your head, shoulders, and butt at all times.\n3. Grab ahold of the handles with an overhand grip just outside shoulder-width apart just below your chest.\n4. Keeping your core braced by breathing into your stomach and flexing the abdominal muscles, push through your palms to extend your elbows while keeping them at a 45 degree angle from your torso.\n5. Once your arms are fully extended, return to the starting position."
-    },
-    {
-      "categories": [
-        "mobility",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Glutes",
-        "Hamstrings"
-      ],
-      "name": "Hamstring Kicks",
-      "notes": "Stand with your feet hip-width apart and extend one arm in front of you. Swing that leg up in front of you and back down while keeping your leg as straight as possible and your toes pointed up.Repeat with the other leg."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "forearm"
-      ],
-      "name": "Hand Grip",
-      "notes": "chrome Hand Flex Grip to build up forearms muscles"
-    },
-    {
-      "categories": [
-        "calisthenics",
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Shoulders",
-        "Traps",
-        "Triceps"
-      ],
-      "name": "Handstand Pushup",
-      "notes": "The handstand push-up (press-up) - also called the vertical push-up (press-up) or the inverted push-up (press-up) also called commandos- is a type of push-up exercise where the body is positioned in a handstand. For a true handstand, the exercise is performed free-standing, held in the air. To prepare the strength until one has built adequate balance, the feet are often placed against a wall, held by a partner, or secured in some other way from falling. Handstand pushups require significant strength, as well as balance and control if performed free-standing."
-    },
-    {
-      "categories": [
         "calisthenics",
         "strength"
       ],
@@ -2668,32 +1997,6 @@
     },
     {
       "categories": [
-        "calisthenics",
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Head tilts",
-      "notes": "Starting position:\n\nSit or stand with your back straight.\n\nSteps:\n\n1. Tilt your head to one side and hold for a bit.2.Return your head to neutral position and hold for a bit.\n2. Tilt your head to the other side and hold for a bit.\n3. Return your head to neutral position yet again and hold for a bit.\n4. Repeat."
-    },
-    {
-      "categories": [
-        "calisthenics",
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Head turns",
-      "notes": "Starting position:\n\nSit or stand with your back straight and shoulders down.\n\nSteps:\n\n1. Sit or stand up straight, shoulders dropped.\n2. Turn your head to the side as far as possible. Stop when you hit a barrier and hold for 5 seconds.\n3. Return to center position and repeat, changing sides."
-    },
-    {
-      "categories": [
         "cardio"
       ],
       "equipment": [],
@@ -2711,109 +2014,6 @@
       ],
       "name": "High Knee Jumps",
       "notes": "- Start with legs slightly wider than shoulder width\n- Drop into a bodyweight squat\n- As you hit the bottom of the squat, explode upwards into a jump while simultaneously tucking your knees into your chest midflight.  Remain tucked until the apex of your jump.\n- Land on both feet, making sure your knees are not locked so as to avoid excessive strain upon your joints.  Collect yourself into the next rep as quickly but under control as possible."
-    },
-    {
-      "categories": [
-        "cardio",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.run",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "High knees",
-      "notes": "Starting positionStand straight.\n\nSteps:\n\n1. Run in place, putting knees as high up as is comfortable and switching legs at a quick pace."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Cable machine"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Triceps"
-      ],
-      "name": "High-Cable Cross Tricep Extention - NB",
-      "notes": "The high-cable cross tricep extension is an isolation exercise for targeting the triceps,\nparticularly the long head. It utilizes cables and handles grasped with opposite hands, allowing for a unique pressing motion that can be effective for building tricep strength. Unlike exercises that use a straight bar or rope, this variation can be more comfortable on your wrists and elbows"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Cable machine"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Lats",
-        "Serratus Anterior(side chest)"
-      ],
-      "name": "High-pulley pullover",
-      "notes": "Stand facing the machine, feet slightly apart, gripping the bar with an overhand grip, arms extended, hands shoulder-width apart.\n- Keeping your back fixed and your abdominal muscles contracted, inhale and bring the bar down to your thighs while keeping your arms extended (or your elbows slightly bent).\nExhale at the end of the movement."
-    },
-    {
-      "categories": [
-        "calisthenics",
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest",
-        "Shoulders",
-        "Triceps"
-      ],
-      "name": "Hindu Pushups",
-      "notes": "Exercise to strengthen the shoulders and pectorals. Its name is due to the fact that it begins in the Yoga position \"Dog Facing Down\", passing to \"Cobra\" but without resting the legs or torso on the ground to finally end with a normal flexion. The exercise can also be performed backwards (back to the starting position). As a variation, after doing the push-up, the hip can be raised to return to downward facing dog."
-    },
-    {
-      "categories": [
-        "warmups",
-        "mobility"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Hamstrings",
-        "Glutes"
-      ],
-      "name": "Hip Circles",
-      "notes": "View the video to undestand the exercise"
-    },
-    {
-      "categories": [
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Hip Crossover",
-      "notes": "View the video to undestand the exercise"
-    },
-    {
-      "categories": [
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Hip Flexor Stretch",
-      "notes": "View the video to undestand the exercise"
     },
     {
       "categories": [
@@ -2856,25 +2056,6 @@
         "strength"
       ],
       "equipment": [
-        "Incline bench",
-        "Barbell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest",
-        "Shoulders",
-        "Triceps"
-      ],
-      "name": "Incline Bench Press - Barbell",
-      "notes": "To do slowly, tempo is 4010"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
         "Dumbbell",
         "Incline bench"
       ],
@@ -2888,41 +2069,6 @@
       ],
       "name": "45 Press - Dumbbell",
       "notes": "This is a variation of the flat bench press designed to emphasize the clavicular head of the pectoralis major (the upper portion). By tilting the torso, the angle of the push changes, shifting more tension to the upper chest and shoulders, which helps achieve a more aesthetic, balanced, and three-dimensional development of the torso.\n\n1. Bench Adjustment and Preparation: Set the bench to an incline of between 30 and 45 degrees (an incline greater than 45° will place too much strain on the shoulders and reduce the stimulus to the chest). Sit down with a dumbbell on each thigh.\n\n2. Starting position: Lean back, resting your back against the bench, while using your knees one after the other to push the dumbbells upward to shoulder height.\n\n3. Anatomical Stabilization: Plant your feet firmly on the floor. Retract your scapulas (bring your shoulder blades together and press them into the bench) to protect your shoulders and stabilize the load.\n\n4. Eccentric Phase (Lowering): Lower the dumbbells slowly and in a controlled manner toward the upper part of your chest. Your elbows should not splay out to the sides (90°); maintain a safe angle of about 45 to 60 degrees relative to your torso.\n\n5. Concentric Phase (Lift): Push the dumbbells vertically upward as you exhale. Follow a slightly converging path (without letting them touch at the top). Stop the movement just before locking out your elbows to maintain muscle tension in the upper pectoral."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Barbell",
-        "Incline bench"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest",
-        "Shoulders",
-        "Triceps"
-      ],
-      "name": "Incline Bench Press - MP",
-      "notes": ""
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Incline bench"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Lats"
-      ],
-      "name": "Incline bench pulldown",
-      "notes": "Lying face down on the incline bench facing the cable machine, perform the pulldown."
     },
     {
       "categories": [
@@ -2961,20 +2107,6 @@
       ],
       "name": "Incline Chest-Supported Dumbbell Row",
       "notes": "Set up an adjustable bench at a 45-degree angle.\nLay on your stomach with your head hanging just above the edge of the bench.\nGrab a dumbbell in each hand and set up with a good posture – core and lats engaged and shoulders neutral.\nRow the dumbbells toward the top of the stomach and squeeze the back at the top of the rep.\nFinally, lower the dumbbells back to the starting position and repeat until all reps are completed."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Abs"
-      ],
-      "name": "Incline Crunches",
-      "notes": "Lay down on your back on a inclined bench, feet are on one end of the bench. Ask a partner or use some other help (barbell, etc.) to keep them fixed, your hands are behind your head. From this position move your upper body up till your head or elbows touch your knees. Do this movement by rolling up your back."
     },
     {
       "categories": [
@@ -3051,38 +2183,6 @@
     },
     {
       "categories": [
-        "cardio",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Jumping Jacks",
-      "notes": "A jumping jack or star jump, also called side-straddle hop in the US military, is a physical jumping exercise performed by jumping to a position with the legs spread wide and the hands going overhead, sometimes in a clap, and then returning to a position with the feet together and the arms at the sides"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Kettlebell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Glutes",
-        "Hamstrings",
-        "Quads",
-        "Traps"
-      ],
-      "name": "Kettlebell deadlifts",
-      "notes": "Starting position:\n\nStand hip-width apart, with your kettlebell centered between your ankles. Your back should be straight, your head facing forward.\n\nSteps:\n\n1. Hinge at the hips and slightly bend at the knees to put your hands on the kettlebell handles. Your back should be straight as you perform the movement.\n2. Grab the kettlebell handles, with your hands pushing in opposite directions as if to pull the handle apart.\n3. While contacting your abs and glutes, stand straight up.\n4. Hinge at the hips again to bring the kettlebell back down, similarly to step 1.\n5. Repeat from step 3.\n\nTips:\n\n* Be sure you're performing the movements correctly, as doing otherwise can lead to injury. For example, do not squat instead of hinging at the hips, do not round your back while reaching for the kettlebell, and do not lean back while standing up."
-    },
-    {
-      "categories": [
         "strength"
       ],
       "equipment": [
@@ -3096,44 +2196,6 @@
       ],
       "name": "Kettlebell One Legged Deadlift",
       "notes": "This exercise involves holding a kettlebell in one hand and standing on one leg while bending forward to touch the kettlebell to the ground. It targets the hamstrings, glutes, and lower back while also improving balance and stability."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Kettlebell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Glutes",
-        "Hamstrings",
-        "Quads"
-      ],
-      "name": "kettlebell sumo deadlift",
-      "notes": "Place your feet wider than shoulder-width apart, pointing your toes outward.\nKeep your back straight, shoulders back, and chest up.\nThe knees must follow the same direction as the toes and not move forward.\nWhen going up, it is advisable to contract your glutes to maximize the effectiveness of the exercise.."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Kettlebell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Abs",
-        "Glutes",
-        "Quads",
-        "Shoulders",
-        "Traps"
-      ],
-      "name": "Kettlebell Swing",
-      "notes": "While kettlebell swings are a full-body workout, they mostly target the muscles along the posterior chain (back of the body). The main muscles used are the glutes, hamstrings, spinal erectors, and muscles of the upper back."
     },
     {
       "categories": [
@@ -3169,22 +2231,6 @@
       ],
       "name": "Knee Raises",
       "notes": "The 90° leg raise on the bar is a very intense exercise that involves all the abdominal muscles."
-    },
-    {
-      "categories": [
-        "mobility",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Glutes",
-        "Hamstrings"
-      ],
-      "name": "Knee to Chest Stretch",
-      "notes": "The knee to chest stretch is a simple yet effective exercise for relieving lower back tension and improving hip mobility. To perform, lie flat on your back with your legs extended. Bring one knee toward your chest, wrapping your hands around your shin or behind your thigh. Gently pull the knee closer to your chest while keeping the other leg straight on the floor. Hold the stretch for 15–30 seconds, then switch sides. For a deeper stretch, both knees can be pulled toward the chest simultaneously."
     },
     {
       "categories": [
@@ -3240,125 +2286,6 @@
     },
     {
       "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Cable machine"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Shoulders"
-      ],
-      "name": "Lateral Rows on Cable, One Armed",
-      "notes": "Set cable at waist height, start with arm across your belly and move han over and out too other side, one arm at the time."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Glutes",
-        "Hamstrings"
-      ],
-      "name": "Leg Curl",
-      "notes": "The leg curl, also known as the hamstring curl, is an isolation exercise that targets the hamstring muscles. The exercise involves flexing the lower leg against resistance towards the buttocks. Other exercises that can be used to strengthen the hamstrings are the glute-ham raise and the deadlift."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Hamstrings"
-      ],
-      "name": "Leg Curls (sitting)",
-      "notes": ""
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Hamstrings"
-      ],
-      "name": "Leg Curls (standing)",
-      "notes": ""
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Quads"
-      ],
-      "name": "Leg Extension",
-      "notes": "The leg extension is a resistance weight training exercise that targets the quadriceps muscle in the legs. The exercise is done using a machine called the Leg Extension Machine. There are various manufacturers of these machines and each one is slightly different. Most gym and weight rooms will have the machine in their facility. The leg extension is an isolated exercise targeting one specific muscle group, the quadriceps. It should not be considered as a total leg workout, such as the squat or deadlift. The exercise consists of bending the leg at the knee and extending the legs, then lowering them back to the original position."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Calves",
-        "Glutes",
-        "Hamstrings",
-        "Quads"
-      ],
-      "name": "Leg Press",
-      "notes": "The leg press is a weight training exercise in which the individual pushes a weight or resistance away from them using their legs."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Quads"
-      ],
-      "name": "Leg Press on Hackenschmidt Machine",
-      "notes": ""
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Glutes",
-        "Quads"
-      ],
-      "name": "Leg Presses (narrow)",
-      "notes": "The exercise is very similar to the wide leg press:\n\nSit on the machine and put your feet on the platform so far apart  that you could just put another foot in between them. The feet are parallel and point up.\n\nLower the weight so much, that the knees form a right angle. Push immediately the platform up again, without any pause. When in the lower position, the knees point a bit outwards and the movement should be always fluid."
-    },
-    {
-      "categories": [
         "strength",
         "calisthenics"
       ],
@@ -3375,62 +2302,6 @@
       ],
       "name": "Hanging Leg raises ",
       "notes": "with a firm grip with both hands on the bar, raise your outstretched legs, until you reach a 90° angle with your torso."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Biceps",
-        "Brachialis(lower bicep)",
-        "Lats"
-      ],
-      "name": "Long-Pulley (low Row)",
-      "notes": "Sit down, put your feet on the supporting points and grab the bar with a wide grip. Pull the weight with a rapid movement towards your belly button, not upper. Keep your arms and elbows during the movement close to your body. Your shoulders are pulled together. Let the weight slowly down till your arms are completely stretched."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest",
-        "Shoulders"
-      ],
-      "name": "Low-Cable Cross-Over - NB",
-      "notes": "The low-cable cross-over is an isolation movement that uses a cable stack to target the upper portion of the pectoral muscles. It is common in upper-body and chest-focused muscle-building workouts, often in combination with presses or flyes from other angles to target all portions of the chest."
-    },
-    {
-      "categories": [
-        "calisthenics",
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Lower Back Extensions",
-      "notes": "* Engage the muscles\n* Lift your bottom slightly\n* Controlled movement\n* Slow movement\n* Don't use momentum\n* Keep your upper body straight"
-    },
-    {
-      "categories": [
-        "mobility"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Lunge with Twist Stretch",
-      "notes": "View the video to undestand the exercise"
     },
     {
       "categories": [
@@ -3470,119 +2341,6 @@
     },
     {
       "categories": [
-        "mobility",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Lying Figure Four Stretch",
-      "notes": "View the video to undestand the exercise"
-    },
-    {
-      "categories": [
-        "mobility",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Lying Hamstring Stretch with Band",
-      "notes": "View the video to undestand the exercise"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest"
-      ],
-      "name": "Machine chest fly",
-      "notes": "seated machine, straight back, slow exercise"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Glutes"
-      ],
-      "name": "Machine Hip Abduction",
-      "notes": "Technique and Execution\n\nStarting Position\n\nSeated Positioning: Sit in the machine with back against the pad\n\nLeg Placement: Inner thighs against the machine's padded resistance points\n\nAdjust Machine: Set seat position to align your hip joint with the machine's pivot point\n\nMovement Technique\n\nStart with legs together or slightly pressed against the inner pads\n\nSlowly push legs outward, spreading them apart\n\nMove until maximum comfortable lateral range is reached\n\nPause briefly at the outer point of the movement\n\nSlowly return to the starting position with controlled movement\n\nBiomechanical Breakdown\n\nMuscle Engagement\n\nPrimary Activation: Gluteus Medius (side hip muscle)\n\nStabilization: Engages core and lower back muscles\n\nFunctional Movement: Mimics lateral leg movement used in walking, sports, and daily activities\n\nBenefits\n\nStrength and Stability\n\nImproves Hip Stability\n\nReduces Risk of Knee Injuries\n\nEnhances Lateral Movement Capabilities\n\nTargets Often-Neglected Muscle Groups"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Shoulders"
-      ],
-      "name": "Machine Lateral Raise",
-      "notes": "The machine lateral raise is an isolation exercise that targets the medial (side) deltoid muscle to build wider, more defined shoulders. The machine's fixed path of motion provides greater stability than dumbbells, making it ideal for beginners or those who want to focus solely on muscle activation."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Hamstrings"
-      ],
-      "name": "Machine Leg Flexion",
-      "notes": "Adjust the back seat or pad so your knees align with the side pivot axis.Place the lower roller pad against your lower calves, just above the back of your ankles.Lower the upper thigh restraint pad so your legs stay firmly on the seat.Pick a light weight on the stack with the pin."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Shoulders"
-      ],
-      "name": "Machine Side Lateral Raises",
-      "notes": "Machine side lateral raises are an isolation exercise for the side (lateral) deltoids, performed on a machine for stability, targeting the outer shoulder by lifting pads or handles out to the sides to shoulder height, then lowering slowly, keeping elbows slightly bent and traps down to focus on the delts. This exercise helps build shoulder width by preventing swinging and providing constant tension, making it great for beginners or as a finisher.\n\nHow to Perform Machine Lateral Raises\n\nSetup: Adjust the seat so your shoulders align with the machine's pivot point, your chest is against the pad (or back if facing out), and your arms are at a 90-degree angle with the pads/handles.\n\nStarting Position: Grip the handles with a relaxed grip, elbows slightly bent, and shoulders down (depressed) away from your ears.\n\nLifting Phase: Exhale and lift your arms out to the sides, moving your upper arms laterally, until they are parallel to the floor.\n\nPeak Contraction: Pause briefly at the top, squeezing the side delts, but don't shrug your shoulders up.\n\nLowering Phase: Inhale and slowly lower the weight back down with control, resisting the weight on the way down."
-    },
-    {
-      "categories": [
-        "cardio"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Abs",
-        "Calves",
-        "Glutes",
-        "Quads"
-      ],
-      "name": "Marching High Knees",
-      "notes": "A low-impact cardio and mobility exercise that strengthens the hip flexors and improves balance.\n1. Movement: Stand tall and lift one knee toward your chest as high as comfortable.\n1. Arms: Swing the opposite arm forward as you lift your knee, similar to a walking motion.\n1. Core: Keep your abs engaged to maintain an upright posture.\n1. Pace: Perform the movement with control, alternating legs rhythmically."
-    },
-    {
-      "categories": [
         "strength"
       ],
       "equipment": [],
@@ -3594,56 +2352,6 @@
       ],
       "name": "Medicine ball booklet crunch",
       "notes": "Using a medicine ball as an overload will make the exercise heavier."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "EZ-Bar"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Shoulders",
-        "Traps",
-        "Triceps"
-      ],
-      "name": "Military Press mit SZ-Bar",
-      "notes": "On an SZ-bar grip your hands on the outside of each bend and stand with your arms straight down, palms facing your legs. Pull the bar (bending your arms at the elbow) to your chest, and the push the bar above your head (arms as straight as possible). Return the bar to your chest by dropping your arms at the elbows. Return the bar to it's origional position (stand with your arms straight down, palms facing your legs.)"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Biceps",
-        "Lats",
-        "Serratus Anterior(side chest)"
-      ],
-      "name": "Neutral-grip chest pulldown",
-      "notes": "The lat pulldown is an important exercise for strengthening the back and improving posture, which can contribute to a healthier life. To perform this exercise correctly and avoid injury, it is important to follow a few key steps:\n\n1. Position yourself in front of the cable machine with your knees slightly bent and your feet on the floor.\n\n2. Grip the cable handle with your palms facing each other and your hands shoulder-width apart.\n\n3. Pull the handle down until it touches or comes close to your chest, holding the position for one or two seconds.\n\n4. Slowly raise the handle back to the starting position, making sure to keep your arms and hands straight and your back straight throughout the movement."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Kettlebell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Biceps"
-      ],
-      "name": "one-handed kettlebell curls",
-      "notes": "Standing with the kettlebell in one hand and bent at the elbow, start from a fully extended position until your hand reaches shoulder height. To perform the movement correctly, try not to push with your back or body."
     },
     {
       "categories": [
@@ -3678,34 +2386,6 @@
       ],
       "name": "Overhead Triceps Extension",
       "notes": "**Overhead Triceps Extension with EZ Bar – Quick Guide**\n\nThe **overhead position** *emphasizes the long head* of the triceps (because it's stretched under load), the exercise **does engage all three triceps heads** (long, lateral, and medial) to some degree during extension.\n\n1. **Setup**:\n   Sit on a bench (or stand) and hold an EZ bar with a narrow, overhand\n   grip. Lift the bar overhead, arms fully extended. Keep your core tight\n   and elbows close to your head.\n2. **Execution**:\n   Slowly lower the bar behind your head by bending your elbows until they\n   reach ~90°. Keep elbows pointed forward (not flaring out).\n3. **Finish**: Extend your arms back up to the starting position, squeezing your triceps at the top.\n\n**Tips**:\n\n* Control the movement to avoid straining your shoulders.\n* Use a moderate weight for full range of motion.\n* Keep your back straight and avoid arching."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Glutes",
-        "Quads"
-      ],
-      "name": "Pendular hack",
-      "notes": "Pendulum hack, made on a pendulum machine"
-    },
-    {
-      "categories": [
-        "mobility",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Pigeon Stretch",
-      "notes": "View the video to undestand the exercise"
     },
     {
       "categories": [
@@ -3773,21 +2453,6 @@
       ],
       "name": "Plank Shoulder Taps",
       "notes": "In the correct plank position, place your feet slightly wider than shoulder-width apart. alternately lift and touch the opposite shoulder with one hand."
-    },
-    {
-      "categories": [
-        "mobility",
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Calves"
-      ],
-      "name": "Plantarflexion Stretch with Band",
-      "notes": "This stretch is for the ankles, as well as Tibialis anterior."
     },
     {
       "categories": [
@@ -4041,19 +2706,6 @@
     },
     {
       "categories": [
-        "mobility",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Quad Stretch",
-      "notes": "View the video to undestand the exercise"
-    },
-    {
-      "categories": [
         "strength"
       ],
       "equipment": [
@@ -4068,38 +2720,6 @@
       ],
       "name": "Rear Delt Raises",
       "notes": "standing with the dumbbells on the floor bend over at 45 Degrees and then slowly raise each dumbbell to shoulder height and hold for a couple seconds before lowering to the starting position. use cench to put head if better"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Biceps",
-        "Lats",
-        "Traps"
-      ],
-      "name": "Remo maquina agarre estrecho",
-      "notes": "Remo en máquina con barra en agarre estrecho"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Biceps",
-        "Lats",
-        "Traps"
-      ],
-      "name": "Remo maquina agarre estrecho supino",
-      "notes": "Remo en máquina o polea con agarre cerrado supino"
     },
     {
       "categories": [
@@ -4334,20 +2954,6 @@
     },
     {
       "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Lats"
-      ],
-      "name": "Rope Pullover/row",
-      "notes": "Set up bench in front of cable row machine. Lean over bench to do a row/pullover with rope that targets lats. See picture."
-    },
-    {
-      "categories": [
         "physio",
         "strength"
       ],
@@ -4369,37 +2975,6 @@
       "categories": [
         "strength"
       ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Lats"
-      ],
-      "name": "Rowing seated, narrow grip",
-      "notes": "* Tighten muscles\n* Controlled movement\n* Slow movement\n* Keep upper body upright\n* Do not lean back\n* Pull toward chest"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Biceps",
-        "Brachialis(lower bicep)",
-        "Lats",
-        "Shoulders"
-      ],
-      "name": "Rowing, T-bar",
-      "notes": "The execution of this exercise is very similar to the regular bent over rowing, only that the bar is fixed here.\n\nGrab the barbell with a wide grip (slightly more than shoulder wide) and lean forward. Your upper body is not quite parallel to the floor, but forms a slight angle. The chest's out during the whole exercise. Pull now the barbell with a fast movement towards your belly button, not further up. Go slowly down to the initial position. Don't swing with your body and keep your arms next to your body."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
       "equipment": [
         "Mini Loop Resistance"
       ],
@@ -4411,19 +2986,6 @@
       ],
       "name": "rubber band glute kickback",
       "notes": "A rubber band glute kickback is an exercise performed on hands and knees, where you anchor a resistance band to your foot and kick your heel back and up, squeezing your glute at the top of the movement, while maintaining a stable core and flat back to target and strengthen the gluteal muscles."
-    },
-    {
-      "categories": [
-        "mobility",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Runners Lunge Stretch",
-      "notes": "View the video to undestand the exercise"
     },
     {
       "categories": [
@@ -4442,53 +3004,6 @@
       ],
       "name": "Russian Twist",
       "notes": "1. Hold a dumbbell, barbell weight or something else that is heavy with both hands, but make sure it is not too heavy and you are able to keep in form.\n2. Lean back to a 45-degree angle from the floor. For an extra challenge, lift your feet off the floor.\n3. Rotate your arms to one side to the same level as your chest, touch the floor for a little extra challenge, and then do the same to the other side. When you're back in your original position after doing both sides it will count as 1 rep."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest"
-      ],
-      "name": "Seated Cable chest fly",
-      "notes": "1. Place a bench between two cable pulleys and adjust the pulleys so they are at chest/shoulder height when you are seated.\n2. Grab the handles with a neutral grip and lean against the upright backrest.\n3. Bring your arms together in front of your chest in a controlled motion, focusing on squeezing your chest muscles. Keep your elbows slightly bent throughout the movement.\n4. Pause briefly at the top position.\n5. Slowly lower your arms back to the starting position while maintaining control of the movement.\n6. Repeat for reps."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Biceps",
-        "Lats",
-        "Traps"
-      ],
-      "name": "Seated Cable Row",
-      "notes": "1. Take a seat on the machine with your feet planted, a little wider than shoulder width. Drive the heels, and squeeze the glutes. Grab onto the cable handle.\n2. Sit up tall with a slight bend through the knees. Tighten up the abs and low back to maintain a perpendicular angle to the floor with your torso.\n3. Roll the shoulders back and down. Squeeze them together as you row, thinking about pinching a pencil in between them. As you do this, pull the handle back towards you, landing right above your belly button.\n4. Pause here for a moment before returning the handle, still squeezing the shoulder blades. Once you've returned the weight to the stack, then allow the shoulder blades to relax, without pulling the torso forward.\n5. Repeat the movement."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell",
-        "Bench"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Calves"
-      ],
-      "name": "Seated Dumbbell Calf Raise",
-      "notes": "The seated dumbbell calf raise is a targeted exercise for strengthening the lower leg muscles. It follows the same movement pattern as the machine version: you place the weight on your knees, and by extending and flexing your ankles, you move the weight."
     },
     {
       "categories": [
@@ -4533,21 +3048,6 @@
       "equipment": [],
       "icon": "figure.core.training",
       "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Glutes",
-        "Abductors"
-      ],
-      "name": "Seated Hip Adduction",
-      "notes": "Starting Position: Sit on the machine with your knees inward and against the pads. Pull the pin to release the pads. Grab the handles on the sides.b"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
       "isFavorited": true,
       "muscles": [
         "Abs",
@@ -4572,22 +3072,6 @@
       ],
       "name": "Seated rear delt rise",
       "notes": "Seated, bent 45 deg forward. Arms fully stretched out, raise arms up to shoulder height and back down"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Lats",
-        "Shoulders",
-        "Traps"
-      ],
-      "name": "Seated Row (Machine)",
-      "notes": "Keep your chest up and squeeze your shoulder blades at the end.\n\nDon’t hunch forward or round your back during the pull."
     },
     {
       "categories": [
@@ -4663,37 +3147,6 @@
       "categories": [
         "strength"
       ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Shoulders",
-        "Triceps"
-      ],
-      "name": "Shoulder Press, on Machine",
-      "notes": ""
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Barbell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Traps"
-      ],
-      "name": "Shrugs, Barbells",
-      "notes": "Take a barbell and stand with a straight body, the arms are hanging freely in front of you. Lift from this position the shoulders as high as you can, but don't bend the arms during the movement. On the highest point, make a short pause of 1 or 2 seconds before returning slowly to the initial position.\n\nWhen training with a higher weight, make sure that you still do the whole movement!"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
       "equipment": [
         "Dumbbell"
       ],
@@ -4741,50 +3194,6 @@
     },
     {
       "categories": [
-        "mobility",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Side stretch",
-      "notes": "View the video to undestand the exercise"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Lats"
-      ],
-      "name": "Single arm row",
-      "notes": "Sitting on the ground, use a high cable in a single grip, to do lat pulldowns with a focus on a long stretch in the lats."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Shoulders",
-        "Traps"
-      ],
-      "name": "Single-arm dumbbell shoulder press",
-      "notes": "Press the dumbbell vertically overhead in a controlled motion until your arm is fully extended, without locking the elbow. Slowly lower the dumbbell back to the starting position at shoulder height."
-    },
-    {
-      "categories": [
         "strength"
       ],
       "equipment": [
@@ -4822,24 +3231,6 @@
       "categories": [
         "strength"
       ],
-      "equipment": [
-        "Kettlebell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Calves",
-        "Glutes",
-        "Quads"
-      ],
-      "name": "Single-Leg Lunge with Kettlebell:",
-      "notes": "How to do a single-leg kettlebell lunge\n\nPreparation: Stand with your feet together. Hold the kettlebell with both hands by the handle, keeping it close to your chest, or hold it with one hand (on the same side as the working leg).\n\nStep and Lower: Take a large step forward (or backward, which is safer for your knees) with one leg, lowering your hips until both knees form a 90-degree angle.\n\nFocus: Shift your weight onto your front (or bent) leg, keeping your back straight and your torso upright.\n\nReturn: Push off with your front leg to return to the starting position."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
       "equipment": [],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": true,
@@ -4850,38 +3241,6 @@
       ],
       "name": "Single-Leg Roman Chair Hyperextension with Rotation",
       "notes": "On Roman chair, one leg only. Keep spine straight, stay up, rotate torso 90°."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Calves",
-        "Glutes",
-        "Quads"
-      ],
-      "name": "Single-leg side glute press",
-      "notes": "The Single-Leg Side Glute Press is a leg press machine variation where you angle your body sideways on the pad, placing one foot high and slightly angled to press the weight, powerfully targeting the outer glute (gluteus medius/minimus) and hamstrings for balanced leg development and stability, requiring focus on pushing through the heel and maintaining control without locking out.\n\nHow to Perform:\n\nSetup: Sit in the leg press machine, rotate your body to one hip, placing one foot high on the platform at about a 45-degree angle with toes pointed slightly out/forward.\n\nPositioning: Keep your hip, knee, and ankle aligned, and ensure your lower back stays on the pad.\n\nDescent: Slowly lower the weight, allowing your knee to bend deeply (near 90 degrees), feeling a stretch in your glute and hamstring.\n\nPress: Drive through your heel (not your toes) to press the weight back up, squeezing your glutes and hamstrings, stopping just before your leg fully extends.\n\nControl: Avoid bouncing and don't let your lower back lift off the pad; maintain tension throughout the movement."
-    },
-    {
-      "categories": [
-        "physio",
-        "mobility"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Calves",
-        "Soleus(lower calf)"
-      ],
-      "name": "Sitting Calf Stretch (Dorsiflexion)",
-      "notes": "This is a light stretch for the calf that is great for rehab."
     },
     {
       "categories": [
@@ -4958,64 +3317,6 @@
       "categories": [
         "strength"
       ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Chest"
-      ],
-      "name": "Smith Machine Slight Incline Press",
-      "notes": "### * **Execution** * **Start position:**\n\n* Unrack the bar and hold it above your upper chest with arms fully extended.\n* Keep your shoulder blades **retracted and pressed into the bench**.\n* **Lowering phase (eccentric):**\n* Slowly bring the bar down to just below your collarbone or upper chest.\n* Maintain control — don’t bounce the bar.\n* **Pressing phase (concentric):**\n* Push the bar upward in a straight line until your arms are fully extended.\n* Focus on **squeezing your upper chest** at the top.\n* **Lock and repeat:**\n* Complete your reps, then safely rack the bar back into the hooks."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Hamstrings",
-        "Quads"
-      ],
-      "name": "Smith Machine Split Squat",
-      "notes": "The **\"Smith Machine Split Squat\"** is a strength exercise\nperformed on the Smith machine, ideal for targeting the legs and glutes.\nIt involves placing one foot forward and the other back, lowering the\nbody until the front thigh is parallel to the ground while the bar\nslides vertically along the machine. This exercise helps improve\nstability, correct muscle imbalances, and reduces stress on the back,\nproviding a safe environment for strength training."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Glutes",
-        "Quads"
-      ],
-      "name": "Smith machine squat",
-      "notes": "Technique and Execution\n\nThe Smith machine squat is a variation of the traditional barbell squat that uses a guided, fixed-path barbell. Here's a detailed breakdown of the proper technique:\n\nStarting Position\n\nFoot Placement: Position feet slightly forward of the bar, about shoulder-width apart\n\nBar Position: Rest the bar on your upper trapezius/shoulders, similar to a traditional back squat\n\nStance: Feet can be slightly angled outward for natural hip rotation\n\nSquat Movement\n\nUnrack the bar by rotating it to release from the safety hooks\n\nSlowly lower your body by bending knees and hips\n\nDescend until thighs are parallel to the ground (or slightly below)\n\nPause briefly at the bottom of the movement\n\nDrive through your heels to return to the starting position\n\nBenefits and Considerations\n\nAdvantages\n\nReduced Balance Requirements: Fixed bar path makes it easier for beginners\n\nControlled Movement: Less risk of improper form compared to free weight squats\n\nIsolation: Allows focused leg muscle development"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Shoulders"
-      ],
-      "name": "Smith Press",
-      "notes": "Sitting almost 90 degree angle, smith machine"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
       "equipment": [
         "Dumbbell"
       ],
@@ -5031,19 +3332,6 @@
     },
     {
       "categories": [
-        "mobility",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Standing IT Band Stretch",
-      "notes": "View the video to undestand the exercise"
-    },
-    {
-      "categories": [
         "physio"
       ],
       "equipment": [],
@@ -5056,37 +3344,6 @@
       ],
       "name": "Standing kettlebell Hip Flexion",
       "notes": "Standing, holding a kettlebell, raise the knee up against resistance."
-    },
-    {
-      "categories": [
-        "cardio"
-      ],
-      "equipment": [],
-      "icon": "figure.run",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Stationary bike cardio",
-      "notes": "Benefits of Stationary Bike Cardio\nStationary bike cardio is an excellent form of exercise that offers multiple benefits for health and well-being. Here are some of the most notable ones:\nImproved Cardiovascular Health\nStrengthens the heart: Regular exercise helps improve the heart's efficiency and reduce the risk of cardiovascular disease.\nIncreases circulation: It improves blood flow, which can help lower blood pressure.\nCalorie Burning and Weight Loss\nEfficient for burning calories: Depending on the intensity, you can burn between 400 and 600 calories per hour.\nHelps with weight loss: Combined with a balanced diet, stationary bike cardio can be effective for losing weight.\nMuscle Strengthening\nTones the legs: It mainly works the leg muscles, including the quadriceps, hamstrings and calves.\nImproves muscular endurance: Over time, you can increase the endurance and strength in your legs.\nMental Health Benefits\nReduces stress: Exercise releases endorphins, which can improve your mood and reduce stress.\nBoosts energy: Regular physical activity can raise your energy levels and improve sleep quality."
-    },
-    {
-      "categories": [
-        "cardio",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.run",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Abs",
-        "Glutes",
-        "Obliques",
-        "Quads",
-        "Shoulders"
-      ],
-      "name": "Step Jack",
-      "notes": "The Step Jack is a low-impact plyometric-style move that provides cardiovascular benefits without the joint stress of jumping. It works the entire body, specifically targeting the legs, core, and shoulders. This move is ideal for beginners, individuals with joint sensitivities, or as a dynamic warm-up to gradually elevate the heart rate.\nNotes (Instructions):\n1. Stand upright with your feet together and arms at your sides.\n2. Step your right foot out to the side while simultaneously swinging both arms up above your head.\n3. Bring your right foot back to the center and lower your arms.\n4. Immediately repeat the movement, stepping out with your left foot.\n5. Continue alternating sides at a steady, rhythmic pace."
     },
     {
       "categories": [
@@ -5107,20 +3364,6 @@
       ],
       "name": "Step-ups",
       "notes": "Starting position:\n\nStand facing a chair.\n\nSteps:\n\n1. Step up onto the chair.\n2. Step off the chair.\n3. Repeat."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Biceps"
-      ],
-      "name": "Straight Bar Cable Curls",
-      "notes": "Standing upright in front of Cable Tower using a straight bar"
     },
     {
       "categories": [
@@ -5169,51 +3412,6 @@
     },
     {
       "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Lats"
-      ],
-      "name": "Straight-Arm Pulldown (Cable)",
-      "notes": "Keep arms straight but not locked, pulling with your lats, not your shoulders.\n\nDon’t let your shoulders shrug up during the movement."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Barbell"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Glutes",
-        "Hamstrings",
-        "Quads",
-        "Traps"
-      ],
-      "name": "Sumo Deadlift",
-      "notes": "1. Begin with a bar loaded on the ground. Approach the bar so that the bar intersects the middle of the feet. The feet should be set very wide, near the collars. Bend at the hips to grip the bar. The arms should be directly below the shoulders, inside the legs, and you can use a pronated grip, a mixed grip, or hook grip. Relax the shoulders, which in effect lengthens your arms.\n2. Take a breath, and then lower your hips, looking forward with your head with your chest up. Drive through the floor, spreading your feet apart, with your weight on the back half of your feet. Extend through the hips and knees.\n3. As the bar passes through the knees, lean back and drive the hips into the bar, pulling your shoulder blades together.\n4. Return the weight to the ground by bending at the hips and controlling the weight on the way down."
-    },
-    {
-      "categories": [
-        "mobility"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Supported Calf Stretch",
-      "notes": "View the video to undestand the exercise"
-    },
-    {
-      "categories": [
         "strength",
         "warmups"
       ],
@@ -5231,36 +3429,6 @@
     },
     {
       "categories": [
-        "cardio"
-      ],
-      "equipment": [],
-      "icon": "figure.run",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Calves",
-        "Hamstrings"
-      ],
-      "name": "Talons fesses",
-      "notes": "Touch your heels to your buttocks, while remaining static or moving"
-    },
-    {
-      "categories": [
-        "mobility",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Abs"
-      ],
-      "name": "Torso Twist",
-      "notes": "Standing Torso Twist WorkoutTarget your core and improve flexibility with this dynamic standing exercise! The Standing Torso Twist Workout involves twisting your torso while keeping your feet and hips stable, engaging your obliques, and stretching your entire upper body. This movement helps to:Strengthen core musclesIncrease flexibility in the spine and torsoImprove posture and balanceEnhance overall athletic performancePerform 3 sets of 10-15 reps, twisting to each side, to feel the benefits of this effective and efficient workout!"
-    },
-    {
-      "categories": [
         "strength"
       ],
       "equipment": [
@@ -5274,63 +3442,6 @@
       ],
       "name": "Trap press",
       "notes": "Laying flat with arm pointing straight upwards, elbow fully extended, use only your shoulder to raise the weight as high as comfortable and back to rest."
-    },
-    {
-      "categories": [
-        "cardio"
-      ],
-      "equipment": [],
-      "icon": "figure.run",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [],
-      "name": "Treadmill Cardio",
-      "notes": "It's a cardiovascular workout performed on a treadmill to improve endurance, burn calories, and promote heart health. It offers multiple benefits, such as the ability to easily adjust speed and incline, allowing for a variety of workouts, from hill walking to high-intensity interval training (HIIT) and tempo runs. To optimize results, it's important to vary your workouts.\nBenefits of Treadmill Cardio:\n- Improved Cardiovascular Health:\nRegular aerobic exercise on a treadmill strengthens the heart and lungs, which can help prevent heart disease.\n- Weight Loss:\nBy burning calories, treadmill training can be an effective tool for weight loss and maintaining a healthy weight.\n- Muscle Strengthening:\nIt strengthens the muscles in the legs and glutes, helping to prevent muscle loss, which is especially important with age.\n- Training Flexibility:\nAllows you to vary speed, incline, and intervals, making your workout more dynamic and adaptable to different fitness levels.\nTypes of Treadmill Training:\n- Hill Walking:\nIncreasing the incline of the treadmill and walking at a brisk pace can improve endurance and work your leg muscles.\n- Endurance Jog:\nA run at a comfortable, steady pace that keeps your heart rate in a target zone (such as Zone 2) to build endurance.\n- Interval Training:\nAlternating periods of high intensity (fast running) with periods of low intensity (easy walking or jogging) to maximize calorie burn and cardiovascular improvement.\n- Tempo Run:\nA run at a steady, sustained pace that is slightly faster than a normal jog, which challenges your ability to sustain a more intense effort for an extended period."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Triceps"
-      ],
-      "name": "Tricep Pushdown on Cable",
-      "notes": "The cable rope push-down is a popular exercise targeting the triceps muscles. It's easy to learn and perform, making it a favorite for everyone from beginners to advanced lifters. It is usually performed for moderate to high reps, such as 8-12 reps or more per set, as part of an upper-body or arm-focused workout."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Lats",
-        "Triceps"
-      ],
-      "name": "Tricep Rope Pushdowns",
-      "notes": "- **Setup:** Stand facing the cable, feet shoulder-width apart, with a slight forward lean.\n- **Grip:** Hold the rope with palms facing each other and elbows tucked tight to your ribs.\n- **Execution:** Push the rope down until arms are fully straight, pulling the ends apart at the bottom.\n- **Control:** Keep upper arms still and return to the start with a slow, controlled motion."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Cable machine"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Triceps"
-      ],
-      "name": "Triceps Extensions on Cable",
-      "notes": "Grab the cable, stand with your feet shoulder wide, keep your back straight and lean forward a little. Push the bar down, making sure the elbows don't move during the exercise. Rotate your hands outwards at the very end and go back to the initial position without pause."
     },
     {
       "categories": [
@@ -5365,50 +3476,6 @@
       ],
       "name": "Triceps Overhead (Dumbbell)",
       "notes": "* Keep the elbows fixed\n* Engage the muscles\n* Don't use momentum\n* Controlled movement\n* Slow movement\n* Don't overextend"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Triceps"
-      ],
-      "name": "Triceps Pushdown",
-      "notes": "Triceps pushdown on cable using lat bar."
-    },
-    {
-      "categories": [
-        "mobility",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Triceps"
-      ],
-      "name": "Triceps stretch left",
-      "notes": "Put your left hand on your back, use your right hand to grab your left elbow and gently pull it. Hold this position for a few seconds."
-    },
-    {
-      "categories": [
-        "mobility",
-        "warmups"
-      ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Triceps"
-      ],
-      "name": "Triceps stretch right",
-      "notes": "Put your right hand on your back, use your left hand to grab your right elbow and gently pull it. Hold this position for a few seconds."
     },
     {
       "categories": [
@@ -5558,21 +3625,6 @@
       "categories": [
         "strength"
       ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Lats",
-        "Serratus Anterior(side chest)"
-      ],
-      "name": "Unilateral Cable row",
-      "notes": "Put a vertical seated bench in front of the cable row machine.position it so that you can focus on one side, and then do slow pulls focusing on the lateral muscles and ensuring tention in those muscles when in a stretched position."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
       "equipment": [
         "Dumbbell"
       ],
@@ -5591,22 +3643,6 @@
       "categories": [
         "strength"
       ],
-      "equipment": [],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Biceps",
-        "Shoulders",
-        "Traps"
-      ],
-      "name": "Upright Row, on Multi Press",
-      "notes": "The movements are basically the same as with an SZ-bar, but you use the bar on the multi press:\n\nStand straight, your feet are shoulder-width apart. Hold the bar with an overhand grip on your thighs, the arms are stretched. Lift the bar close to the body till your chin. The elbows point out so that at the highest point they form a V. Make here a short pause before going slowly down and repeating the movement."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
       "equipment": [
         "EZ-Bar"
       ],
@@ -5620,26 +3656,6 @@
       ],
       "name": "Upright Row, SZ-bar",
       "notes": "Stand straight, your feet are shoulder-width apart. Hold the SZ-bar with an overhand grip on your thighs, the arms are stretched. Lift the bar close to the body till your chin. The elbows point out so that at the highest point they form a V. Make here a short pause before going slowly down and repeating the movement."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": false,
-      "muscles": [
-        "Abs",
-        "Biceps",
-        "Chest",
-        "Glutes",
-        "Quads",
-        "Shoulders",
-        "Traps"
-      ],
-      "name": "Wall balls",
-      "notes": "Get a medicine ball, shoulder width stance, squat, thrust the ball as high as possible against the wall and catch"
     },
     {
       "categories": [

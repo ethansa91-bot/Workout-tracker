@@ -20,6 +20,10 @@ enum ExerciseMediaMode {
 struct ExerciseMediaView: View {
     let exercise: Exercise
     var mode: ExerciseMediaMode
+    /// Overrides `Self.height` — used by EMOM/AMRAP's grid, where each cell's media
+    /// must fit an exact row height (2 rows visible without scrolling) rather than the
+    /// fixed 220pt every other call site uses.
+    var height: CGFloat = ExerciseMediaView.height
 
     /// Set when YouTube reports the video can't be embedded (common for Shorts, even
     /// when the regular link plays fine) — falls back to the photo instead of leaving
@@ -38,12 +42,23 @@ struct ExerciseMediaView: View {
         return GeneratedExerciseImageStore.load(fileName: fileName)
     }
 
+    private static let height: CGFloat = 220
+    /// A normal 16:9 video rectangle derived from `height`, rather than always
+    /// stretching to the full screen width — on phones this is wider than the screen
+    /// anyway so it has no visible effect, but on bigger screens (iPad) the box stays a
+    /// sensible video-sized rectangle instead of one long thin bar. Applies identically
+    /// whether showing video, a photo, or the text fallback, since all three share this
+    /// same outer frame.
+    private var maxWidth: CGFloat { height * 16 / 9 }
+
     var body: some View {
         content
-            .frame(maxWidth: .infinity)
-            .frame(height: 220)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: maxWidth)
+            .frame(height: height)
             .background(Color.appSurface)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder

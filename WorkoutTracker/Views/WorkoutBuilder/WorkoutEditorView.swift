@@ -6,6 +6,10 @@ private struct OverviewItem: Identifiable {
     let iconName: String
     let title: String
     let detail: String
+    /// A follow-along exercise step's assigned color (`TimeSectionStep.color`), if any
+    /// — `nil` for rest/get-ready steps and for rep-section exercises, which don't
+    /// have per-exercise colors.
+    var color: Color?
 }
 
 struct WorkoutEditorView: View {
@@ -167,7 +171,8 @@ struct WorkoutEditorView: View {
                     id: step.id,
                     iconName: overviewIcon(for: step),
                     title: overviewTitle(for: step),
-                    detail: "\(step.durationSeconds)s"
+                    detail: "\(step.durationSeconds)s",
+                    color: step.effectiveColor?.color
                 )
             }
         } else {
@@ -211,7 +216,7 @@ struct WorkoutEditorView: View {
         HStack {
             Image(systemName: item.iconName)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(item.color ?? .secondary)
                 .frame(width: 20)
             Text(item.title)
                 .font(.subheadline)

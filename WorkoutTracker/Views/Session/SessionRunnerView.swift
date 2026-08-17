@@ -89,14 +89,24 @@ struct SessionRunnerView: View {
         VStack(spacing: 6) {
             ProgressView(value: progressFraction)
                 .tint(.accentColor)
+            // Three equal thirds (not a single HStack + Spacer) so the middle counter
+            // sits truly centered in the bar regardless of how wide the elapsed-time
+            // and percent text on either side are.
             HStack {
                 Text(elapsedDisplay)
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
-                Spacer()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("Exercise \(currentItemNumber) of \(totalItems)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity, alignment: .center)
                 Text("\(Int(progressFraction * 100))% complete")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
         .padding()
@@ -158,8 +168,10 @@ struct SessionRunnerView: View {
         }
     }
 
-    private var progressFraction: Double {
-        guard totalItems > 0 else { return 0 }
+    /// Items completed across every section before the current one, plus progress
+    /// into the current section — the same whole-workout count that drives both the
+    /// progress bar and the "Exercise X of Y" counter, so the two always agree.
+    private var completedItems: Int {
         var completed = sections.prefix(session.currentSectionIndex).reduce(0) { $0 + itemCount(in: $1) }
         if let currentSection {
             switch currentSection.sectionType {
@@ -168,7 +180,19 @@ struct SessionRunnerView: View {
             case .amrap: break // stays a single unit until the countdown finishes
             }
         }
-        return min(1, Double(completed) / Double(totalItems))
+        return completed
+    }
+
+    private var progressFraction: Double {
+        guard totalItems > 0 else { return 0 }
+        return min(1, Double(completedItems) / Double(totalItems))
+    }
+
+    /// 1-indexed position for display — "completed" items plus the one currently in
+    /// progress, capped at the total so the last exercise reads e.g. "20 of 20" rather
+    /// than "21 of 20".
+    private var currentItemNumber: Int {
+        min(completedItems + 1, max(totalItems, 1))
     }
 
     private func updateElapsedDisplay() {

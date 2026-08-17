@@ -41,6 +41,23 @@ extension Color {
     static let appHighlightGray = Color(light: UIColor(white: 0.91, alpha: 1),
                                          dark: UIColor(white: 0.24, alpha: 1))
 
+    // MARK: - Follow-along step colors
+    //
+    // The per-exercise color picker (`TimeStepColor`) needs a few hues this palette
+    // doesn't otherwise have (blue, brown, yellow, purple) — matched to the same
+    // deep/muted tone as `appAccent`/`appRust`/`appDanger` above rather than bright
+    // system colors, so a colored step reads as part of this app's palette instead of
+    // clashing with it. Green/orange/red/gray reuse `appAccent`/`appRust`/`appDanger`/
+    // `appInkMuted` directly instead of duplicating them.
+    static let appStepBlue = Color(light: UIColor(red: 0.204, green: 0.376, blue: 0.529, alpha: 1),
+                                    dark: UIColor(red: 0.353, green: 0.596, blue: 0.706, alpha: 1))
+    static let appStepBrown = Color(light: UIColor(red: 0.451, green: 0.325, blue: 0.220, alpha: 1),
+                                     dark: UIColor(red: 0.678, green: 0.522, blue: 0.384, alpha: 1))
+    static let appStepYellow = Color(light: UIColor(red: 0.710, green: 0.573, blue: 0.204, alpha: 1),
+                                      dark: UIColor(red: 0.827, green: 0.706, blue: 0.404, alpha: 1))
+    static let appStepPurple = Color(light: UIColor(red: 0.427, green: 0.294, blue: 0.478, alpha: 1),
+                                      dark: UIColor(red: 0.612, green: 0.455, blue: 0.663, alpha: 1))
+
     fileprivate init(light: UIColor, dark: UIColor) {
         self.init(uiColor: UIColor { $0.userInterfaceStyle == .dark ? dark : light })
     }

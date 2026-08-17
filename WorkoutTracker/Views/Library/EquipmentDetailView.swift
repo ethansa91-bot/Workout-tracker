@@ -16,14 +16,14 @@ struct EquipmentDetailView: View {
                 )
                 .listRowSeparator(.hidden)
 
-                HStack(spacing: 12) {
-                    toggleChip(icon: "house", label: "At Home", isOn: equipment.isAtHome, tint: Color.accentColor) {
+                HStack(spacing: 8) {
+                    SelectableChip(icon: "house", title: "At Home", isSelected: equipment.isAtHome, tint: Color.accentColor) {
                         toggleHome()
                     }
-                    toggleChip(icon: "building.2", label: "At the Gym", isOn: equipment.isAtGym, tint: .orange) {
+                    SelectableChip(icon: "building.2", title: "At Gym", isSelected: equipment.isAtGym, tint: .orange) {
                         toggleGym()
                     }
-                    toggleChip(icon: "dumbbell", label: "Weighted", isOn: equipment.isWeighted, tint: Color.appRust) {
+                    SelectableChip(icon: "dumbbell", title: "Weighted", isSelected: equipment.isWeighted, tint: Color.appRust) {
                         toggleWeighted()
                     }
                 }
@@ -82,21 +82,6 @@ struct EquipmentDetailView: View {
         .themedListBackground()
         .navigationTitle(equipment.name)
         .navigationBarTitleDisplayMode(.inline)
-    }
-
-    /// Same capsule-chip style as `ExerciseQuickFilterView`'s quick filters, with an
-    /// icon in front of the label instead of text alone.
-    private func toggleChip(icon: String, label: String, isOn: Bool, tint: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(label, systemImage: isOn ? "\(icon).fill" : icon)
-                .font(.caption.weight(.semibold))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .foregroundStyle(isOn ? Color.white : tint)
-                .background(isOn ? tint : tint.opacity(0.12), in: Capsule())
-                .overlay(Capsule().stroke(isOn ? Color.clear : tint.opacity(0.35), lineWidth: 1))
-        }
-        .buttonStyle(.plain)
     }
 
     private func toggleHome() {

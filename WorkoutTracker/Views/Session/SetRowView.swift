@@ -26,7 +26,9 @@ struct SetRowView: View {
             Text("×").foregroundStyle(.secondary)
             repsStepper
 
-            Spacer()
+            // Capped, not a full flex Spacer — keeps the button close to the row's
+            // content instead of snapping to the far trailing edge on wide screens.
+            Spacer(minLength: 12).frame(maxWidth: 24)
 
             if isLogged {
                 Button(action: onCancel) {

@@ -1,14 +1,10 @@
 import SwiftUI
 import SwiftData
 
-/// Shared create/edit form. Pass `existingExercise` to edit an exercise already in the
-/// library (custom or catalog) in place; leave it nil to create a brand-new custom one.
-/// The canonical catalog `name` can only be set at creation time or for custom
-/// exercises — catalog exercises use `label` (a personal nickname) instead, so catalog
-/// identity/matching never gets corrupted by an in-place rename.
+/// Creates a brand-new custom exercise. Editing an exercise already in the library
+/// (custom or catalog) happens directly on `ExerciseDetailView` instead — chips there
+/// for equipment/muscles/categories, `ExerciseIdentityEditView` for name/label/video/notes.
 struct CustomExerciseFormView: View {
-    var existingExercise: Exercise?
-
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
@@ -25,20 +21,6 @@ struct CustomExerciseFormView: View {
     @State private var selectedCategoryNames: Set<String> = []
     @State private var createdExercise: Exercise?
 
-    private var isEditing: Bool { existingExercise != nil }
-    private var canEditName: Bool { existingExercise == nil || existingExercise?.isCustom == true }
-
-    init(existingExercise: Exercise? = nil) {
-        self.existingExercise = existingExercise
-        _name = State(initialValue: existingExercise?.name ?? "")
-        _label = State(initialValue: existingExercise?.label ?? "")
-        _notes = State(initialValue: existingExercise?.notes ?? "")
-        _videoURLText = State(initialValue: existingExercise?.videoURL ?? "")
-        _selectedEquipmentIDs = State(initialValue: Set(existingExercise?.equipmentItems.map(\.id) ?? []))
-        _selectedMuscleIDs = State(initialValue: Set(existingExercise?.muscles.map(\.id) ?? []))
-        _selectedCategoryNames = State(initialValue: Set(existingExercise?.categories.map(\.name) ?? []))
-    }
-
     var body: some View {
         NavigationStack {
             if let createdExercise {
@@ -51,11 +33,7 @@ struct CustomExerciseFormView: View {
             } else {
                 Form {
                     Section("Name") {
-                        if canEditName {
-                            TextField("e.g. Cable Chest Fly", text: $name)
-                        } else {
-                            Text(name).foregroundStyle(.secondary)
-                        }
+                        TextField("e.g. Cable Chest Fly", text: $name)
                     }
 
                     Section {
@@ -82,36 +60,20 @@ struct CustomExerciseFormView: View {
                         Text("Paste a YouTube link. Shown as a thumbnail here — tap to play. Auto-plays muted during workouts.")
                     }
 
+                    Section("Muscles") {
+                        chipGrid(allMuscles, tint: .appAccent, title: \.name, isSelected: { selectedMuscleIDs.contains($0.id) }, toggle: toggleMuscle)
+                    }
+
                     Section("Passive Equipment") {
-                        equipmentToggles(for: allEquipment.filter { !$0.isWeighted })
+                        chipGrid(allEquipment.filter { !$0.isWeighted }, tint: .appStepBrown, title: \.name, isSelected: { selectedEquipmentIDs.contains($0.id) }, toggle: toggleEquipment)
                     }
 
                     Section("Weighted Equipment") {
-                        equipmentToggles(for: allEquipment.filter { $0.isWeighted })
-                    }
-
-                    Section("Muscles") {
-                        ForEach(allMuscles) { muscle in
-                            Toggle(muscle.name, isOn: Binding(
-                                get: { selectedMuscleIDs.contains(muscle.id) },
-                                set: { isOn in
-                                    if isOn { selectedMuscleIDs.insert(muscle.id) }
-                                    else { selectedMuscleIDs.remove(muscle.id) }
-                                }
-                            ))
-                        }
+                        chipGrid(allEquipment.filter { $0.isWeighted }, tint: .appStepBlue, title: \.name, isSelected: { selectedEquipmentIDs.contains($0.id) }, toggle: toggleEquipment)
                     }
 
                     Section("Categories") {
-                        ForEach(allCategories) { category in
-                            Toggle(category.name.capitalized, isOn: Binding(
-                                get: { selectedCategoryNames.contains(category.name) },
-                                set: { isOn in
-                                    if isOn { selectedCategoryNames.insert(category.name) }
-                                    else { selectedCategoryNames.remove(category.name) }
-                                }
-                            ))
-                        }
+                        chipGrid(allCategories, tint: .appRust, title: { $0.name.capitalized }, isSelected: { selectedCategoryNames.contains($0.name) }, toggle: toggleCategory)
                     }
 
                     Section("Notes") {
@@ -119,7 +81,7 @@ struct CustomExerciseFormView: View {
                     }
                 }
                 .themedListBackground()
-                .navigationTitle(isEditing ? "Edit Exercise" : "New Exercise")
+                .navigationTitle("New Exercise")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") { dismiss() }
@@ -133,16 +95,36 @@ struct CustomExerciseFormView: View {
         }
     }
 
-    private func equipmentToggles(for items: [Equipment]) -> some View {
-        ForEach(items) { equipment in
-            Toggle(equipment.name, isOn: Binding(
-                get: { selectedEquipmentIDs.contains(equipment.id) },
-                set: { isOn in
-                    if isOn { selectedEquipmentIDs.insert(equipment.id) }
-                    else { selectedEquipmentIDs.remove(equipment.id) }
+    private func chipGrid<Item: Identifiable>(
+        _ items: [Item],
+        tint: Color,
+        title: @escaping (Item) -> String,
+        isSelected: @escaping (Item) -> Bool,
+        toggle: @escaping (Item) -> Void
+    ) -> some View {
+        FlowLayout(spacing: 8, rowSpacing: 8) {
+            ForEach(items) { item in
+                SelectableChip(title: title(item), isSelected: isSelected(item), tint: tint) {
+                    toggle(item)
                 }
-            ))
+            }
         }
+        .padding(.vertical, 4)
+    }
+
+    private func toggleMuscle(_ muscle: Muscle) {
+        if selectedMuscleIDs.contains(muscle.id) { selectedMuscleIDs.remove(muscle.id) }
+        else { selectedMuscleIDs.insert(muscle.id) }
+    }
+
+    private func toggleEquipment(_ equipment: Equipment) {
+        if selectedEquipmentIDs.contains(equipment.id) { selectedEquipmentIDs.remove(equipment.id) }
+        else { selectedEquipmentIDs.insert(equipment.id) }
+    }
+
+    private func toggleCategory(_ category: ExerciseCategory) {
+        if selectedCategoryNames.contains(category.name) { selectedCategoryNames.remove(category.name) }
+        else { selectedCategoryNames.insert(category.name) }
     }
 
     private func save() {
@@ -153,36 +135,21 @@ struct CustomExerciseFormView: View {
         let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedVideoURL = videoURLText.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        if let existingExercise {
-            if canEditName {
-                existingExercise.name = name.trimmingCharacters(in: .whitespaces)
-            }
-            existingExercise.label = trimmedLabel.isEmpty ? nil : trimmedLabel
-            existingExercise.notes = trimmedNotes.isEmpty ? nil : trimmedNotes
-            existingExercise.videoURL = trimmedVideoURL.isEmpty ? nil : trimmedVideoURL
-            existingExercise.equipmentItems = equipment
-            existingExercise.muscles = muscles
-            existingExercise.categories = categories
-            existingExercise.markDirty()
-            try? context.save()
-            dismiss()
-        } else {
-            let symbol = IconSymbolMapping.defaultExerciseSymbol(forCategoryNames: Array(selectedCategoryNames))
-            let exercise = Exercise(
-                name: name.trimmingCharacters(in: .whitespaces),
-                label: trimmedLabel.isEmpty ? nil : trimmedLabel,
-                notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
-                videoURL: trimmedVideoURL.isEmpty ? nil : trimmedVideoURL,
-                iconSymbolName: symbol,
-                isCustom: true,
-                isFavorited: true,
-                equipmentItems: equipment
-            )
-            exercise.muscles = muscles
-            exercise.categories = categories
-            context.insert(exercise)
-            try? context.save()
-            createdExercise = exercise
-        }
+        let symbol = IconSymbolMapping.defaultExerciseSymbol(forCategoryNames: Array(selectedCategoryNames))
+        let exercise = Exercise(
+            name: name.trimmingCharacters(in: .whitespaces),
+            label: trimmedLabel.isEmpty ? nil : trimmedLabel,
+            notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
+            videoURL: trimmedVideoURL.isEmpty ? nil : trimmedVideoURL,
+            iconSymbolName: symbol,
+            isCustom: true,
+            isFavorited: true,
+            equipmentItems: equipment
+        )
+        exercise.muscles = muscles
+        exercise.categories = categories
+        context.insert(exercise)
+        try? context.save()
+        createdExercise = exercise
     }
 }

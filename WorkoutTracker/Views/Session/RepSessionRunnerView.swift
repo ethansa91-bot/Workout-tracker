@@ -8,6 +8,7 @@ struct RepSessionRunnerView: View {
     let onSectionComplete: () -> Void
 
     @Environment(\.modelContext) private var context
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var draftReps: [Int: Int] = [:]
     @State private var draftWeight: [Int: Double] = [:]
@@ -24,31 +25,21 @@ struct RepSessionRunnerView: View {
 
     var body: some View {
         if let entry = currentEntry, let exercise = entry.exercise {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    header(exercise: exercise, entry: entry)
-                    ExerciseMediaView(exercise: exercise, mode: .autoplayWorkout(maxSeconds: 30))
-                        .id(exercise.id)
-                    historyRow(entry: entry, exercise: exercise)
-                    setsSection(entry: entry, exercise: exercise)
-                    ExerciseNoteControl(session: session, exercise: exercise)
-                        .id(exercise.id)
+            VStack(spacing: 0) {
+                header(exercise: exercise, entry: entry)
+                    .padding()
+                Divider()
+                GeometryReader { geometry in
+                    if isWideLayout(geometry) {
+                        wideBody(entry: entry, exercise: exercise)
+                    } else {
+                        compactBody(entry: entry, exercise: exercise)
+                    }
                 }
-                .padding()
             }
             .background(Color.appBackground)
             .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 8) {
-                    if loggedSets(for: entry).count < entry.targetSets {
-                        Button("Skip the Rest of This Exercise", role: .destructive) {
-                            goToNext(entry: entry, force: true)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Color.appDanger)
-                        .scaleEffect(0.8)
-                    }
-                    navigationBar(entry: entry)
-                }
+                navigationBar(entry: entry)
             }
             .onAppear { primeDrafts(for: entry, exercise: exercise) }
             .onChange(of: entry.id) { _, _ in primeDrafts(for: entry, exercise: exercise) }
@@ -58,6 +49,52 @@ struct RepSessionRunnerView: View {
     }
 
     // MARK: - Layout pieces
+
+    /// iPad in landscape (regular width, wider than tall) gets a two-column split —
+    /// log on the left, media on the right, each scrolling independently — instead of
+    /// one long single-column scroll. The header above stays fixed either way.
+    private func isWideLayout(_ geometry: GeometryProxy) -> Bool {
+        horizontalSizeClass == .regular && geometry.size.width > geometry.size.height
+    }
+
+    private func compactBody(entry: RepSectionExercise, exercise: Exercise) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                ExerciseMediaView(exercise: exercise, mode: .autoplayWorkout(maxSeconds: 30))
+                    .id(exercise.id)
+                logColumn(entry: entry, exercise: exercise)
+            }
+            .padding()
+        }
+    }
+
+    private func wideBody(entry: RepSectionExercise, exercise: Exercise) -> some View {
+        HStack(alignment: .top, spacing: 0) {
+            ScrollView {
+                logColumn(entry: entry, exercise: exercise)
+                    .padding()
+            }
+            .frame(maxWidth: .infinity)
+
+            Divider()
+
+            ScrollView {
+                ExerciseMediaView(exercise: exercise, mode: .autoplayWorkout(maxSeconds: 30))
+                    .id(exercise.id)
+                    .padding()
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func logColumn(entry: RepSectionExercise, exercise: Exercise) -> some View {
+        VStack(alignment: .leading, spacing: 20) {
+            historyRow(entry: entry, exercise: exercise)
+            setsSection(entry: entry, exercise: exercise)
+            ExerciseNoteControl(session: session, exercise: exercise)
+                .id(exercise.id)
+        }
+    }
 
     private func header(exercise: Exercise, entry: RepSectionExercise) -> some View {
         HStack(alignment: .top, spacing: 16) {
@@ -80,10 +117,6 @@ struct RepSessionRunnerView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Image(systemName: exercise.iconSymbolName)
-                    .font(.system(size: 34))
-                    .foregroundStyle(.tint)
-                    .padding(.top, 4)
             }
         }
     }
@@ -136,7 +169,7 @@ struct RepSessionRunnerView: View {
             ? (PersonalRecordQueries.current(for: exercise, context: context)?.holdSeconds ?? SetLogQueries.bestHoldEver(exercise: exercise, context: context))
             : nil
 
-        return VStack(spacing: 12) {
+        return VStack(alignment: .leading, spacing: 12) {
             ForEach(0..<entry.targetSets, id: \.self) { setIndex in
                 switch entry.trackingMode {
                 case .repsWeight:
@@ -195,33 +228,177 @@ struct RepSessionRunnerView: View {
         }
     }
 
+    private enum NavDirection { case previous, next }
+
+    /// Fixed height for the nav bar's `GeometryReader` (needed since GeometryReader has
+    /// no intrinsic size of its own) — generous enough for the two-line button label
+    /// (title + neighboring exercise name) at `.controlSize(.large)`.
+    private static let navBarHeight: CGFloat = 64
+    private static let navBarCornerRadius: CGFloat = 12
+
     private func navigationBar(entry: RepSectionExercise) -> some View {
-        HStack {
-            Button {
-                goToPrevious()
-            } label: {
-                Label("Previous", systemImage: "chevron.left")
+        GeometryReader { geometry in
+            let isBigScreen = horizontalSizeClass == .regular
+            // Skip always occupies its slot in the layout — graying out instead of
+            // disappearing when there's nothing left to skip, so Previous/Next don't
+            // resize or shift position as sets get logged.
+            let isSkipEnabled = loggedSets(for: entry).count < entry.targetSets
+            let spacing: CGFloat = 12
+
+            // Exact (not max) widths throughout, computed directly from geometry —
+            // relying on flexible `.frame(maxWidth: .infinity)` buttons plus layout
+            // priority to out-compete Spacers for leftover space turned out unreliable
+            // in practice (buttons stayed small, Spacers ate the row instead). Exact
+            // widths sidestep that: on iPhone they're sized to add up to the full row
+            // width with no Spacers at all, so there's no leftover space stranded next
+            // to Skip.
+            HStack(spacing: spacing) {
+                if isBigScreen {
+                    // Capped at 25% of width — full-width buttons would look absurd on
+                    // a big screen — with the slack visibly absorbed by Spacers.
+                    let quarterWidth = geometry.size.width * 0.25
+                    navButton(.previous, entry: entry, width: quarterWidth)
+                    Spacer(minLength: 8)
+                    skipButton(entry: entry, width: quarterWidth * 0.5, isEnabled: isSkipEnabled)
+                    Spacer(minLength: 8)
+                    navButton(.next, entry: entry, width: quarterWidth)
+                } else {
+                    // No Spacers — Previous/Next/Skip widths are sized to exactly fill
+                    // the row themselves, Skip always half a side button's width.
+                    let remaining = geometry.size.width - spacing * 2
+                    let sideWidth = remaining / 2.5
+                    navButton(.previous, entry: entry, width: sideWidth)
+                    skipButton(entry: entry, width: sideWidth * 0.5, isEnabled: isSkipEnabled)
+                    navButton(.next, entry: entry, width: sideWidth)
+                }
             }
-            .disabled(currentIndex == 0)
-
-            Spacer()
-
-            Text(entry.exercise?.displayName ?? "")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-
-            Spacer()
-
-            Button {
-                goToNext(entry: entry)
-            } label: {
-                Label("Next", systemImage: "chevron.right")
-            }
-            .disabled(!canAdvance(entry))
+            .frame(width: geometry.size.width, height: geometry.size.height)
         }
+        .frame(height: Self.navBarHeight)
         .padding()
         .background(Color.appSurface)
+    }
+
+    private func skipButton(entry: RepSectionExercise, width: CGFloat, isEnabled: Bool) -> some View {
+        Button(role: .destructive) {
+            goToNext(entry: entry, force: true)
+        } label: {
+            // Smaller than Previous/Next's title font — Skip's width is always the
+            // narrowest of the three, so it needs a font that fits at that width on
+            // every screen size rather than the default (which could clip).
+            Text("Skip")
+                .font(.footnote.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.roundedRectangle(radius: Self.navBarCornerRadius))
+        .controlSize(.large)
+        .tint(isEnabled ? Color.appDanger : Color.gray)
+        // Explicit height (matching navButton's) rather than letting content size it —
+        // guarantees Skip always matches Previous/Next exactly.
+        .frame(width: width, height: Self.navBarHeight)
+        .disabled(!isEnabled)
+    }
+
+    /// Previous/Next, each carrying a small subtitle (neighboring exercise name, or —
+    /// at a section/workout boundary — the next section's name) so the button itself
+    /// communicates what you're navigating to. `width` is exact (computed by the
+    /// caller from available geometry), not a cap. An explicit `height` (rather than
+    /// sizing to content) keeps every nav button the same height regardless of
+    /// whether it has a subtitle to show; the subtitle line itself is only rendered
+    /// when there's something to show, so a button without one (e.g. "Finish", or
+    /// "Previous" on the very first exercise) centers its title in that height instead
+    /// of sitting pinned above blank leftover space.
+    private func navButton(_ direction: NavDirection, entry: RepSectionExercise, width: CGFloat) -> some View {
+        let isPrevious = direction == .previous
+        let isDisabled = isPrevious ? currentIndex == 0 : !canAdvance(entry)
+
+        let title: String
+        let subtitle: String?
+        let icon: String?
+        if isPrevious {
+            title = "Previous"
+            subtitle = previousExerciseName
+            icon = "chevron.left"
+        } else if !isLastExerciseInSection {
+            title = "Next"
+            subtitle = nextExerciseName
+            icon = "chevron.right"
+        } else if !isLastSection {
+            title = "Next Section"
+            subtitle = nextSectionName
+            icon = "chevron.right"
+        } else {
+            title = "Finish"
+            subtitle = nil
+            icon = "checkmark"
+        }
+
+        return Button {
+            if isPrevious { goToPrevious() } else { goToNext(entry: entry) }
+        } label: {
+            VStack(spacing: 2) {
+                HStack(spacing: 4) {
+                    if isPrevious { Image(systemName: icon!) }
+                    Text(title)
+                    if !isPrevious { Image(systemName: icon!) }
+                }
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            // maxHeight: .infinity (not just maxWidth) is what actually centers a
+            // single-line label within the button's full fixed height — without it the
+            // VStack only fills width, keeping its natural (short) height and just
+            // sitting near the top of the taller button instead of centering.
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.roundedRectangle(radius: Self.navBarCornerRadius))
+        .controlSize(.large)
+        .frame(width: width, height: Self.navBarHeight)
+        .disabled(isDisabled)
+    }
+
+    private var previousExerciseName: String? {
+        guard currentIndex > 0 else { return nil }
+        return entries[currentIndex - 1].exercise?.displayName
+    }
+
+    private var nextExerciseName: String? {
+        let next = currentIndex + 1
+        guard next < entries.count else { return nil }
+        return entries[next].exercise?.displayName
+    }
+
+    private var isLastExerciseInSection: Bool {
+        currentIndex >= entries.count - 1
+    }
+
+    private var sections: [WorkoutSection] {
+        session.workout?.sortedSections ?? []
+    }
+
+    private var currentSectionIndex: Int {
+        sections.firstIndex(where: { $0.id == section.id }) ?? session.currentSectionIndex
+    }
+
+    private var isLastSection: Bool {
+        currentSectionIndex >= sections.count - 1
+    }
+
+    private var nextSectionName: String? {
+        guard !isLastSection else { return nil }
+        let next = sections[currentSectionIndex + 1]
+        return next.name?.isEmpty == false ? next.name! : next.sectionType.fallbackSectionName
     }
 
     // MARK: - Data helpers

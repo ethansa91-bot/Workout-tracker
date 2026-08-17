@@ -10,8 +10,10 @@ enum WorkoutSectionCloningService {
         var steps = section.sortedTimeSteps
         guard range.lowerBound >= 0, range.upperBound <= steps.count, !range.isEmpty else { return }
 
-        let clones = steps[range].map { original in
-            TimeSectionStep(section: section, sortOrder: 0, stepType: original.stepType, exercise: original.exercise, durationSeconds: original.durationSeconds)
+        let clones = steps[range].map { original -> TimeSectionStep in
+            let clone = TimeSectionStep(section: section, sortOrder: 0, stepType: original.stepType, exercise: original.exercise, durationSeconds: original.durationSeconds)
+            clone.color = original.color
+            return clone
         }
         clones.forEach { context.insert($0) }
         steps.insert(contentsOf: clones, at: steps.count)
@@ -103,6 +105,7 @@ enum WorkoutSectionCloningService {
                 exercise: step.exercise,
                 durationSeconds: step.durationSeconds
             )
+            stepCopy.color = step.color
             context.insert(stepCopy)
         }
         for entry in source.sortedRepExercises {

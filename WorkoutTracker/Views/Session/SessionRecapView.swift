@@ -6,6 +6,7 @@ private struct SessionOverviewItem: Identifiable {
     let iconName: String
     let title: String
     let detail: String
+    var color: Color?
 }
 
 /// Tapping a workout in the list lands here: a quick recap of everything in it, plus
@@ -549,7 +550,10 @@ struct SessionRecapView: View {
                     id: step.id,
                     iconName: overviewIcon(for: step),
                     title: overviewTitle(for: step),
-                    detail: "\(step.durationSeconds)s"
+                    detail: "\(step.durationSeconds)s",
+                    // Rest/get-ready have no `effectiveColor` (nil) — gray, not the
+                    // green default IconBadge would otherwise fall back to.
+                    color: step.stepType == .exercise ? (step.effectiveColor?.color ?? .accentColor) : Color.secondary
                 )
             }
         case .rep:
@@ -600,7 +604,7 @@ struct SessionRecapView: View {
 
     private func overviewItemRow(_ item: SessionOverviewItem) -> some View {
         HStack(spacing: 12) {
-            IconBadge(systemName: item.iconName, size: 28)
+            IconBadge(systemName: item.iconName, tint: item.color ?? .accentColor, size: 28)
             Text(item.title)
             Spacer()
             Text(item.detail)

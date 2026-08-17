@@ -32,6 +32,7 @@ enum WorkoutCloningService {
                     exercise: step.exercise,
                     durationSeconds: step.durationSeconds
                 )
+                stepCopy.color = step.color
                 context.insert(stepCopy)
             }
 

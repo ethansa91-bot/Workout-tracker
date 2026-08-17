@@ -9,6 +9,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @State private var showingResetConfirm = false
     @State private var resetErrorMessage: String?
+    @State private var testDataMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -46,6 +47,16 @@ struct SettingsView: View {
                 } footer: {
                     Text("Permanently deletes every workout, session, custom exercise, and note on this device, then reloads the starter exercise catalog from scratch. This cannot be undone.")
                 }
+
+                Section {
+                    Button("Generate Test Workouts") {
+                        generateTestWorkouts()
+                    }
+                } header: {
+                    Text("Testing")
+                } footer: {
+                    Text("Creates one workout per section type (Rep, Time, EMOM, AMRAP), each with the same 5 exercises chosen to cover every exercise-media state — picture only, video only, both, and neither — so they're quick to spot-check. Re-running replaces the previous set.")
+                }
             }
             .themedListBackground()
             .navigationTitle("Settings")
@@ -66,6 +77,14 @@ struct SettingsView: View {
             } message: {
                 Text(resetErrorMessage ?? "")
             }
+            .alert("Test Workouts", isPresented: Binding(
+                get: { testDataMessage != nil },
+                set: { if !$0 { testDataMessage = nil } }
+            )) {
+                Button("OK") { testDataMessage = nil }
+            } message: {
+                Text(testDataMessage ?? "")
+            }
         }
     }
 
@@ -74,6 +93,15 @@ struct SettingsView: View {
             try DataResetService.resetAndReseed(context: context)
         } catch {
             resetErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func generateTestWorkouts() {
+        do {
+            try TestDataService.generateTestWorkouts(context: context)
+            testDataMessage = "Created \"Test — Rep\", \"Test — Time\", \"Test — EMOM\", and \"Test — AMRAP\"."
+        } catch {
+            testDataMessage = "Failed: \(error.localizedDescription)"
         }
     }
 }

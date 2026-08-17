@@ -25,21 +25,26 @@ struct TimeSessionRunnerView: View {
         guard currentIndex >= 0, currentIndex < steps.count else { return nil }
         return steps[currentIndex]
     }
-    private var nextStep: TimeSectionStep? {
-        let next = currentIndex + 1
-        guard next < steps.count else { return nil }
-        return steps[next]
-    }
 
     var body: some View {
         if let currentStep {
             VStack(spacing: 12) {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        mainStepView(currentStep)
-                        nextStepPreview
+                Group {
+                    if currentStep.stepType == .exercise {
+                        // Exercise steps carry the media box, which can be tall enough
+                        // to need scrolling — Rest/Get Ready are short and just center
+                        // in the available space instead.
+                        ScrollView {
+                            mainStepView(currentStep)
+                                .padding(.vertical)
+                        }
+                    } else {
+                        VStack {
+                            Spacer(minLength: 0)
+                            mainStepView(currentStep)
+                            Spacer(minLength: 0)
+                        }
                     }
-                    .padding(.vertical)
                 }
                 SessionScrubStripView(
                     steps: steps,
@@ -96,42 +101,6 @@ struct TimeSessionRunnerView: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal)
         .padding(.vertical, 24)
-    }
-
-    @ViewBuilder
-    private var nextStepPreview: some View {
-        if let nextStep {
-            HStack {
-                Image(systemName: nextStepIcon(nextStep))
-                    .foregroundStyle(.secondary)
-                Text("Next: \(nextStepTitle(nextStep))")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text("\(nextStep.durationSeconds)s").font(.caption).foregroundStyle(.secondary)
-            }
-            .padding(.horizontal)
-        } else {
-            Text("Last step in this section")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private func nextStepIcon(_ step: TimeSectionStep) -> String {
-        switch step.stepType {
-        case .exercise: return step.exercise?.iconSymbolName ?? "figure.strengthtraining.traditional"
-        case .rest: return "pause.circle"
-        case .getReady: return "hourglass"
-        }
-    }
-
-    private func nextStepTitle(_ step: TimeSectionStep) -> String {
-        switch step.stepType {
-        case .exercise: return step.exercise?.displayName ?? "Exercise"
-        case .rest: return "Rest"
-        case .getReady: return "Get Ready"
-        }
     }
 
     private var completedIndices: Set<Int> {
