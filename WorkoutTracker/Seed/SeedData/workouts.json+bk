@@ -1,0 +1,641 @@
+{
+  "workouts": [
+    {
+      "isArchived": false,
+      "kind": "personalized",
+      "name": "calesthenic full",
+      "notes": "",
+      "sections": [
+        {
+          "name": "core",
+          "sectionDescription": "",
+          "sectionType": "time",
+          "timeSteps": [
+            {
+              "stepType": "getReady",
+              "durationSeconds": 15
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hanging Hollow Hold (Arched, Still)"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hanging Double Knee Raise"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hanging Alternating Knee Raise"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 30
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Single-Leg Roman Chair Hyperextension "
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Single-Leg Roman Chair Hyperextension "
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hyperextensions"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 120
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hanging Hollow Hold (Arched, Still)"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hanging Double Knee Raise"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hanging Alternating Knee Raise"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 30
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Single-Leg Roman Chair Hyperextension "
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Single-Leg Roman Chair Hyperextension "
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hyperextensions"
+            }
+          ]
+        },
+        {
+          "name": "upper/core",
+          "sectionDescription": "",
+          "sectionType": "rep",
+          "repExercises": [
+            {
+              "exercise": "Ring Chin-Up",
+              "targetSets": 3,
+              "trackingMode": "repsWeight",
+              "customRestSeconds": 120
+            },
+            {
+              "exercise": "Ring Pull-Up",
+              "targetSets": 3,
+              "trackingMode": "repsWeight",
+              "customRestSeconds": 120
+            },
+            {
+              "exercise": "Ring Row (Inverted Row)",
+              "targetSets": 3,
+              "trackingMode": "repsWeight",
+              "customRestSeconds": 120
+            },
+            {
+              "exercise": "Ring T-Hold (Open/Close)",
+              "targetSets": 3,
+              "trackingMode": "repsWeight",
+              "customRestSeconds": 120
+            },
+            {
+              "exercise": "Ring Support Hold (Straight-Arm)",
+              "targetSets": 3,
+              "trackingMode": "maxHoldTime",
+              "customRestSeconds": 120,
+              "headStartSeconds": 3
+            },
+            {
+              "exercise": "Dips",
+              "targetSets": 3,
+              "trackingMode": "repsWeight",
+              "customRestSeconds": 120
+            },
+            {
+              "exercise": "Pike Push Ups",
+              "targetSets": 3,
+              "trackingMode": "repsWeight",
+              "customRestSeconds": 90
+            },
+            {
+              "exercise": "Push-Up",
+              "targetSets": 3,
+              "trackingMode": "repsWeight",
+              "customRestSeconds": 120
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "isArchived": false,
+      "kind": "personalized",
+      "name": "Core/upper",
+      "notes": "",
+      "sections": [
+        {
+          "name": "Abs",
+          "sectionDescription": "Abs section",
+          "sectionType": "time",
+          "timeSteps": [
+            {
+              "stepType": "getReady",
+              "durationSeconds": 15
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Basic Crunch",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Crunch Pulse",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Crunch Hold",
+              "color": "brown"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 5
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Flat Leg Crunch, Basic (Straight Relaxed Legs)",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Flat Leg Crunch, Pulse (Straight Relaxed Legs)",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Flat Leg Crunch, Hold (Straight Relaxed Legs)",
+              "color": "brown"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 5
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Bent-Knee Crunch, Basic (Legs at 90°)",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Bent-Knee Crunch, Pulse (Legs at 90°)",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Bent-Knee Crunch, Hold (Legs at 90°)",
+              "color": "brown"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 5
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Bicycle Crunch",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Bicycle Crunch",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Bicycle Crunch",
+              "color": "brown"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 5
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Side plank active",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Side Plank Rotation",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Side plank Hold",
+              "color": "brown"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 10
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Prone Back Extension, Basic",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Prone Back Extension, Pulse",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Prone Back Extension, Hold",
+              "color": "brown"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 10
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Prone Back Extension with Side Bend, Basic",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Prone Back Extension with Side Bend, Pulse",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Prone Back Extension with Side Bend, Hold",
+              "color": "brown"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 10
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Prone Back Extension with Arm Reach, Basic",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Prone Back Extension with Arm Reach, Pulse",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Prone Back Extension with Arm Reach, Hold",
+              "color": "brown"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 90
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Single-Leg Roman Chair Hyperextension ",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Single-Leg Roman Chair Hyperextension ",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hyperextensions",
+              "color": "brown"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 90
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hanging Hollow Hold (Arched, Still)",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hanging Alternating Knee Raise",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hanging Double Knee Raise",
+              "color": "brown"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 90
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Single-Leg Roman Chair Hyperextension ",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Single-Leg Roman Chair Hyperextension ",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hyperextensions",
+              "color": "brown"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 90
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hanging Hollow Hold (Arched, Still)",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hanging Alternating Knee Raise",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Hanging Double Knee Raise",
+              "color": "brown"
+            }
+          ]
+        },
+        {
+          "name": "shoulder/back",
+          "sectionDescription": "",
+          "sectionType": "rep",
+          "repExercises": [
+            {
+              "exercise": "Lateral Raises",
+              "targetSets": 5,
+              "trackingMode": "repsWeight",
+              "customRestSeconds": 90
+            },
+            {
+              "exercise": "Shoulder Press, Dumbbells",
+              "targetSets": 5,
+              "trackingMode": "repsWeight",
+              "customRestSeconds": 90
+            },
+            {
+              "exercise": "Front Raises",
+              "targetSets": 3,
+              "trackingMode": "repsWeight",
+              "customRestSeconds": 90
+            },
+            {
+              "exercise": "Ring T-Hold (Open/Close)",
+              "targetSets": 3,
+              "trackingMode": "maxHoldTime",
+              "customRestSeconds": 90,
+              "headStartSeconds": 5
+            },
+            {
+              "exercise": "Ring Pull-Up",
+              "targetSets": 4,
+              "trackingMode": "repsWeight",
+              "customRestSeconds": 90
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "isArchived": false,
+      "kind": "personalized",
+      "name": "Core/lower",
+      "notes": "",
+      "sections": [
+        {
+          "name": "Abs",
+          "sectionDescription": "Abs section",
+          "sectionType": "time",
+          "timeSteps": [
+            {
+              "stepType": "getReady",
+              "durationSeconds": 15
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Basic Crunch",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Crunch Pulse",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Crunch Hold",
+              "color": "brown"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 5
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Flat Leg Crunch, Basic (Straight Relaxed Legs)",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Flat Leg Crunch, Pulse (Straight Relaxed Legs)",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Flat Leg Crunch, Hold (Straight Relaxed Legs)",
+              "color": "brown"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 5
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Bent-Knee Crunch, Basic (Legs at 90°)",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Bent-Knee Crunch, Pulse (Legs at 90°)",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Bent-Knee Crunch, Hold (Legs at 90°)",
+              "color": "brown"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 5
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Bicycle Crunch",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Bicycle Crunch",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Bicycle Crunch",
+              "color": "brown"
+            },
+            {
+              "stepType": "rest",
+              "durationSeconds": 5
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Side plank active",
+              "color": "green"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Side Plank Rotation",
+              "color": "blue"
+            },
+            {
+              "stepType": "exercise",
+              "durationSeconds": 30,
+              "exercise": "Side plank Hold",
+              "color": "brown"
+            }
+          ]
+        },
+        {
+          "name": "leg/gluted",
+          "sectionDescription": "",
+          "sectionType": "rep",
+          "repExercises": [
+            {
+              "exercise": "Slow Squat",
+              "targetSets": 3,
+              "trackingMode": "repsWeight"
+            },
+            {
+              "exercise": "Reverse Nordic Curl",
+              "targetSets": 3,
+              "trackingMode": "repsWeight"
+            },
+            {
+              "exercise": "Single-Leg Goblet Squat to Bench (Depth Stop)",
+              "targetSets": 3,
+              "trackingMode": "repsWeight"
+            },
+            {
+              "exercise": "Sliding Lateral Lunge",
+              "targetSets": 3,
+              "trackingMode": "repsWeight"
+            },
+            {
+              "exercise": "Resistance Band Abductor Lunge",
+              "targetSets": 3,
+              "trackingMode": "repsWeight"
+            },
+            {
+              "exercise": "Side Plank Bench Leg Pump",
+              "targetSets": 3,
+              "trackingMode": "repsWeight"
+            },
+            {
+              "exercise": "TRX Hip Bridge Curl",
+              "targetSets": 3,
+              "trackingMode": "repsWeight"
+            }
+          ]
+        },
+        {
+          "name": "",
+          "sectionDescription": "",
+          "sectionType": "time",
+          "timeSteps": []
+        }
+      ]
+    }
+  ]
+}

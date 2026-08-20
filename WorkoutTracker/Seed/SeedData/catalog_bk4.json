@@ -143,6 +143,16 @@
       "weighted": false
     },
     {
+      "icon": "figure.strengthtraining.functional",
+      "isAtGym": false,
+      "isAtHome": false,
+      "isCustom": false,
+      "name": "Cable machine",
+      "unit": "lb",
+      "weighted": true,
+      "weights": []
+    },
+    {
       "icon": "dumbbell.fill",
       "isAtGym": false,
       "isAtHome": true,
@@ -384,58 +394,6 @@
   "exercises": [
     {
       "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Gym mat"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": true,
-      "isFavorited": true,
-      "muscles": [
-        "Abs",
-        "Obliques"
-      ],
-      "name": "Side Plank Rotation",
-      "notes": "",
-      "videolink": "https://www.youtube.com/watch?v=OMc5f_JUDUU&pp=ygUaU2lkZSBQbGFuayBSb3RhdGlvbiBzaG9ydHM%3D"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Gym mat"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": true,
-      "isFavorited": true,
-      "muscles": [
-        "Abs",
-        "Obliques"
-      ],
-      "name": "Side plank Hold",
-      "notes": "",
-      "videolink": "https://www.youtube.com/shorts/Ph26le5EuCY"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": true,
-      "isFavorited": true,
-      "muscles": [
-        "Abs",
-        "Obliques"
-      ],
-      "name": "Side plank active",
-      "notes": "hips up and down",
-      "videolink": "https://www.youtube.com/shorts/tJou_VRNf8g"
-    },
-    {
-      "categories": [
         "physio"
       ],
       "equipment": [
@@ -522,7 +480,7 @@
       "muscles": [
         "Biceps"
       ],
-      "name": "Alternating hammer curl",
+      "name": "Alternating dumbbell hammer curl",
       "notes": "Stand with your knees slightly bent and your back straight. Hold a dumbbell in each hand, using a neutral grip at your sides.",
       "videolink": "https://www.youtube.com/watch?v=h46ccQsXDEk&pp=ygUnQWx0ZXJuYXRpbmcgZHVtYmJlbGwgaGFtbWVyIGN1cmwgc2hvcnRz0gcJCf4LAYcqIYzv"
     },
@@ -536,7 +494,7 @@
       ],
       "icon": "figure.core.training",
       "isCustom": false,
-      "isFavorited": false,
+      "isFavorited": true,
       "muscles": [
         "Glutes",
         "Hamstrings"
@@ -573,7 +531,7 @@
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
-      "isFavorited": false,
+      "isFavorited": true,
       "muscles": [
         "Shoulders"
       ],
@@ -666,8 +624,7 @@
         "Quads"
       ],
       "name": "Banded Overhead Squat",
-      "notes": "Squat while holding a resistance band overhead, keeping tension throughout the movement.",
-      "videolink": "https://www.youtube.com/watch?v=YxuwmkMRSjA"
+      "notes": "Squat while holding a resistance band overhead, keeping tension throughout the movement."
     },
     {
       "categories": [
@@ -685,8 +642,7 @@
         "Traps"
       ],
       "name": "Banded Thoracic Extension (45° Roman Chair)",
-      "notes": "On a 45° Roman chair, extend the upper (thoracic) spine against band resistance.",
-      "videolink": "https://www.youtube.com/watch?v=bvWdU8Duo8Y"
+      "notes": "On a 45° Roman chair, extend the upper (thoracic) spine against band resistance."
     },
     {
       "categories": [
@@ -697,7 +653,7 @@
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
-      "isFavorited": false,
+      "isFavorited": true,
       "label": "Barbell Squat",
       "muscles": [
         "Glutes",
@@ -736,7 +692,7 @@
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
-      "isFavorited": false,
+      "isFavorited": true,
       "muscles": [
         "Triceps"
       ],
@@ -806,7 +762,7 @@
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
-      "isFavorited": false,
+      "isFavorited": true,
       "muscles": [
         "Chest",
         "Shoulders",
@@ -843,7 +799,7 @@
       "isCustom": false,
       "isFavorited": true,
       "muscles": [
-        "Lats"
+        "Traps"
       ],
       "name": "Bent High Pulls",
       "notes": "Bend over slightly while holding two dumbbells.  Pull the dumbbells up to your chest, keeping your elbows as high as you can."
@@ -1120,7 +1076,7 @@
       "muscles": [
         "Abs"
       ],
-      "name": "Crunch Pulse",
+      "name": "Crunch Pulse (Top-Range)",
       "notes": "Knees bent, feet flat. Small, fast pulses at top of crunch."
     },
     {
@@ -1236,8 +1192,7 @@
         "strength"
       ],
       "equipment": [
-        "Parallel Bars",
-        "Rings"
+        "Parallel Bars"
       ],
       "icon": "figure.core.training",
       "isCustom": false,
@@ -1295,35 +1250,7 @@
       "muscles": [
         "Calves"
       ],
-      "name": "Calf Raise",
-      "notes": "The double leg heel raise is important to strengthen and create control and stability around the ankle and knee, and provide balance and control for the hip and pelvis."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": true,
-      "isFavorited": true,
-      "muscles": [
-        "Calves"
-      ],
-      "name": "Calf Raise feet inward",
-      "notes": "The double leg heel raise is important to strengthen and create control and stability around the ankle and knee, and provide balance and control for the hip and pelvis."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": true,
-      "isFavorited": true,
-      "muscles": [
-        "Calves"
-      ],
-      "name": "Calf Raise feet outward",
+      "name": "Double Leg Calf Raise",
       "notes": "The double leg heel raise is important to strengthen and create control and stability around the ankle and knee, and provide balance and control for the hip and pelvis."
     },
     {
@@ -1555,8 +1482,7 @@
     },
     {
       "categories": [
-        "strength",
-        "physio"
+        "strength"
       ],
       "equipment": [
         "Dumbbell"
@@ -1962,7 +1888,7 @@
       "icon": "figure.core.training",
       "isCustom": true,
       "isFavorited": true,
-      "label": "Hanging Alternating Knee Raise",
+      "label": "Abs hanging",
       "muscles": [
         "Abs"
       ],
@@ -1980,7 +1906,7 @@
       "icon": "figure.core.training",
       "isCustom": true,
       "isFavorited": true,
-      "label": "Hanging Around the World",
+      "label": "Abs hanging",
       "muscles": [
         "Abs",
         "Obliques"
@@ -1999,7 +1925,7 @@
       "icon": "figure.core.training",
       "isCustom": true,
       "isFavorited": true,
-      "label": "Hanging Double Knee Raise",
+      "label": "Abs hanging",
       "muscles": [
         "Abs"
       ],
@@ -2017,7 +1943,7 @@
       "icon": "figure.core.training",
       "isCustom": true,
       "isFavorited": true,
-      "label": "Hanging Hollow Hold (Arched, Still)",
+      "label": "Abs hanging",
       "muscles": [
         "Abs"
       ],
@@ -2035,7 +1961,7 @@
       "icon": "figure.core.training",
       "isCustom": true,
       "isFavorited": true,
-      "label": "Hanging Straight Leg Raise",
+      "label": "Abs hanging",
       "muscles": [
         "Abs"
       ],
@@ -2095,7 +2021,7 @@
         "Lats"
       ],
       "name": "Hyperextensions",
-      "notes": "Lie on the roman chair with your navel at the front edge, allowing your upper body to hang freely. Tighten all your back muscles and raise your torso until you're horizontal, but no higher. Lower yourself slowly, maintaining a steady flow of muscles."
+      "notes": "Lie on the hyperextension pillow with your navel at the front edge, allowing your upper body to hang freely. Tighten all your back muscles and raise your torso until you're horizontal, but no higher. Lower yourself slowly, maintaining a steady flow of muscles."
     },
     {
       "categories": [
@@ -3027,25 +2953,8 @@
       "muscles": [
         "Glutes"
       ],
-      "name": "band glute kickback",
+      "name": "rubber band glute kickback",
       "notes": "A rubber band glute kickback is an exercise performed on hands and knees, where you anchor a resistance band to your foot and kick your heel back and up, squeezing your glute at the top of the movement, while maintaining a stable core and flat back to target and strengthen the gluteal muscles."
-    },
-    {
-      "categories": [
-        "physio"
-      ],
-      "equipment": [
-        "Resistance band"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": true,
-      "isFavorited": true,
-      "muscles": [
-        "Glutes"
-      ],
-      "name": "banded glute kickback",
-      "notes": "band attach in fron feet in it kick back",
-      "videolink": "https://www.youtube.com/shorts/Oz9KXbiSt2c"
     },
     {
       "categories": [
@@ -3298,8 +3207,8 @@
       "muscles": [
         "lower back"
       ],
-      "name": "Single-Leg Roman Chair Hyperextension ",
-      "notes": "On Roman chair, one leg only. Keep spine straight, stay up"
+      "name": "Single-Leg Roman Chair Hyperextension with Rotation",
+      "notes": "On Roman chair, one leg only. Keep spine straight, stay up, rotate torso 90°."
     },
     {
       "categories": [

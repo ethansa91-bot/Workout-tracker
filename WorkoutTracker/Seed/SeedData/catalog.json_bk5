@@ -666,8 +666,7 @@
         "Quads"
       ],
       "name": "Banded Overhead Squat",
-      "notes": "Squat while holding a resistance band overhead, keeping tension throughout the movement.",
-      "videolink": "https://www.youtube.com/watch?v=YxuwmkMRSjA"
+      "notes": "Squat while holding a resistance band overhead, keeping tension throughout the movement."
     },
     {
       "categories": [
@@ -685,8 +684,7 @@
         "Traps"
       ],
       "name": "Banded Thoracic Extension (45° Roman Chair)",
-      "notes": "On a 45° Roman chair, extend the upper (thoracic) spine against band resistance.",
-      "videolink": "https://www.youtube.com/watch?v=bvWdU8Duo8Y"
+      "notes": "On a 45° Roman chair, extend the upper (thoracic) spine against band resistance."
     },
     {
       "categories": [
@@ -1295,35 +1293,7 @@
       "muscles": [
         "Calves"
       ],
-      "name": "Calf Raise",
-      "notes": "The double leg heel raise is important to strengthen and create control and stability around the ankle and knee, and provide balance and control for the hip and pelvis."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": true,
-      "isFavorited": true,
-      "muscles": [
-        "Calves"
-      ],
-      "name": "Calf Raise feet inward",
-      "notes": "The double leg heel raise is important to strengthen and create control and stability around the ankle and knee, and provide balance and control for the hip and pelvis."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [],
-      "icon": "figure.core.training",
-      "isCustom": true,
-      "isFavorited": true,
-      "muscles": [
-        "Calves"
-      ],
-      "name": "Calf Raise feet outward",
+      "name": "Double Leg Calf Raise",
       "notes": "The double leg heel raise is important to strengthen and create control and stability around the ankle and knee, and provide balance and control for the hip and pelvis."
     },
     {
@@ -1555,8 +1525,7 @@
     },
     {
       "categories": [
-        "strength",
-        "physio"
+        "strength"
       ],
       "equipment": [
         "Dumbbell"
@@ -1962,7 +1931,7 @@
       "icon": "figure.core.training",
       "isCustom": true,
       "isFavorited": true,
-      "label": "Hanging Alternating Knee Raise",
+      "label": "Abs hanging",
       "muscles": [
         "Abs"
       ],
@@ -1980,7 +1949,7 @@
       "icon": "figure.core.training",
       "isCustom": true,
       "isFavorited": true,
-      "label": "Hanging Around the World",
+      "label": "Abs hanging",
       "muscles": [
         "Abs",
         "Obliques"
@@ -1999,7 +1968,7 @@
       "icon": "figure.core.training",
       "isCustom": true,
       "isFavorited": true,
-      "label": "Hanging Double Knee Raise",
+      "label": "Abs hanging",
       "muscles": [
         "Abs"
       ],
@@ -2017,7 +1986,7 @@
       "icon": "figure.core.training",
       "isCustom": true,
       "isFavorited": true,
-      "label": "Hanging Hollow Hold (Arched, Still)",
+      "label": "Abs hanging",
       "muscles": [
         "Abs"
       ],
@@ -2035,7 +2004,7 @@
       "icon": "figure.core.training",
       "isCustom": true,
       "isFavorited": true,
-      "label": "Hanging Straight Leg Raise",
+      "label": "Abs hanging",
       "muscles": [
         "Abs"
       ],
@@ -3027,25 +2996,8 @@
       "muscles": [
         "Glutes"
       ],
-      "name": "band glute kickback",
+      "name": "rubber band glute kickback",
       "notes": "A rubber band glute kickback is an exercise performed on hands and knees, where you anchor a resistance band to your foot and kick your heel back and up, squeezing your glute at the top of the movement, while maintaining a stable core and flat back to target and strengthen the gluteal muscles."
-    },
-    {
-      "categories": [
-        "physio"
-      ],
-      "equipment": [
-        "Resistance band"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": true,
-      "isFavorited": true,
-      "muscles": [
-        "Glutes"
-      ],
-      "name": "banded glute kickback",
-      "notes": "band attach in fron feet in it kick back",
-      "videolink": "https://www.youtube.com/shorts/Oz9KXbiSt2c"
     },
     {
       "categories": [
