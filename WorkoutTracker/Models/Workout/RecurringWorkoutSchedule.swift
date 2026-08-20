@@ -8,20 +8,22 @@ import SwiftData
 /// can individually be opened/moved/cancelled.
 @Model
 final class RecurringWorkoutSchedule: SyncableModel {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     var workout: Workout?
     /// `Calendar` weekday values: 1 = Sunday ... 7 = Saturday.
-    var weekdays: [Int]
+    var weekdays: [Int] = []
     /// Last date occurrences are generated through — user-chosen, either derived
     /// from "N weeks" or picked directly, at creation time.
     var endDate: Date = Date.now
-    var updatedAt: Date
+    var updatedAt: Date = Date.now
     var deletedAt: Date?
-    var isDirty: Bool
-    var remoteSyncedAt: Date?
 
     @Relationship(deleteRule: .cascade, inverse: \ScheduledWorkout.recurringSchedule)
-    var occurrences: [ScheduledWorkout] = []
+    var occurrencesStorage: [ScheduledWorkout]?
+    var occurrences: [ScheduledWorkout] {
+        get { occurrencesStorage ?? [] }
+        set { occurrencesStorage = newValue }
+    }
 
     init(id: UUID = UUID(), workout: Workout?, weekdays: [Int], endDate: Date) {
         self.id = id
@@ -30,7 +32,5 @@ final class RecurringWorkoutSchedule: SyncableModel {
         self.endDate = endDate
         self.updatedAt = .now
         self.deletedAt = nil
-        self.isDirty = true
-        self.remoteSyncedAt = nil
     }
 }

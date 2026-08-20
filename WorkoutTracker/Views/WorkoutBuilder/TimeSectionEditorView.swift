@@ -25,6 +25,7 @@ struct TimeSectionEditorView: View {
         VStack(spacing: 0) {
             if !isLocked {
                 heroCard
+                settingsBar
                 headerBar
                 Divider()
             }
@@ -114,6 +115,33 @@ struct TimeSectionEditorView: View {
     private var heroInfoLine: String {
         let count = section.sortedTimeSteps.filter { $0.stepType == .exercise }.count
         return "\(section.sectionType.pillLabel) · \(count) Exercise\(count == 1 ? "" : "s")"
+    }
+
+    private var settingsBar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Toggle("Autostart", isOn: autostartBinding)
+            Stepper(repeatLabel(section.repeatCount), value: repeatBinding, in: 1...20)
+        }
+        .padding(.horizontal)
+        .padding(.top, 8)
+    }
+
+    private var autostartBinding: Binding<Bool> {
+        Binding(get: { section.autostart }, set: { updateAutostart($0) })
+    }
+
+    private var repeatBinding: Binding<Int> {
+        Binding(get: { section.repeatCount }, set: { updateRepeatCount($0) })
+    }
+
+    private func updateAutostart(_ autostart: Bool) {
+        do { try WorkoutEditingService.updateAutostart(section, to: autostart, context: context) }
+        catch { errorMessage = error.localizedDescription }
+    }
+
+    private func updateRepeatCount(_ count: Int) {
+        do { try WorkoutEditingService.updateRepeatCount(section, to: count, context: context) }
+        catch { errorMessage = error.localizedDescription }
     }
 
     private var editSheet: some View {
@@ -407,26 +435,10 @@ private struct TimeStepInlineEditor: View {
             Text("Color")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            HStack(spacing: 10) {
-                ForEach(TimeStepColor.allCases) { option in
-                    Button {
-                        step.color = (step.color == option) ? nil : option
-                        save()
-                    } label: {
-                        Circle()
-                            .fill(option.color)
-                            .frame(width: 28, height: 28)
-                            .overlay {
-                                if step.color == option {
-                                    Image(systemName: "checkmark")
-                                        .font(.caption.weight(.bold))
-                                        .foregroundStyle(.white)
-                                }
-                            }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
+            PaletteColorPicker(selection: Binding(
+                get: { step.color },
+                set: { step.color = $0; save() }
+            ))
         }
     }
 

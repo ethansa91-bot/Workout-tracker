@@ -103,10 +103,37 @@ enum CatalogSeedLoader {
     private static let fixedMuscleCategoryNames = ["upperBody", "core", "lowerBody"]
     private static let fixedExerciseCategoryNames = ["calisthenics", "strength", "mobility", "plyo", "cardio", "warmups", "physio"]
 
+    /// Every row already in the store, keyed by `id`, in a single fetch.
+    ///
+    /// Seeding is gated on a `UserDefaults` flag, which is per-device and never synced —
+    /// so a second device on the same iCloud account always re-seeds locally even after
+    /// CloudKit has already delivered the first device's catalog. Because
+    /// `SeedIdentity.uuid` is a pure hash of namespace + name, both devices derive the
+    /// *same* id for the same entity, which is what makes an id lookup enough to tell
+    /// "already here" from "genuinely new". Reinstalling on a single device hits the
+    /// identical path.
+    ///
+    /// One fetch per type rather than one per row: the catalog runs to a few hundred
+    /// exercises, and per-row fetches during a synchronous `App.init()` would be a
+    /// visible launch delay.
+    private static func existingByID<T: PersistentModel>(_ type: T.Type, context: ModelContext, id: KeyPath<T, UUID>) -> [UUID: T] {
+        let rows = (try? context.fetch(FetchDescriptor<T>())) ?? []
+        // Keeping the first occurrence rather than the last means a pre-existing
+        // duplicate (from a device seeded before this guard existed) resolves to a
+        // stable winner here; `CatalogReconciliation` removes the losers separately.
+        return Dictionary(rows.map { ($0[keyPath: id], $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
     private static func seedMuscleCategories(context: ModelContext) -> [String: MuscleCategory] {
+        let existing = existingByID(MuscleCategory.self, context: context, id: \.id)
         var result: [String: MuscleCategory] = [:]
         for name in fixedMuscleCategoryNames {
-            let category = MuscleCategory(id: SeedIdentity.uuid("muscleCategory", name), name: name)
+            let id = SeedIdentity.uuid("muscleCategory", name)
+            if let category = existing[id] {
+                result[name] = category
+                continue
+            }
+            let category = MuscleCategory(id: id, name: name)
             context.insert(category)
             result[name] = category
         }
@@ -114,9 +141,15 @@ enum CatalogSeedLoader {
     }
 
     private static func seedExerciseCategories(context: ModelContext) -> [String: ExerciseCategory] {
+        let existing = existingByID(ExerciseCategory.self, context: context, id: \.id)
         var result: [String: ExerciseCategory] = [:]
         for name in fixedExerciseCategoryNames {
-            let category = ExerciseCategory(id: SeedIdentity.uuid("exerciseCategory", name), name: name)
+            let id = SeedIdentity.uuid("exerciseCategory", name)
+            if let category = existing[id] {
+                result[name] = category
+                continue
+            }
+            let category = ExerciseCategory(id: id, name: name)
             context.insert(category)
             result[name] = category
         }
@@ -126,9 +159,15 @@ enum CatalogSeedLoader {
     // MARK: - Muscles
 
     private static func seedMuscles(_ entries: [MuscleEntry], categoriesByName: [String: MuscleCategory], context: ModelContext) -> [String: Muscle] {
+        let existing = existingByID(Muscle.self, context: context, id: \.id)
         var result: [String: Muscle] = [:]
         for entry in entries {
-            let muscle = Muscle(id: SeedIdentity.uuid("muscle", entry.name), name: entry.name, iconSymbolName: SeedDataLoader.symbol(forMuscleCategories: entry.categories))
+            let id = SeedIdentity.uuid("muscle", entry.name)
+            if let muscle = existing[id] {
+                result[entry.name] = muscle
+                continue
+            }
+            let muscle = Muscle(id: id, name: entry.name, iconSymbolName: SeedDataLoader.symbol(forMuscleCategories: entry.categories))
             muscle.categories = entry.categories.compactMap { categoriesByName[$0] }
             context.insert(muscle)
             result[entry.name] = muscle
@@ -139,10 +178,17 @@ enum CatalogSeedLoader {
     // MARK: - Equipment
 
     private static func seedEquipment(_ entries: [EquipmentEntry], context: ModelContext) -> [String: Equipment] {
+        let existing = existingByID(Equipment.self, context: context, id: \.id)
+        let existingCombos = existingByID(WeightCombo.self, context: context, id: \.id)
         var result: [String: Equipment] = [:]
         for entry in entries {
+            let id = SeedIdentity.uuid("equipment", entry.name)
+            if let equipment = existing[id] {
+                result[entry.name] = equipment
+                continue
+            }
             let equipment = Equipment(
-                id: SeedIdentity.uuid("equipment", entry.name),
+                id: id,
                 name: entry.name,
                 iconSymbolName: entry.icon,
                 isCustom: entry.isCustom,
@@ -153,7 +199,12 @@ enum CatalogSeedLoader {
             )
             context.insert(equipment)
             for (index, value) in entry.weights.enumerated() {
-                let combo = WeightCombo(equipment: equipment, value: value, sortOrder: index)
+                // Derived from the owning equipment name + position, not left to the
+                // random-UUID default: without this every weighted item's weight list
+                // duplicates across devices, since nothing else identifies a combo.
+                let comboID = SeedIdentity.uuid("weightCombo", "\(entry.name)|\(index)")
+                guard existingCombos[comboID] == nil else { continue }
+                let combo = WeightCombo(id: comboID, equipment: equipment, value: value, sortOrder: index)
                 context.insert(combo)
             }
             result[entry.name] = equipment
@@ -170,9 +221,12 @@ enum CatalogSeedLoader {
         categoriesByName: [String: ExerciseCategory],
         context: ModelContext
     ) {
+        let existing = existingByID(Exercise.self, context: context, id: \.id)
         for entry in entries {
+            let id = SeedIdentity.uuid("catalogExercise", entry.name)
+            guard existing[id] == nil else { continue }
             let exercise = Exercise(
-                id: SeedIdentity.uuid("catalogExercise", entry.name),
+                id: id,
                 name: entry.name,
                 label: entry.label,
                 notes: entry.notes,

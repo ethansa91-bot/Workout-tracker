@@ -6,9 +6,6 @@ enum SeedDataError: Error {
 }
 
 /// Populates the starter catalog (muscles, equipment, exercises) on first launch only.
-/// Everything seeded here starts `isDirty = true` / `remoteSyncedAt = nil` just like any
-/// other locally-created row, so it flows through the normal "sync everything" path the
-/// first time the user pushes to Supabase — no special-casing needed in the sync engine.
 enum SeedDataLoader {
     /// Not private — `CatalogSeedLoader` (the newer, consolidated fresh-install path)
     /// shares this same flag, so `hasSeeded` is one signal regardless of which loader

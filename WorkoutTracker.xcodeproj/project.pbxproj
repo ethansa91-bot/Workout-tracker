@@ -62,7 +62,7 @@
 				BCAF04C13028F66300CB8C48 /* Sources */,
 				BCAF04C23028F66300CB8C48 /* Frameworks */,
 				BCAF04C33028F66300CB8C48 /* Resources */,
-				BCAF04FE3028F66300CB8C48 /* Inject Supabase config into Info.plist */,
+				BCAF04FE3028F66300CB8C48 /* Inject API keys into Info.plist */,
 			);
 			buildRules = (
 			);
@@ -127,7 +127,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		BCAF04FE3028F66300CB8C48 /* Inject Supabase config into Info.plist */ = {
+		BCAF04FE3028F66300CB8C48 /* Inject API keys into Info.plist */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -136,14 +136,14 @@
 			);
 			inputPaths = (
 			);
-			name = "Inject Supabase config into Info.plist";
+			name = "Inject API keys into Info.plist";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# GENERATE_INFOPLIST_FILE only auto-populates Apple's known INFOPLIST_KEY_* keys,\n# not arbitrary custom ones, so SupabaseURL/SupabaseAnonKey/GeminiAPIKey/\n# HuggingFaceAPIToken (from Secrets.xcconfig) are injected here instead, before the\n# implicit code-sign step.\nBUILT_INFOPLIST=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"\n/usr/libexec/PlistBuddy -c \"Delete :SupabaseURL\" \"${BUILT_INFOPLIST}\" 2>/dev/null\n/usr/libexec/PlistBuddy -c \"Add :SupabaseURL string ${SUPABASE_URL}\" \"${BUILT_INFOPLIST}\"\n/usr/libexec/PlistBuddy -c \"Delete :SupabaseAnonKey\" \"${BUILT_INFOPLIST}\" 2>/dev/null\n/usr/libexec/PlistBuddy -c \"Add :SupabaseAnonKey string ${SUPABASE_ANON_KEY}\" \"${BUILT_INFOPLIST}\"\n/usr/libexec/PlistBuddy -c \"Delete :GeminiAPIKey\" \"${BUILT_INFOPLIST}\" 2>/dev/null\n/usr/libexec/PlistBuddy -c \"Add :GeminiAPIKey string ${GEMINI_API_KEY}\" \"${BUILT_INFOPLIST}\"\n/usr/libexec/PlistBuddy -c \"Delete :HuggingFaceAPIToken\" \"${BUILT_INFOPLIST}\" 2>/dev/null\n/usr/libexec/PlistBuddy -c \"Add :HuggingFaceAPIToken string ${HUGGINGFACE_API_TOKEN}\" \"${BUILT_INFOPLIST}\"\n";
+			shellScript = "# GENERATE_INFOPLIST_FILE only auto-populates Apple's known INFOPLIST_KEY_* keys,\n# not arbitrary custom ones, so GeminiAPIKey/HuggingFaceAPIToken (from\n# Secrets.xcconfig) are injected here instead, before the implicit code-sign step.\nBUILT_INFOPLIST=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"\n/usr/libexec/PlistBuddy -c \"Delete :GeminiAPIKey\" \"${BUILT_INFOPLIST}\" 2>/dev/null\n/usr/libexec/PlistBuddy -c \"Add :GeminiAPIKey string ${GEMINI_API_KEY}\" \"${BUILT_INFOPLIST}\"\n/usr/libexec/PlistBuddy -c \"Delete :HuggingFaceAPIToken\" \"${BUILT_INFOPLIST}\" 2>/dev/null\n/usr/libexec/PlistBuddy -c \"Add :HuggingFaceAPIToken string ${HUGGINGFACE_API_TOKEN}\" \"${BUILT_INFOPLIST}\"\n\n# UIBackgroundModes is likewise not one of the auto-mapped INFOPLIST_KEY_* names, so\n# setting it as a build setting is silently ignored. CloudKit needs remote-notification\n# here or iOS drops the silent pushes that tell this device another one has new data.\n/usr/libexec/PlistBuddy -c \"Delete :UIBackgroundModes\" \"${BUILT_INFOPLIST}\" 2>/dev/null\n/usr/libexec/PlistBuddy -c \"Add :UIBackgroundModes array\" \"${BUILT_INFOPLIST}\"\n/usr/libexec/PlistBuddy -c \"Add :UIBackgroundModes:0 string remote-notification\" \"${BUILT_INFOPLIST}\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -285,6 +285,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = WorkoutTracker/WorkoutTracker.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YG6FNSXV35;
@@ -321,6 +322,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = WorkoutTracker/WorkoutTracker.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YG6FNSXV35;

@@ -25,7 +25,7 @@ struct SessionHistoryDetailView: View {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(log.exerciseNameSnapshot ?? log.exercise?.displayName ?? "Exercise")
-                                Text("Set \(log.setIndex + 1)")
+                                Text(setLabel(for: log))
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
@@ -36,8 +36,15 @@ struct SessionHistoryDetailView: View {
                                 Text("Held \(holdSeconds)s")
                                     .font(.subheadline)
                             } else {
-                                Text("\(log.reps) × \(formattedWeight(log.weight, unit: log.weightUnit))")
-                                    .font(.subheadline)
+                                HStack(spacing: 4) {
+                                    if let color = levelColor(for: log) {
+                                        Circle().fill(color.color).frame(width: 6, height: 6)
+                                    }
+                                    Text(log.isBodyweight == true
+                                         ? "\(log.reps) × Bodyweight"
+                                         : "\(log.reps) × \(formattedWeight(log.weight, unit: log.weightUnit, exercise: log.exercise))")
+                                        .font(.subheadline)
+                                }
                             }
                         }
                     }
@@ -78,6 +85,14 @@ struct SessionHistoryDetailView: View {
         session.setLogs.sorted { $0.loggedAt < $1.loggedAt }
     }
 
+    /// Side-tracked exercises log two sets per index, so the side has to appear or the
+    /// list reads "Set 1" twice with no way to tell them apart.
+    private func setLabel(for log: SetLog) -> String {
+        let base = "Set \(log.setIndex + 1)"
+        guard let side = log.side else { return base }
+        return "\(base) · \(side.label)"
+    }
+
     private var sortedStepLogs: [StepLog] {
         session.stepLogs.sorted { $0.sortOrder < $1.sortOrder }
     }
@@ -104,7 +119,20 @@ struct SessionHistoryDetailView: View {
         return String(format: "%d:%02d:%02d", total / 3600, (total % 3600) / 60, total % 60)
     }
 
-    private func formattedWeight(_ value: Double, unit: String) -> String {
-        value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value)) \(unit)" : "\(value) \(unit)"
+    private func formattedWeight(_ value: Double, unit: String, exercise: Exercise?) -> String {
+        if unit == Equipment.levelUnit, let equipment = exercise?.weightedEquipment, equipment.isLevelBased {
+            if let combo = equipment.sortedWeightCombos.first(where: { $0.value == value }) {
+                return combo.levelDisplayName
+            }
+            return "Level \(Int(value))"
+        }
+        return value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value)) \(unit)" : "\(value) \(unit)"
+    }
+
+    private func levelColor(for log: SetLog) -> PaletteColor? {
+        guard log.weightUnit == Equipment.levelUnit,
+              let equipment = log.exercise?.weightedEquipment,
+              equipment.isLevelBased else { return nil }
+        return equipment.sortedWeightCombos.first(where: { $0.value == log.weight })?.color
     }
 }

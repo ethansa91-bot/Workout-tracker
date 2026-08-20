@@ -43,7 +43,7 @@ extension Color {
 
     // MARK: - Follow-along step colors
     //
-    // The per-exercise color picker (`TimeStepColor`) needs a few hues this palette
+    // The per-exercise color picker (`PaletteColor`) needs a few hues this palette
     // doesn't otherwise have (blue, brown, yellow, purple) — matched to the same
     // deep/muted tone as `appAccent`/`appRust`/`appDanger` above rather than bright
     // system colors, so a colored step reads as part of this app's palette instead of

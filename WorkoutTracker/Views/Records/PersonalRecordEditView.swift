@@ -8,6 +8,10 @@ import SwiftData
 /// `PersonalRecord` from then on.
 struct PersonalRecordEditView: View {
     let exercise: Exercise
+    /// Which equipment this record belongs to — records are kept per equipment, so an
+    /// exercise trained on two has one record each. nil falls back to the exercise's
+    /// own resolution.
+    var equipment: Equipment?
     var existingRecord: PersonalRecord?
 
     @Environment(\.modelContext) private var context
@@ -17,19 +21,35 @@ struct PersonalRecordEditView: View {
     @State private var weight: Double
     @State private var reps: Int
     @State private var holdSeconds: Int
+    /// Level-based equipment only: true when the weight doesn't match any of the
+    /// equipment's current levels (or "Custom…" was explicitly picked), revealing a
+    /// manual-entry field instead of the level picker's own value.
+    @State private var useCustomWeight: Bool
+
+    private var weightedEquipment: Equipment? {
+        equipment ?? exercise.equipmentItems.first(where: \.isWeighted)
+    }
 
     init(
         exercise: Exercise,
+        equipment: Equipment? = nil,
         existingRecord: PersonalRecord? = nil,
         derivedBestSet: SetLogQueries.BestSet? = nil,
         derivedHold: Int? = nil
     ) {
         self.exercise = exercise
+        self.equipment = equipment
         self.existingRecord = existingRecord
         _trackingMode = State(initialValue: existingRecord?.trackingMode ?? (derivedHold != nil && derivedBestSet == nil ? .maxHoldTime : .repsWeight))
-        _weight = State(initialValue: existingRecord?.weight ?? derivedBestSet?.weight ?? 0)
+        let initialWeight = existingRecord?.weight ?? derivedBestSet?.weight ?? 0
+        _weight = State(initialValue: initialWeight)
         _reps = State(initialValue: existingRecord?.reps ?? derivedBestSet?.reps ?? 0)
         _holdSeconds = State(initialValue: existingRecord?.holdSeconds ?? derivedHold ?? 0)
+        if let resolved = equipment ?? exercise.equipmentItems.first(where: \.isWeighted), resolved.isLevelBased {
+            _useCustomWeight = State(initialValue: !resolved.sortedWeightCombos.contains { $0.value == initialWeight })
+        } else {
+            _useCustomWeight = State(initialValue: false)
+        }
     }
 
     var body: some View {
@@ -46,14 +66,18 @@ struct PersonalRecordEditView: View {
                 .pickerStyle(.segmented)
 
                 if trackingMode == .repsWeight {
-                    HStack {
-                        Text("Weight")
-                        Spacer()
-                        TextField("Weight", value: $weight, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 100)
-                        Text(exercise.equipmentItems.first(where: \.isWeighted)?.effectiveWeightUnit ?? AppSettings.weightUnit).foregroundStyle(.secondary)
+                    if let equipment = weightedEquipment, equipment.isLevelBased {
+                        levelPicker(equipment)
+                    } else {
+                        HStack {
+                            Text("Weight")
+                            Spacer()
+                            TextField("Weight", value: $weight, format: .number)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 100)
+                            Text(weightedEquipment?.effectiveWeightUnit ?? AppSettings.weightUnit).foregroundStyle(.secondary)
+                        }
                     }
                     Stepper("Reps: \(reps)", value: $reps, in: 0...200)
                 } else {
@@ -74,8 +98,42 @@ struct PersonalRecordEditView: View {
         }
     }
 
+    @ViewBuilder
+    private func levelPicker(_ equipment: Equipment) -> some View {
+        Picker("Level", selection: levelSelection(equipment)) {
+            ForEach(equipment.sortedWeightCombos) { combo in
+                Text(combo.levelDisplayName).tag(Double?.some(combo.value))
+            }
+            Text("Custom…").tag(Double?.none)
+        }
+        if useCustomWeight {
+            HStack {
+                Text("Custom value")
+                Spacer()
+                TextField("Value", value: $weight, format: .number)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 100)
+            }
+        }
+    }
+
+    private func levelSelection(_ equipment: Equipment) -> Binding<Double?> {
+        Binding(
+            get: { useCustomWeight ? nil : weight },
+            set: { newValue in
+                if let newValue {
+                    useCustomWeight = false
+                    weight = newValue
+                } else {
+                    useCustomWeight = true
+                }
+            }
+        )
+    }
+
     private func save() {
-        let record = existingRecord ?? PersonalRecord(exercise: exercise)
+        let record = existingRecord ?? PersonalRecord(exercise: exercise, equipment: weightedEquipment)
         if existingRecord == nil {
             context.insert(record)
         }
@@ -85,10 +143,14 @@ struct PersonalRecordEditView: View {
             record.weight = weight
             record.reps = reps
             record.holdSeconds = nil
+            // Stamped rather than re-derived at display time, so the number keeps its
+            // meaning if the exercise's equipment changes later.
+            record.weightUnit = weightedEquipment?.effectiveWeightUnit ?? AppSettings.weightUnit
         case .maxHoldTime:
             record.holdSeconds = holdSeconds
             record.weight = nil
             record.reps = nil
+            record.weightUnit = nil
         }
         record.markDirty()
         try? context.save()

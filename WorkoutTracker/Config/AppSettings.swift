@@ -15,8 +15,11 @@ enum AppSettings {
         set { UserDefaults.standard.set(newValue, forKey: defaultRestSecondsKey) }
     }
 
+    /// Defaults to kg. Note this is only the fallback for a device that has never
+    /// chosen — `WeightUnitKgMigration` handles devices that already stored "lb".
+    /// Logged sets snapshot their own unit, so changing this never reinterprets history.
     static var weightUnit: String {
-        get { UserDefaults.standard.string(forKey: weightUnitKey) ?? "lb" }
+        get { UserDefaults.standard.string(forKey: weightUnitKey) ?? "kg" }
         set { UserDefaults.standard.set(newValue, forKey: weightUnitKey) }
     }
 

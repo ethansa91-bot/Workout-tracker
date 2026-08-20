@@ -9,7 +9,7 @@ enum TimeStepType: String, Codable {
 /// A single step's user-assigned color — every exercise in a follow-along section can
 /// have its own, so `SessionScrubStripView` highlights each chip in its own color
 /// while it's the active step, instead of one fixed accent color for the whole strip.
-enum TimeStepColor: String, Codable, CaseIterable, Identifiable {
+enum PaletteColor: String, Codable, CaseIterable, Identifiable {
     case green, blue, brown, orange, yellow, purple, red, gray
 
     var id: String { rawValue }
@@ -37,28 +37,31 @@ enum TimeStepColor: String, Codable, CaseIterable, Identifiable {
 /// (it has a duration and advances the same way) except it has no picture.
 @Model
 final class TimeSectionStep: SyncableModel, Orderable {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     var section: WorkoutSection?
-    var sortOrder: Int
-    var stepTypeRaw: String
+    var sortOrder: Int = 0
+    var stepTypeRaw: String = TimeStepType.exercise.rawValue
     /// nil for rest steps.
     var exercise: Exercise?
-    var durationSeconds: Int
+    var durationSeconds: Int = 0
     /// Backing storage for `color` — `nil` means "no custom color," which falls back
     /// to the app's default accent in the scrub strip.
     var colorRaw: String?
-    var updatedAt: Date
+    var updatedAt: Date = Date.now
     var deletedAt: Date?
-    var isDirty: Bool
-    var remoteSyncedAt: Date?
+
+    /// Exists only to satisfy CloudKit's "every relationship needs an inverse" rule for
+    /// `StepLog.timeSectionStep` — nothing in the app reads or writes this back-reference.
+    @Relationship(inverse: \StepLog.timeSectionStep)
+    var stepLogs: [StepLog]?
 
     var stepType: TimeStepType {
         get { TimeStepType(rawValue: stepTypeRaw) ?? .exercise }
         set { stepTypeRaw = newValue.rawValue }
     }
 
-    var color: TimeStepColor? {
-        get { colorRaw.flatMap(TimeStepColor.init(rawValue:)) }
+    var color: PaletteColor? {
+        get { colorRaw.flatMap(PaletteColor.init(rawValue:)) }
         set { colorRaw = newValue?.rawValue }
     }
 
@@ -68,7 +71,7 @@ final class TimeSectionStep: SyncableModel, Orderable {
     /// The live scrub strip during a session uses raw `color` instead (not this) —
     /// there, an unset color means the old plain gray/no-border look, not a green
     /// default; only an explicit choice gets the colored treatment.
-    var effectiveColor: TimeStepColor? {
+    var effectiveColor: PaletteColor? {
         guard stepType == .exercise else { return nil }
         return color ?? .green
     }
@@ -83,7 +86,5 @@ final class TimeSectionStep: SyncableModel, Orderable {
         self.colorRaw = nil
         self.updatedAt = .now
         self.deletedAt = nil
-        self.isDirty = true
-        self.remoteSyncedAt = nil
     }
 }

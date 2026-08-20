@@ -4,22 +4,22 @@ import SwiftData
 /// calisthenics, strength, mobility, plyo, cardio, warmups, physio, ...
 @Model
 final class ExerciseCategory: SyncableModel {
-    @Attribute(.unique) var id: UUID
-    var name: String
-    var updatedAt: Date
+    var id: UUID = UUID()
+    var name: String = ""
+    var updatedAt: Date = Date.now
     var deletedAt: Date?
-    var isDirty: Bool
-    var remoteSyncedAt: Date?
 
-    @Relationship(inverse: \Exercise.categories)
-    var exercises: [Exercise] = []
+    @Relationship(inverse: \Exercise.categoriesStorage)
+    var exercisesStorage: [Exercise]?
+    var exercises: [Exercise] {
+        get { exercisesStorage ?? [] }
+        set { exercisesStorage = newValue }
+    }
 
     init(id: UUID = UUID(), name: String) {
         self.id = id
         self.name = name
         self.updatedAt = .now
         self.deletedAt = nil
-        self.isDirty = true
-        self.remoteSyncedAt = nil
     }
 }

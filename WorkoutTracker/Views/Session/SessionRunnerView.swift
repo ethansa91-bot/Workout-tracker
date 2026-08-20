@@ -37,7 +37,10 @@ struct SessionRunnerView: View {
                         AmrapSessionRunnerView(session: session, section: currentSection, soundProfile: soundProfile, onSectionComplete: advanceSection)
                     }
                 }
-                .id(currentSection.id)
+                // Includes the repeat so each pass rebuilds the runner — state seeded
+                // once in `init`/`.onAppear` (EMOM's autostart, AMRAP's hasStarted)
+                // would otherwise never re-initialize on the next round.
+                .id("\(currentSection.id)-\(session.currentSectionRepeat ?? 0)")
             } else {
                 VStack {
                     Spacer()
@@ -53,6 +56,9 @@ struct SessionRunnerView: View {
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .tabBar)
+        // Only while actually working out — a paused session should let the screen
+        // sleep normally.
+        .keepScreenAwake(session.status == .inProgress)
         .toolbar {
             if !showingPauseSheet {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -158,7 +164,9 @@ struct SessionRunnerView: View {
         sections.reduce(0) { $0 + itemCount(in: $1) }
     }
 
-    private func itemCount(in section: WorkoutSection) -> Int {
+    /// Items in one pass of the section — see `itemCount(in:)` for the repeat-aware
+    /// total that the progress bar uses.
+    private func itemsPerPass(in section: WorkoutSection) -> Int {
         switch section.sectionType {
         case .time: return section.sortedTimeSteps.count
         case .rep: return section.sortedRepExercises.count
@@ -168,12 +176,20 @@ struct SessionRunnerView: View {
         }
     }
 
+    /// Multiplied by the repeat count, or the bar would read 100% partway through a
+    /// repeated section's second pass.
+    private func itemCount(in section: WorkoutSection) -> Int {
+        itemsPerPass(in: section) * section.effectiveRepeatCount
+    }
+
     /// Items completed across every section before the current one, plus progress
     /// into the current section — the same whole-workout count that drives both the
     /// progress bar and the "Exercise X of Y" counter, so the two always agree.
     private var completedItems: Int {
         var completed = sections.prefix(session.currentSectionIndex).reduce(0) { $0 + itemCount(in: $1) }
         if let currentSection {
+            // Passes already finished in this section count in full.
+            completed += itemsPerPass(in: currentSection) * (session.currentSectionRepeat ?? 0)
             switch currentSection.sectionType {
             case .time, .emom: completed += session.currentStepIndex ?? 0
             case .rep: completed += session.currentExerciseIndex ?? 0

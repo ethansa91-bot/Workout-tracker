@@ -8,20 +8,28 @@ import SwiftData
 /// or a max hold time, matching the same two shapes a set can be logged as.
 @Model
 final class PersonalRecord: SyncableModel {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     var exercise: Exercise?
+    /// Which equipment the record was set on. Records are kept per equipment — a
+    /// barbell best and a dumbbell best aren't the same lift. nil for records made
+    /// before this existed, and for hold-time records, which have no load.
+    var equipment: Equipment?
+    /// The unit the record's `weight` is expressed in. Previously re-derived at display
+    /// time from the exercise's current equipment, which silently reinterpreted the
+    /// number whenever that resolution changed.
+    var weightUnit: String?
     var trackingModeRaw: String = RepExerciseTrackingMode.repsWeight.rawValue
     var weight: Double?
     var reps: Int?
     var holdSeconds: Int?
-    var updatedAt: Date
+    var updatedAt: Date = Date.now
     var deletedAt: Date?
-    var isDirty: Bool
-    var remoteSyncedAt: Date?
 
     init(
         id: UUID = UUID(),
         exercise: Exercise? = nil,
+        equipment: Equipment? = nil,
+        weightUnit: String? = nil,
         trackingMode: RepExerciseTrackingMode = .repsWeight,
         weight: Double? = nil,
         reps: Int? = nil,
@@ -29,14 +37,14 @@ final class PersonalRecord: SyncableModel {
     ) {
         self.id = id
         self.exercise = exercise
+        self.equipment = equipment
+        self.weightUnit = weightUnit
         self.trackingModeRaw = trackingMode.rawValue
         self.weight = weight
         self.reps = reps
         self.holdSeconds = holdSeconds
         self.updatedAt = .now
         self.deletedAt = nil
-        self.isDirty = true
-        self.remoteSyncedAt = nil
     }
 
     var trackingMode: RepExerciseTrackingMode {

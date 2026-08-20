@@ -24,6 +24,11 @@ struct ExerciseMediaView: View {
     /// must fit an exact row height (2 rows visible without scrolling) rather than the
     /// fixed 220pt every other call site uses.
     var height: CGFloat = ExerciseMediaView.height
+    /// Fill the available width and take height from the 16:9 ratio, rather than being
+    /// sized by `height`. The single-exercise runners use this so the media is as large
+    /// as the column allows; the EMOM/AMRAP grids don't, since their cells need an exact
+    /// row height.
+    var fillsWidth: Bool = false
 
     /// Set when YouTube reports the video can't be embedded (common for Shorts, even
     /// when the regular link plays fine) — falls back to the photo instead of leaving
@@ -52,13 +57,24 @@ struct ExerciseMediaView: View {
     private var maxWidth: CGFloat { height * 16 / 9 }
 
     var body: some View {
-        content
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .frame(maxWidth: maxWidth)
-            .frame(height: height)
-            .background(Color.appSurface)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .frame(maxWidth: .infinity)
+        if fillsWidth {
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Ratio drives the height, so the box grows with the column instead of
+                // being pinned to a fixed 220pt and capped short of the edges.
+                .aspectRatio(16 / 9, contentMode: .fit)
+                .background(Color.appSurface)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .frame(maxWidth: .infinity)
+        } else {
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: maxWidth)
+                .frame(height: height)
+                .background(Color.appSurface)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .frame(maxWidth: .infinity)
+        }
     }
 
     @ViewBuilder
@@ -96,19 +112,15 @@ struct ExerciseMediaView: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            VStack(spacing: 8) {
-                Text("No visual data found")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                if let notes = exercise.notes, !notes.isEmpty {
-                    Text(notes)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Media only — the exercise's description lives under this box
+            // (`ExerciseDescriptionView`), not inside it, so it shows whether or not
+            // there's a photo to go with it.
+            Text("No photo/video available")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }

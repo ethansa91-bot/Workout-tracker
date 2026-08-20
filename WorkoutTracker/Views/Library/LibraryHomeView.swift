@@ -25,8 +25,6 @@ struct LibraryHomeView: View {
                     LibraryRow(title: "Muscles", count: muscles.count, systemImage: "figure.core.training")
                 }
             }
-
-            SyncStatusView()
         }
         .themedListBackground()
     }

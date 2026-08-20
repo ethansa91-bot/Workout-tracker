@@ -17,8 +17,20 @@ struct EmomSessionRunnerView: View {
 
     @State private var remainingSeconds: Int = 60
 
+    /// Seeded from `section.autostart` — see `TimeSessionRunnerView` for why this is
+    /// only gated once, at section entry, not every round.
+    @State private var isRunning: Bool
+
     // Must be @State, not `let` — see TimeSessionRunnerView for why.
     @State private var ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    init(session: WorkoutSession, section: WorkoutSection, soundProfile: TimerSoundProfile, onSectionComplete: @escaping () -> Void) {
+        self.session = session
+        self.section = section
+        self.soundProfile = soundProfile
+        self.onSectionComplete = onSectionComplete
+        _isRunning = State(initialValue: section.autostart)
+    }
 
     private var currentRound: Int { session.currentStepIndex ?? 0 }
     private var totalRounds: Int { section.emomRoundCount }
@@ -38,12 +50,16 @@ struct EmomSessionRunnerView: View {
     private static let cellSpacing: CGFloat = 6
     private static let titleHeight: CGFloat = 22
 
+    /// Same share of the container the Follow Along runner gives its timer, so the
+    /// countdown reads at a comparable size across section types.
+    private var timerHeightFraction: CGFloat { horizontalSizeClass == .regular ? 0.45 : 0.3 }
+
     var body: some View {
         if currentRound < totalRounds {
             GeometryReader { geometry in
                 VStack(spacing: 0) {
                     header
-                        .frame(height: geometry.size.height * 0.2)
+                        .frame(height: geometry.size.height * timerHeightFraction)
                         .frame(maxWidth: .infinity)
                     Divider()
                     exerciseList
@@ -62,17 +78,48 @@ struct EmomSessionRunnerView: View {
     /// Round and time remaining side by side, not stacked, so the header takes
     /// noticeably less height (pinned to 20% of the available height above) — same
     /// background tint as AMRAP's header for visual consistency between the two.
+    /// Before the section has started (Autostart off), a play button takes the
+    /// timer's place; tapping it starts the section.
     private var header: some View {
-        HStack(spacing: 0) {
-            Text("Round \(currentRound + 1) of \(totalRounds)")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+        GeometryReader { geometry in
+            // Font scales with the band the header was given, the way the Follow Along
+            // timer does, instead of a fixed size floating in mostly empty space.
+            let glyphSize = geometry.size.height * 0.4
+
+            HStack(spacing: 0) {
+                Text("Round \(currentRound + 1) of \(totalRounds)")
+                    .font(.system(size: glyphSize * 0.5, weight: .bold, design: .rounded))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.5)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+
+                Divider()
+
+                VStack(spacing: 4) {
+                    if isRunning {
+                        Text(timeString(remainingSeconds))
+                            .font(.system(size: glyphSize, weight: .bold, design: .rounded).monospacedDigit())
+                            .minimumScaleFactor(0.3)
+                            .lineLimit(1)
+                    } else {
+                        Image(systemName: "play.circle.fill")
+                            .font(.system(size: glyphSize))
+                            .foregroundStyle(Color.appAccent)
+                    }
+                    Text(isRunning ? "Tap to pause" : "Paused — tap to resume")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
                 .frame(maxWidth: .infinity)
-            Divider()
-            Text(timeString(remainingSeconds))
-                .font(.system(size: 24, weight: .bold, design: .rounded).monospacedDigit())
-                .frame(maxWidth: .infinity)
+                // Local pause only — the session clock keeps running and the grid
+                // below stays fully visible and interactive.
+                .contentShape(Rectangle())
+                .onTapGesture { isRunning.toggle() }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(Color.appAccent.opacity(0.12))
     }
@@ -87,6 +134,9 @@ struct EmomSessionRunnerView: View {
             let cellWidth = availableWidth / CGFloat(columnCount)
             let mediaHeight = cellWidth * 9 / 16
             ScrollView {
+                SectionHeaderLabel(section: section, repeatIndex: session.currentSectionRepeat ?? 0)
+                    .padding(.horizontal, Self.gridPadding)
+                    .padding(.top, 8)
                 LazyVGrid(columns: gridColumns, alignment: .leading, spacing: Self.rowSpacing) {
                     ForEach(exercises) { entry in
                         exerciseCell(entry, mediaHeight: mediaHeight)
@@ -107,12 +157,17 @@ struct EmomSessionRunnerView: View {
             if let exercise = entry.exercise {
                 ExerciseMediaView(exercise: exercise, mode: .photoOnly, height: mediaHeight)
                     .id(exercise.id)
+                ExerciseDescriptionView(exercise: exercise, style: .gridButton)
+                    .id(exercise.id)
             }
         }
+        // Grid rows are height-matched to their tallest cell; pinning to the top keeps
+        // every cell's media on the same baseline if a row is ever stretched.
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 
     private func tick() {
-        guard session.status == .inProgress else { return }
+        guard isRunning, session.status == .inProgress else { return }
         if remainingSeconds > 0 {
             remainingSeconds -= 1
             SoundPlayer.playWarningIfNeeded(remainingSeconds: remainingSeconds, profile: soundProfile)

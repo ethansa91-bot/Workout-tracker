@@ -7,13 +7,13 @@ import SwiftData
 /// Local-only for now — no sync fields, unlike the other session models.
 @Model
 final class ExerciseSessionNote {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     var session: WorkoutSession?
     var exercise: Exercise?
     var exerciseNameSnapshot: String?
-    var text: String
-    var createdAt: Date
-    var updatedAt: Date
+    var text: String = ""
+    var createdAt: Date = Date.now
+    var updatedAt: Date = Date.now
 
     init(
         id: UUID = UUID(),

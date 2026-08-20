@@ -68,15 +68,6 @@ struct ExerciseDetailView: View {
                 chipGrid(allCategories, tint: .appRust, title: { $0.name.capitalized }, isSelected: isCategorySelected, toggle: toggleCategory)
             }
 
-            Section {
-                HStack {
-                    Text("Sync")
-                    Spacer()
-                    SyncButton(isDirty: exercise.isDirty) {
-                        try? await SyncEngine.shared.syncSingle(exercise: exercise)
-                    }
-                }
-            }
         }
         .themedListBackground()
         .navigationTitle(exercise.displayName)
@@ -174,13 +165,30 @@ struct ExerciseDetailView: View {
         .buttonStyle(.plain)
     }
 
+    /// Favorite plus the two capability flags that unlock per-workout options. The
+    /// bodyweight chip only appears for exercises that carry weighted equipment — an
+    /// exercise with none is bodyweight already, so the flag would say nothing.
     private var favoriteRow: some View {
-        SelectableChip(icon: "star", title: "Favorite", isSelected: exercise.isFavorited, tint: Color.appStepYellow) {
-            exercise.isFavorited.toggle()
-            exercise.markDirty()
-            try? context.save()
+        FlowLayout(spacing: 8, rowSpacing: 8) {
+            SelectableChip(icon: "star", title: "Favorite", isSelected: exercise.isFavorited, tint: Color.appStepYellow) {
+                toggleFlag { exercise.isFavorited.toggle() }
+            }
+            if exercise.weightedEquipment != nil {
+                SelectableChip(icon: "figure.strengthtraining.functional", title: "Bodyweight OK", isSelected: exercise.allowsBodyweight, tint: Color.appStepBlue) {
+                    toggleFlag { exercise.allowsBodyweight.toggle() }
+                }
+            }
+            SelectableChip(icon: "arrow.left.and.right", title: "One-sided", isSelected: exercise.isOneSided, tint: Color.appStepBrown) {
+                toggleFlag { exercise.isOneSided.toggle() }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private func toggleFlag(_ change: () -> Void) {
+        change()
+        exercise.markDirty()
+        try? context.save()
     }
 
     /// Truncated to one line, tap to expand in place — same accordion idea as

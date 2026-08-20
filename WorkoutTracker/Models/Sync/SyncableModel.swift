@@ -1,15 +1,13 @@
 import Foundation
 import SwiftData
 
-/// Shared shape for every entity that participates in Supabase sync. `id` is a
-/// client-generated UUID (SwiftData's own `persistentModelID` isn't stable across
-/// devices/reinstalls, so it can't be the sync key).
+/// Shared shape for every entity that syncs via CloudKit. `id` is a client-generated
+/// UUID (SwiftData's own `persistentModelID` isn't stable across devices/reinstalls,
+/// so it can't be the sync key).
 protocol SyncableModel: PersistentModel {
     var id: UUID { get set }
     var updatedAt: Date { get set }
     var deletedAt: Date? { get set }
-    var isDirty: Bool { get set }
-    var remoteSyncedAt: Date? { get set }
 }
 
 /// Entities whose sibling rows have an explicit display order (workout sections, steps
@@ -32,23 +30,17 @@ extension Orderable where Self: SyncableModel {
 }
 
 extension SyncableModel {
-    /// Call at the end of any mutation so the next sync knows to push this row.
+    /// Call at the end of any mutation, for anything that cares when a row last changed.
     func markDirty() {
         updatedAt = .now
-        isDirty = true
     }
 }
 
 enum SyncDeletion {
-    /// A record never pushed to Supabase can simply be removed. One that was pushed at
-    /// least once must be tombstoned (soft-deleted) instead, so the deletion can still
-    /// propagate to Supabase on the next sync.
+    /// Always a soft delete (tombstone) — CloudKit sync needs the deletion itself to
+    /// propagate to other devices, which a local hard delete alone can't do.
     static func delete<T: SyncableModel>(_ model: T, context: ModelContext) {
-        if model.remoteSyncedAt == nil {
-            context.delete(model)
-        } else {
-            model.deletedAt = .now
-            model.markDirty()
-        }
+        model.deletedAt = .now
+        model.markDirty()
     }
 }

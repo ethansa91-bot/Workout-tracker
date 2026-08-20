@@ -38,25 +38,43 @@ enum WorkoutKind: String, Codable {
 
 @Model
 final class Workout: SyncableModel {
-    @Attribute(.unique) var id: UUID
-    var name: String
+    var id: UUID = UUID()
+    var name: String = ""
     var notes: String?
-    var createdAt: Date
+    var createdAt: Date = Date.now
     var clonedFromWorkoutId: UUID?
     var kindRaw: String = WorkoutKind.personalized.rawValue
     var isArchived: Bool = false
-    var updatedAt: Date
+    var updatedAt: Date = Date.now
     var deletedAt: Date?
-    var isDirty: Bool
-    var remoteSyncedAt: Date?
 
     @Relationship(deleteRule: .cascade, inverse: \WorkoutSection.workout)
-    var sections: [WorkoutSection] = []
+    var sectionsStorage: [WorkoutSection]?
+    var sections: [WorkoutSection] {
+        get { sectionsStorage ?? [] }
+        set { sectionsStorage = newValue }
+    }
 
-    /// Deny, not cascade: a workout with sessions is history and must not be able to
-    /// vanish out from under them via a careless local delete.
-    @Relationship(deleteRule: .deny, inverse: \WorkoutSession.workout)
-    var sessions: [WorkoutSession] = []
+    /// Nullify, not deny: CloudKit doesn't support `.deny` delete rules at all. The
+    /// only place that deletes a `Workout` directly is `TestDataService`'s dev/QA
+    /// cleanup, which relied on `.deny` to silently skip test workouts already used in
+    /// a session — with `.nullify` that delete now succeeds instead, leaving the
+    /// session's `workout` nil (already an Optional, handled via optional chaining
+    /// everywhere it's read). No user-facing delete-workout path exists today.
+    @Relationship(deleteRule: .nullify, inverse: \WorkoutSession.workout)
+    var sessionsStorage: [WorkoutSession]?
+    var sessions: [WorkoutSession] {
+        get { sessionsStorage ?? [] }
+        set { sessionsStorage = newValue }
+    }
+
+    // Exist only to satisfy CloudKit's "every relationship needs an inverse" rule for
+    // the one-directional `RecurringWorkoutSchedule.workout`/`ScheduledWorkout.workout`
+    // lookups — nothing in the app reads or writes these back-references.
+    @Relationship(inverse: \RecurringWorkoutSchedule.workout)
+    var recurringSchedules: [RecurringWorkoutSchedule]?
+    @Relationship(inverse: \ScheduledWorkout.workout)
+    var scheduledWorkouts: [ScheduledWorkout]?
 
     init(id: UUID = UUID(), name: String, notes: String? = nil, clonedFromWorkoutId: UUID? = nil, kind: WorkoutKind = .personalized) {
         self.id = id
@@ -67,8 +85,6 @@ final class Workout: SyncableModel {
         self.kindRaw = kind.rawValue
         self.updatedAt = .now
         self.deletedAt = nil
-        self.isDirty = true
-        self.remoteSyncedAt = nil
     }
 
     var kind: WorkoutKind {

@@ -1,68 +1,120 @@
 import SwiftUI
-import Combine
 
-/// One max-hold-time set: idle → head-start countdown → counting up → stopped
-/// (correctable before confirming), or logged (read-only with a Cancel action) —
-/// the stopwatch counterpart to `SetRowView`'s reps/weight row.
+/// One max-hold-time set: idle → (full-screen `HoldTimerOverlayView` runs the
+/// head-start countdown and count-up) → stopped (correctable before confirming), or
+/// logged (read-only with a Cancel action) — the stopwatch counterpart to
+/// `SetRowView`'s reps/weight row.
 struct HoldSetRowView: View {
     let setNumber: Int
+    let exerciseName: String
     let headStartSeconds: Int
     /// The best hold ever recorded for this exercise (nil if there's no history yet).
     /// When the live count-up reaches it, a "reached your best" cue plays once.
     let previousBest: Int?
     @Binding var recordedSeconds: Int
     let isLogged: Bool
+    /// See `SetRowView.isProminent` — the focused form for the set in progress.
+    var isProminent: Bool = false
+    /// True for the moment after a save, while the runner highlights the set number —
+    /// the button stays disabled so the next set can't start mid-transition.
+    var isSaving: Bool = false
     var onStart: () -> Void = {}
     let onLog: () -> Void
     let onCancel: () -> Void
 
     private enum Phase {
-        case idle, headStart, counting, stopped
+        case idle, stopped
     }
 
     @State private var phase: Phase = .idle
-    @State private var headStartRemaining = 0
-    @State private var elapsedSeconds = 0
+    @State private var showingOverlay = false
 
-    // Must be @State, not `let` — see TimeSessionRunnerView for why.
-    @State private var ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    private static let actionButtonCornerRadius: CGFloat = 12
 
     var body: some View {
+        Group {
+            if isProminent {
+                prominentBody
+            } else {
+                compactBody
+            }
+        }
+        .fullScreenCover(isPresented: $showingOverlay) {
+            HoldTimerOverlayView(
+                exerciseName: exerciseName,
+                headStartSeconds: headStartSeconds,
+                previousBest: previousBest
+            ) { finalSeconds in
+                recordedSeconds = finalSeconds
+                phase = .stopped
+            }
+        }
+    }
+
+    private var compactBody: some View {
         HStack(spacing: 12) {
             Text("Set \(setNumber)")
                 .font(.subheadline.weight(.medium))
                 .frame(width: 46, alignment: .leading)
 
+            // Same columns as `SetRowView`'s recap — number hard left, value across the
+            // middle, button hard right — so both tracking modes read alike.
             content
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Capped, not a full flex Spacer — keeps the button close to the row's
-            // content instead of snapping to the far trailing edge on wide screens.
-            Spacer(minLength: 12).frame(maxWidth: 24)
+            Spacer(minLength: 12)
 
             trailingControl
         }
         .opacity(isLogged ? 0.7 : 1)
-        .onReceive(ticker) { _ in tick() }
+    }
+
+    private var prominentBody: some View {
+        VStack(spacing: 20) {
+            content
+                .font(.title3)
+            prominentControl
+        }
+    }
+
+    /// The full-width counterpart to `trailingControl` — Start before the hold, Save
+    /// after it, both at the same size so the button never moves under the thumb.
+    /// Styled exactly like the reps/weight Save — fill on the label, `.regular` size —
+    /// so the two tracking modes present the same control.
+    @ViewBuilder
+    private var prominentControl: some View {
+        switch phase {
+        case .idle:
+            actionButton("Start recording") { start() }
+        case .stopped:
+            actionButton("Save", action: onLog)
+        }
+    }
+
+    private func actionButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.regular)
+        .buttonBorderShape(.roundedRectangle(radius: Self.actionButtonCornerRadius))
+        .disabled(isSaving)
     }
 
     @ViewBuilder
     private var content: some View {
         if isLogged {
             Text("\(recordedSeconds)s held")
-                .font(.subheadline.monospacedDigit())
+                .font(valueFont)
         } else {
             switch phase {
             case .idle:
-                Text("Not started")
-                    .font(.subheadline)
+                Text("Start recording to track maximum time rep")
+                    .font(isProminent ? .subheadline : .caption)
                     .foregroundStyle(.secondary)
-            case .headStart:
-                Text("Get ready… \(headStartRemaining)")
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            case .counting:
-                Text(timeString(elapsedSeconds))
-                    .font(.subheadline.monospacedDigit().bold())
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             case .stopped:
                 stoppedStepper
             }
@@ -70,21 +122,25 @@ struct HoldSetRowView: View {
     }
 
     private var stoppedStepper: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: isProminent ? 12 : 4) {
             Button {
                 if recordedSeconds > 0 { recordedSeconds -= 1 }
             } label: {
                 Image(systemName: "minus.circle")
             }
             Text("\(recordedSeconds)s")
-                .font(.subheadline.monospacedDigit())
-                .frame(minWidth: 40)
+                .font(valueFont)
+                .frame(minWidth: isProminent ? 72 : 40)
             Button {
                 recordedSeconds += 1
             } label: {
                 Image(systemName: "plus.circle")
             }
         }
+    }
+
+    private var valueFont: Font {
+        isProminent ? .title2.monospacedDigit().weight(.medium) : .subheadline.monospacedDigit()
     }
 
     @ViewBuilder
@@ -102,11 +158,6 @@ struct HoldSetRowView: View {
                 Button("Start") { start() }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
-            case .headStart, .counting:
-                Button("Stop") { stop() }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-                    .tint(.orange)
             case .stopped:
                 Button("Log", action: onLog)
                     .buttonStyle(.borderedProminent)
@@ -117,44 +168,6 @@ struct HoldSetRowView: View {
 
     private func start() {
         onStart()
-        headStartRemaining = headStartSeconds
-        if headStartRemaining > 0 {
-            phase = .headStart
-        } else {
-            elapsedSeconds = 0
-            phase = .counting
-            SoundPlayer.playTimerComplete()
-        }
-    }
-
-    private func stop() {
-        recordedSeconds = elapsedSeconds
-        phase = .stopped
-    }
-
-    private func tick() {
-        switch phase {
-        case .headStart:
-            guard headStartRemaining > 0 else { return }
-            headStartRemaining -= 1
-            if headStartRemaining == 0 {
-                elapsedSeconds = 0
-                phase = .counting
-                SoundPlayer.playTimerComplete()
-            } else {
-                SoundPlayer.playHeadStartTick()
-            }
-        case .counting:
-            elapsedSeconds += 1
-            if let previousBest, previousBest > 0, elapsedSeconds == previousBest {
-                SoundPlayer.playTimerComplete()
-            }
-        case .idle, .stopped:
-            break
-        }
-    }
-
-    private func timeString(_ seconds: Int) -> String {
-        String(format: "%d:%02d", seconds / 60, seconds % 60)
+        showingOverlay = true
     }
 }

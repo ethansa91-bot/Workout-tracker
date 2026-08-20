@@ -3,18 +3,25 @@ import SwiftData
 
 @Model
 final class Muscle: SyncableModel {
-    @Attribute(.unique) var id: UUID
-    var name: String
-    var iconSymbolName: String
-    var updatedAt: Date
+    var id: UUID = UUID()
+    var name: String = ""
+    var iconSymbolName: String = ""
+    var updatedAt: Date = Date.now
     var deletedAt: Date?
-    var isDirty: Bool
-    var remoteSyncedAt: Date?
 
-    var categories: [MuscleCategory] = []
+    /// The `@Relationship(inverse:)` annotation for this pair lives on `MuscleCategory`.
+    var categoriesStorage: [MuscleCategory]?
+    var categories: [MuscleCategory] {
+        get { categoriesStorage ?? [] }
+        set { categoriesStorage = newValue }
+    }
 
-    @Relationship(inverse: \Exercise.muscles)
-    var exercises: [Exercise] = []
+    /// The `@Relationship(inverse:)` annotation for this pair lives on `Exercise`.
+    var exercisesStorage: [Exercise]?
+    var exercises: [Exercise] {
+        get { exercisesStorage ?? [] }
+        set { exercisesStorage = newValue }
+    }
 
     init(id: UUID = UUID(), name: String, iconSymbolName: String) {
         self.id = id
@@ -22,7 +29,5 @@ final class Muscle: SyncableModel {
         self.iconSymbolName = iconSymbolName
         self.updatedAt = .now
         self.deletedAt = nil
-        self.isDirty = true
-        self.remoteSyncedAt = nil
     }
 }

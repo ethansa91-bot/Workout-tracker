@@ -1,20 +1,15 @@
 import SwiftUI
 import SwiftData
 
-/// Shown right after a session finishes: the result is always saved locally first,
-/// with the option to sync now (or sync everything), or leave it for later — per spec,
-/// finishing never blocks on the network.
+/// Shown right after a session finishes: the result is saved locally, and syncs to the
+/// user's other devices via CloudKit automatically in the background.
 struct SessionSummaryView: View {
     let session: WorkoutSession
     let workout: Workout
     let onDone: () -> Void
 
     @Environment(\.modelContext) private var context
-    @State private var isSyncing = false
-    @State private var syncErrorMessage: String?
     @State private var noteTexts: [UUID: String] = [:]
-
-    private var isOnline: Bool { NetworkReachability.shared.isOnline }
 
     var body: some View {
         NavigationStack {
@@ -53,8 +48,6 @@ struct SessionSummaryView: View {
                 }
 
                 VStack(spacing: 12) {
-                    syncSection
-
                     Button {
                         saveNotesAndFinish()
                     } label: {
@@ -68,14 +61,6 @@ struct SessionSummaryView: View {
             .background(Color.appBackground)
             .navigationBarBackButtonHidden(true)
             .onAppear(perform: primeNoteTexts)
-            .alert("Sync failed", isPresented: Binding(
-                get: { syncErrorMessage != nil },
-                set: { if !$0 { syncErrorMessage = nil } }
-            )) {
-                Button("OK") { syncErrorMessage = nil }
-            } message: {
-                Text(syncErrorMessage ?? "")
-            }
         }
     }
 
@@ -95,31 +80,6 @@ struct SessionSummaryView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .cardStyle(cornerRadius: 14)
-    }
-
-    @ViewBuilder
-    private var syncSection: some View {
-        if !isOnline {
-            Text("Saved on this device — offline. It'll sync next time you're online.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        } else if isSyncing {
-            ProgressView("Syncing…")
-        } else {
-            VStack(spacing: 10) {
-                Text("Saved on this device.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                Button {
-                    syncNow()
-                } label: {
-                    Text("Sync Everything").frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .disabled(true)
-            }
-        }
     }
 
     /// Every exercise involved in this session, de-duplicated and in first-seen order —
@@ -175,17 +135,5 @@ struct SessionSummaryView: View {
         }
         try? context.save()
         onDone()
-    }
-
-    private func syncNow() {
-        isSyncing = true
-        Task {
-            do {
-                try await SyncEngine.shared.syncAll(context: context)
-            } catch {
-                syncErrorMessage = error.localizedDescription
-            }
-            isSyncing = false
-        }
     }
 }

@@ -29,7 +29,7 @@ enum WorkoutSectionCloningService {
         guard range.lowerBound >= 0, range.upperBound <= entries.count, !range.isEmpty else { return }
 
         let clones = entries[range].map { original in
-            RepSectionExercise(section: section, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds)
+            RepSectionExercise(section: section, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds, allowsBodyweight: original.allowsBodyweight, tracksSides: original.tracksSides)
         }
         clones.forEach { context.insert($0) }
         entries.insert(contentsOf: clones, at: entries.count)
@@ -93,6 +93,8 @@ enum WorkoutSectionCloningService {
         let copy = WorkoutSection(workout: workout, sortOrder: sortOrder, sectionType: source.sectionType, name: name, description: source.sectionDescription)
         copy.emomRoundCount = source.emomRoundCount
         copy.amrapDurationSeconds = source.amrapDurationSeconds
+        copy.autostart = source.autostart
+        copy.repeatCount = source.repeatCount
         return copy
     }
 
@@ -116,7 +118,9 @@ enum WorkoutSectionCloningService {
                 targetSets: entry.targetSets,
                 customRestSeconds: entry.customRestSeconds,
                 trackingMode: entry.trackingMode,
-                headStartSeconds: entry.headStartSeconds
+                headStartSeconds: entry.headStartSeconds,
+                allowsBodyweight: entry.allowsBodyweight,
+                tracksSides: entry.tracksSides
             )
             context.insert(entryCopy)
         }

@@ -146,13 +146,21 @@ struct QuickSectionEditorView: View {
     private var settingsBar: some View {
         switch section.sectionType {
         case .emom:
-            Stepper("Rounds: \(section.emomRoundCount) (\(section.emomRoundCount) min)", value: emomRoundsBinding, in: 1...60)
-                .padding(.horizontal)
-                .padding(.top, 8)
+            VStack(alignment: .leading, spacing: 0) {
+                Stepper("Rounds: \(section.emomRoundCount) (\(section.emomRoundCount) min)", value: emomRoundsBinding, in: 1...60)
+                Toggle("Autostart", isOn: autostartBinding)
+                Stepper(repeatLabel(section.repeatCount), value: repeatBinding, in: 1...20)
+            }
+            .padding(.horizontal)
+            .padding(.top, 8)
         case .amrap:
-            Stepper("Duration: \(section.amrapDurationSeconds / 60) min", value: amrapMinutesBinding, in: 1...60)
-                .padding(.horizontal)
-                .padding(.top, 8)
+            VStack(alignment: .leading, spacing: 0) {
+                Stepper("Duration: \(section.amrapDurationSeconds / 60) min", value: amrapMinutesBinding, in: 1...60)
+                Toggle("Autostart", isOn: autostartBinding)
+                Stepper(repeatLabel(section.repeatCount), value: repeatBinding, in: 1...20)
+            }
+            .padding(.horizontal)
+            .padding(.top, 8)
         case .time, .rep:
             EmptyView()
         }
@@ -162,8 +170,16 @@ struct QuickSectionEditorView: View {
         Binding(get: { section.emomRoundCount }, set: { updateEmomRounds($0) })
     }
 
+    private var repeatBinding: Binding<Int> {
+        Binding(get: { section.repeatCount }, set: { updateRepeatCount($0) })
+    }
+
     private var amrapMinutesBinding: Binding<Int> {
         Binding(get: { section.amrapDurationSeconds / 60 }, set: { updateAmrapDuration($0 * 60) })
+    }
+
+    private var autostartBinding: Binding<Bool> {
+        Binding(get: { section.autostart }, set: { updateAutostart($0) })
     }
 
     /// Save (left) / Add Exercises (centered) / Edit (right) when browsing; Delete
@@ -278,6 +294,16 @@ struct QuickSectionEditorView: View {
 
     private func updateAmrapDuration(_ seconds: Int) {
         do { try WorkoutEditingService.updateAmrapDuration(section, to: seconds, context: context) }
+        catch { errorMessage = error.localizedDescription }
+    }
+
+    private func updateAutostart(_ autostart: Bool) {
+        do { try WorkoutEditingService.updateAutostart(section, to: autostart, context: context) }
+        catch { errorMessage = error.localizedDescription }
+    }
+
+    private func updateRepeatCount(_ count: Int) {
+        do { try WorkoutEditingService.updateRepeatCount(section, to: count, context: context) }
         catch { errorMessage = error.localizedDescription }
     }
 

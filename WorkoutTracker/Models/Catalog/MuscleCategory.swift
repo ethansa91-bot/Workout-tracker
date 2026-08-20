@@ -5,22 +5,22 @@ import SwiftData
 /// they can be searched/filtered from several angles at once.
 @Model
 final class MuscleCategory: SyncableModel {
-    @Attribute(.unique) var id: UUID
-    var name: String
-    var updatedAt: Date
+    var id: UUID = UUID()
+    var name: String = ""
+    var updatedAt: Date = Date.now
     var deletedAt: Date?
-    var isDirty: Bool
-    var remoteSyncedAt: Date?
 
-    @Relationship(inverse: \Muscle.categories)
-    var muscles: [Muscle] = []
+    @Relationship(inverse: \Muscle.categoriesStorage)
+    var musclesStorage: [Muscle]?
+    var muscles: [Muscle] {
+        get { musclesStorage ?? [] }
+        set { musclesStorage = newValue }
+    }
 
     init(id: UUID = UUID(), name: String) {
         self.id = id
         self.name = name
         self.updatedAt = .now
         self.deletedAt = nil
-        self.isDirty = true
-        self.remoteSyncedAt = nil
     }
 }

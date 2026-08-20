@@ -7,42 +7,56 @@ enum SessionStatus: String, Codable {
 
 @Model
 final class WorkoutSession: SyncableModel {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     var workout: Workout?
-    var statusRaw: String
-    var startedAt: Date
+    var statusRaw: String = SessionStatus.inProgress.rawValue
+    var startedAt: Date = Date.now
     var endedAt: Date?
 
     /// Pause-safe elapsed time: `accumulatedActiveSeconds` is the frozen total as of the
     /// last pause/finish; `lastResumedAt` is non-nil only while `.inProgress`.
-    var accumulatedActiveSeconds: Double
+    var accumulatedActiveSeconds: Double = 0
     var lastResumedAt: Date?
 
     /// Resumable position pointer. Safe as index-based because a workout referenced by
     /// any session is permanently locked, so its section/step ordering can never shift
     /// underneath a paused, later-resumed session.
-    var currentSectionIndex: Int
+    var currentSectionIndex: Int = 0
     var currentStepIndex: Int?
     var currentExerciseIndex: Int?
     var currentSetIndex: Int?
+    /// Which pass through the current section is running, 0-based. The four indices
+    /// above are each already spoken for by a section type, so a repeated section
+    /// needs its own counter. nil is treated as 0 (the first pass).
+    var currentSectionRepeat: Int?
 
     /// Set when a new session is started for the same workout while this one was still
     /// `.paused` — permanently disqualifies this session from ever being finished.
     var supersededBySessionId: UUID?
 
-    var updatedAt: Date
+    var updatedAt: Date = Date.now
     var deletedAt: Date?
-    var isDirty: Bool
-    var remoteSyncedAt: Date?
 
     @Relationship(deleteRule: .cascade, inverse: \StepLog.session)
-    var stepLogs: [StepLog] = []
+    var stepLogsStorage: [StepLog]?
+    var stepLogs: [StepLog] {
+        get { stepLogsStorage ?? [] }
+        set { stepLogsStorage = newValue }
+    }
 
     @Relationship(deleteRule: .cascade, inverse: \SetLog.session)
-    var setLogs: [SetLog] = []
+    var setLogsStorage: [SetLog]?
+    var setLogs: [SetLog] {
+        get { setLogsStorage ?? [] }
+        set { setLogsStorage = newValue }
+    }
 
     @Relationship(deleteRule: .cascade, inverse: \ExerciseSessionNote.session)
-    var exerciseNotes: [ExerciseSessionNote] = []
+    var exerciseNotesStorage: [ExerciseSessionNote]?
+    var exerciseNotes: [ExerciseSessionNote] {
+        get { exerciseNotesStorage ?? [] }
+        set { exerciseNotesStorage = newValue }
+    }
 
     var status: SessionStatus {
         get { SessionStatus(rawValue: statusRaw) ?? .inProgress }
@@ -64,8 +78,6 @@ final class WorkoutSession: SyncableModel {
         self.supersededBySessionId = nil
         self.updatedAt = .now
         self.deletedAt = nil
-        self.isDirty = true
-        self.remoteSyncedAt = nil
     }
 
     /// Live elapsed seconds, safe to read at any moment while running or paused.

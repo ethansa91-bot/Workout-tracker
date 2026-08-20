@@ -6,14 +6,12 @@ import SwiftData
 /// shown at once and the whole section shares a single timer.
 @Model
 final class SectionExerciseEntry: SyncableModel, Orderable {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     var section: WorkoutSection?
-    var sortOrder: Int
+    var sortOrder: Int = 0
     var exercise: Exercise?
-    var updatedAt: Date
+    var updatedAt: Date = Date.now
     var deletedAt: Date?
-    var isDirty: Bool
-    var remoteSyncedAt: Date?
 
     init(id: UUID = UUID(), section: WorkoutSection? = nil, sortOrder: Int, exercise: Exercise? = nil) {
         self.id = id
@@ -22,7 +20,5 @@ final class SectionExerciseEntry: SyncableModel, Orderable {
         self.exercise = exercise
         self.updatedAt = .now
         self.deletedAt = nil
-        self.isDirty = true
-        self.remoteSyncedAt = nil
     }
 }

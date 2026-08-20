@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var showingResetConfirm = false
     @State private var resetErrorMessage: String?
     @State private var testDataMessage: String?
+    @State private var importMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -33,7 +34,31 @@ struct SettingsView: View {
                     .pickerStyle(.inline)
                     .labelsHidden()
                 }
-                SyncStatusView()
+
+                Section {
+                    NavigationLink {
+                        SyncDiagnosticsView()
+                    } label: {
+                        LabeledContent("iCloud Sync") {
+                            Text(ContainerStatus.isCloudEnabled ? "On" : "Off")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Sync")
+                } footer: {
+                    Text("Workouts sync automatically across devices signed into the same Apple Account — there's no separate login. Open this to check sync status.")
+                }
+
+                Section {
+                    Button("Import Workouts") {
+                        importWorkouts()
+                    }
+                } header: {
+                    Text("Import")
+                } footer: {
+                    Text("Adds the starter workouts bundled with the app. Every tap adds another fresh copy, so importing twice gives you duplicates. If an exercise in the file isn't in your catalog, nothing is imported and you'll see which ones are missing.")
+                }
 
                 Section {
                     Button(role: .destructive) {
@@ -85,6 +110,14 @@ struct SettingsView: View {
             } message: {
                 Text(testDataMessage ?? "")
             }
+            .alert("Import Workouts", isPresented: Binding(
+                get: { importMessage != nil },
+                set: { if !$0 { importMessage = nil } }
+            )) {
+                Button("OK") { importMessage = nil }
+            } message: {
+                Text(importMessage ?? "")
+            }
         }
     }
 
@@ -93,6 +126,15 @@ struct SettingsView: View {
             try DataResetService.resetAndReseed(context: context)
         } catch {
             resetErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func importWorkouts() {
+        do {
+            let summary = try WorkoutImportService.importBundledWorkouts(context: context)
+            importMessage = "Imported \(summary.workouts) workouts, \(summary.sections) sections, \(summary.timeSteps) time steps, and \(summary.repExercises) rep exercises."
+        } catch {
+            importMessage = error.localizedDescription
         }
     }
 

@@ -17,6 +17,8 @@ enum WorkoutCloningService {
             let sectionCopy = WorkoutSection(workout: copy, sortOrder: section.sortOrder, sectionType: section.sectionType, name: section.name)
             sectionCopy.emomRoundCount = section.emomRoundCount
             sectionCopy.amrapDurationSeconds = section.amrapDurationSeconds
+            sectionCopy.autostart = section.autostart
+            sectionCopy.repeatCount = section.repeatCount
             context.insert(sectionCopy)
 
             for entry in section.sortedQuickExercises {
@@ -44,7 +46,9 @@ enum WorkoutCloningService {
                     targetSets: entry.targetSets,
                     customRestSeconds: entry.customRestSeconds,
                     trackingMode: entry.trackingMode,
-                    headStartSeconds: entry.headStartSeconds
+                    headStartSeconds: entry.headStartSeconds,
+                    allowsBodyweight: entry.allowsBodyweight,
+                    tracksSides: entry.tracksSides
                 )
                 context.insert(entryCopy)
             }

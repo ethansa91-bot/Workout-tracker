@@ -25,6 +25,7 @@ struct RepSectionEditorView: View {
         VStack(spacing: 0) {
             if !isLocked {
                 heroCard
+                settingsBar
                 headerBar
                 Divider()
             }
@@ -144,6 +145,23 @@ struct RepSectionEditorView: View {
     /// `SessionRecapView`'s "New Section" row, grouped in one `GlassEffectContainer` so
     /// nearby glass buttons render as a single coherent pass.
     @ViewBuilder
+    /// Rep sections had no section-level settings before the repeat count — the other
+    /// two editors' `settingsBar` is the shape this follows.
+    private var settingsBar: some View {
+        Stepper(repeatLabel(section.repeatCount), value: repeatBinding, in: 1...20)
+            .padding(.horizontal)
+            .padding(.top, 8)
+    }
+
+    private var repeatBinding: Binding<Int> {
+        Binding(get: { section.repeatCount }, set: { updateRepeatCount($0) })
+    }
+
+    private func updateRepeatCount(_ count: Int) {
+        do { try WorkoutEditingService.updateRepeatCount(section, to: count, context: context) }
+        catch { errorMessage = error.localizedDescription }
+    }
+
     private var headerBar: some View {
         GlassEffectContainer {
             ZStack {
@@ -260,13 +278,17 @@ struct RepSectionEditorView: View {
     }
 
     private func subtitle(for entry: RepSectionExercise) -> String {
+        var parts: [String] = []
         switch entry.trackingMode {
         case .repsWeight:
             let rest = entry.customRestSeconds ?? AppSettings.defaultRestSeconds
-            return "\(entry.targetSets) sets · rest \(rest)s"
+            parts = ["\(entry.targetSets) sets", "rest \(rest)s"]
         case .maxHoldTime:
-            return "\(entry.targetSets) sets · max hold · \(entry.headStartSeconds)s head start"
+            parts = ["\(entry.targetSets) sets", "max hold", "\(entry.headStartSeconds)s head start"]
         }
+        if entry.isTrackingSides { parts.append("left/right") }
+        if entry.allowsBodyweight { parts.append("bodyweight ok") }
+        return parts.joined(separator: " · ")
     }
 
     private var moveEntriesAction: ((IndexSet, Int) -> Void)? {
@@ -349,6 +371,10 @@ private struct RepEntryInlineEditor: View {
 
     @State private var showingExercisePicker = false
 
+    private var weightedOptions: [Equipment] {
+        (entry.exercise?.equipmentItems ?? []).filter(\.isWeighted).sorted { $0.name < $1.name }
+    }
+
     private var restBinding: Binding<Int> {
         Binding(
             get: { entry.customRestSeconds ?? AppSettings.defaultRestSeconds },
@@ -382,6 +408,37 @@ private struct RepEntryInlineEditor: View {
                     get: { entry.headStartSeconds },
                     set: { entry.headStartSeconds = $0; save() }
                 ), in: 0...30)
+            }
+
+            // Both are offered only for exercises flagged for them in the catalog —
+            // marking an exercise there is what makes the option meaningful here.
+            if entry.exercise?.allowsBodyweight == true {
+                Toggle("Allow bodyweight", isOn: Binding(
+                    get: { entry.allowsBodyweight },
+                    set: { entry.allowsBodyweight = $0; save() }
+                ))
+            }
+
+            if entry.exercise?.isOneSided == true, entry.trackingMode == .repsWeight {
+                Toggle("Track left/right separately", isOn: Binding(
+                    get: { entry.tracksSides },
+                    set: { entry.tracksSides = $0; save() }
+                ))
+            }
+
+            // Only worth asking when there's an actual choice to make.
+            if weightedOptions.count > 1, entry.trackingMode == .repsWeight {
+                Picker("Equipment", selection: Binding(
+                    get: { entry.preferredEquipment?.id ?? weightedOptions.first?.id },
+                    set: { newID in
+                        entry.preferredEquipment = weightedOptions.first { $0.id == newID }
+                        save()
+                    }
+                )) {
+                    ForEach(weightedOptions) { item in
+                        Text(item.name).tag(Optional(item.id))
+                    }
+                }
             }
         }
         .padding(.leading, 40)

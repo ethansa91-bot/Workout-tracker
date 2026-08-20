@@ -160,10 +160,10 @@ enum WorkoutEditingService {
     // MARK: - Rep exercises
 
     @discardableResult
-    static func addRepExercise(to section: WorkoutSection, exercise: Exercise, targetSets: Int, customRestSeconds: Int?, trackingMode: RepExerciseTrackingMode = .repsWeight, headStartSeconds: Int = 3, context: ModelContext) throws -> RepSectionExercise {
+    static func addRepExercise(to section: WorkoutSection, exercise: Exercise, targetSets: Int, customRestSeconds: Int?, trackingMode: RepExerciseTrackingMode = .repsWeight, headStartSeconds: Int = 3, allowsBodyweight: Bool = false, tracksSides: Bool = false, context: ModelContext) throws -> RepSectionExercise {
         let workout = try requireUnlockedParent(of: section)
         let nextOrder = (section.repExercises.map(\.sortOrder).max() ?? -1) + 1
-        let entry = RepSectionExercise(section: section, sortOrder: nextOrder, exercise: exercise, targetSets: targetSets, customRestSeconds: customRestSeconds, trackingMode: trackingMode, headStartSeconds: headStartSeconds)
+        let entry = RepSectionExercise(section: section, sortOrder: nextOrder, exercise: exercise, targetSets: targetSets, customRestSeconds: customRestSeconds, trackingMode: trackingMode, headStartSeconds: headStartSeconds, allowsBodyweight: allowsBodyweight, tracksSides: tracksSides)
         context.insert(entry)
         section.markDirty()
         workout?.markDirty()
@@ -236,6 +236,24 @@ enum WorkoutEditingService {
     static func updateAmrapDuration(_ section: WorkoutSection, to seconds: Int, context: ModelContext) throws {
         let workout = try requireUnlockedParent(of: section)
         section.amrapDurationSeconds = seconds
+        section.markDirty()
+        workout?.markDirty()
+        try context.save()
+    }
+
+    /// Time/EMOM/AMRAP only: whether the section's timer starts automatically.
+    static func updateAutostart(_ section: WorkoutSection, to autostart: Bool, context: ModelContext) throws {
+        let workout = try requireUnlockedParent(of: section)
+        section.autostart = autostart
+        section.markDirty()
+        workout?.markDirty()
+        try context.save()
+    }
+
+    /// How many times the whole section runs back to back. Any type.
+    static func updateRepeatCount(_ section: WorkoutSection, to count: Int, context: ModelContext) throws {
+        let workout = try requireUnlockedParent(of: section)
+        section.repeatCount = max(1, count)
         section.markDirty()
         workout?.markDirty()
         try context.save()

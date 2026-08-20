@@ -31,17 +31,48 @@ struct WorkoutTrackerApp: App {
             RecurringWorkoutSchedule.self,
             ScheduledWorkout.self,
         ])
-        // cloudKitDatabase: .none is required, not optional — SwiftData otherwise tries to
-        // prepare the store for CloudKit sync, which rejects @Attribute(.unique) fields
-        // (every model here has one on `id`). The Simulator is lenient about this; real
-        // devices enforce it strictly, which is why this only crashes on-device. We don't
-        // want CloudKit involved anyway — sync goes through Supabase, not iCloud.
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .none)
+        // Syncs every model in the schema across the user's own devices via iCloud.
+        // Requires the WorkoutTracker.entitlements iCloud/CloudKit capability and a
+        // matching container identifier registered on the Apple Developer account.
+        let cloudConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .private(CloudKitContainer.identifier)
+        )
 
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            let container = try ModelContainer(for: schema, configurations: [cloudConfiguration])
+            ContainerStatus.record(isCloudEnabled: true, failure: nil)
+            return container
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            // CloudKit setup fails for ordinary, recoverable reasons — no iCloud
+            // account, no network on first run, a schema not yet deployed to the
+            // Production environment. Crashing here would make the app unusable
+            // offline and unlaunchable on TestFlight, so fall back to a local-only
+            // store instead. Both configurations resolve to the same on-disk store
+            // URL, so no data is lost and nothing starts from scratch.
+            let nsError = error as NSError
+            let detail = """
+                CloudKit ModelContainer unavailable, falling back to local-only: \(error)
+                NSError domain: \(nsError.domain), code: \(nsError.code)
+                userInfo: \(nsError.userInfo)
+                underlying: \(nsError.userInfo[NSUnderlyingErrorKey].map { String(describing: $0) } ?? "none")
+                """
+            print(detail)
+
+            let localConfiguration = ModelConfiguration(
+                schema: schema,
+                isStoredInMemoryOnly: false,
+                cloudKitDatabase: .none
+            )
+            do {
+                let container = try ModelContainer(for: schema, configurations: [localConfiguration])
+                ContainerStatus.record(isCloudEnabled: false, failure: nsError)
+                return container
+            } catch {
+                // The local store itself is unusable — there is no degraded mode left.
+                fatalError("Could not create ModelContainer (cloud or local): \(error)")
+            }
         }
     }()
 
@@ -65,7 +96,6 @@ struct WorkoutTrackerApp: App {
             WgerCategoryRevert.revertIfNeeded(context: context)
             EquipmentHomeGymMigration.migrateIfNeeded(context: context)
             EquipmentWeightedMigration.migrateIfNeeded(context: context)
-            ExerciseEquipmentMigration.migrateIfNeeded(context: context)
             WgerNoPhotoCleanup.migrateIfNeeded(context: context)
             PersonalExerciseImport.importIfNeeded(context: context)
             ExerciseReviewFavoritesImport.importIfNeeded(context: context)
@@ -81,6 +111,20 @@ struct WorkoutTrackerApp: App {
         }
 
         GetReadyStepMigration.migrateIfNeeded(context: context)
+
+        // Outside the fresh-install branch: a device that already picked "lb" needs the
+        // switch too, not just brand-new installs.
+        WeightUnitKgMigration.migrateIfNeeded()
+
+        // Seeding above runs before CloudKit's first import can land, so a second device
+        // seeds its own catalog and then receives the first device's. This cleans up the
+        // resulting duplicates once that import completes — and repairs devices that
+        // already have them.
+        if ContainerStatus.isCloudEnabled {
+            MainActor.assumeIsolated {
+                CatalogReconciliation.runAfterNextImport(container: sharedModelContainer)
+            }
+        }
     }
 
     /// Flags for every legacy migration superseded by `CatalogSeedLoader` on a fresh

@@ -15,4 +15,16 @@ enum ExerciseSessionNoteQueries {
         )
         return (try? context.fetch(descriptor)) ?? []
     }
+
+    /// Every note for this exercise, newest first — including the current session's.
+    /// `pastNotes` deliberately excludes the current session and sorts oldest-first,
+    /// which is wrong for a history list meant to show what was just written at the top.
+    static func allNotes(for exercise: Exercise, context: ModelContext) -> [ExerciseSessionNote] {
+        let exerciseID = exercise.id
+        let descriptor = FetchDescriptor<ExerciseSessionNote>(
+            predicate: #Predicate { note in note.exercise?.id == exerciseID },
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+        )
+        return (try? context.fetch(descriptor)) ?? []
+    }
 }

@@ -58,6 +58,7 @@ enum WorkoutSessionService {
 
     static func positionAtStart(_ session: WorkoutSession, workout: Workout) {
         session.currentSectionIndex = 0
+        session.currentSectionRepeat = 0
         setPositionForCurrentSection(session, workout: workout)
     }
 
@@ -91,9 +92,26 @@ enum WorkoutSessionService {
 
     /// Advances to the next section, or finishes the session if the current one was
     /// last — this is how a mixed workout's sections "stop when a new section starts."
+    ///
+    /// A section with `repeatCount > 1` runs again first: the repeat counter advances
+    /// and the within-section position resets, leaving `currentSectionIndex` alone.
     static func advanceSection(_ session: WorkoutSession, workout: Workout, context: ModelContext) {
-        session.currentSectionIndex += 1
         let sections = workout.sortedSections
+
+        if session.currentSectionIndex < sections.count {
+            let section = sections[session.currentSectionIndex]
+            let completedRepeat = session.currentSectionRepeat ?? 0
+            if completedRepeat + 1 < section.effectiveRepeatCount {
+                session.currentSectionRepeat = completedRepeat + 1
+                setPositionForCurrentSection(session, workout: workout)
+                session.markDirty()
+                try? context.save()
+                return
+            }
+        }
+
+        session.currentSectionIndex += 1
+        session.currentSectionRepeat = 0
         if session.currentSectionIndex >= sections.count {
             finish(session, context: context)
         } else {

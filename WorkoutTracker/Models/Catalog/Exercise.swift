@@ -3,12 +3,12 @@ import SwiftData
 
 @Model
 final class Exercise: SyncableModel {
-    @Attribute(.unique) var id: UUID
-    var name: String
+    var id: UUID = UUID()
+    var name: String = ""
     var label: String?
     var notes: String?
     var videoURL: String?
-    var iconSymbolName: String
+    var iconSymbolName: String = ""
     /// Asset catalog name of a reference photo in `Assets.xcassets/ExercisePhotos`,
     /// when one was matched from free-exercise-db at seed/import time. nil falls back
     /// to `iconSymbolName` everywhere photos aren't shown.
@@ -21,22 +21,63 @@ final class Exercise: SyncableModel {
     /// Raw value of the `ExerciseImageStyle` used to produce `generatedImageFileName`,
     /// so reopening the generator can default to the last style picked.
     var generatedImageStyle: String?
-    var isCustom: Bool
-    var isFavorited: Bool
-    var updatedAt: Date
+    var isCustom: Bool = false
+    var isFavorited: Bool = false
+    /// This exercise can also be done unloaded even though it has weighted equipment
+    /// (a dip or pull-up that's sometimes weighted, sometimes not). Unlocks the
+    /// per-workout bodyweight option on `RepSectionExercise`. Meaningless — and hidden
+    /// in the UI — for an exercise with no weighted equipment, which is bodyweight
+    /// already.
+    var allowsBodyweight: Bool = false
+    /// Trains one side at a time (split squats, single-arm rows). Unlocks the
+    /// per-workout "track left/right separately" option.
+    var isOneSided: Bool = false
+    var updatedAt: Date = Date.now
     var deletedAt: Date?
-    var isDirty: Bool
-    var remoteSyncedAt: Date?
 
-    /// Deprecated — replaced by `equipmentItems`. Kept under its original name/type so
-    /// SwiftData preserves existing on-disk data; a rename would make SwiftData treat it
-    /// as an unrelated new relationship and silently drop everyone's existing link.
-    /// Read once by `ExerciseEquipmentMigration`; nothing else reads or writes it anymore.
-    var equipment: Equipment?
+    /// Backing storage for `equipmentItems` — CloudKit requires to-many relationships
+    /// to be Optional at the type level (a default value alone isn't enough), so the
+    /// raw `@Relationship` is Optional and every other property in the app keeps using
+    /// the non-optional computed wrapper below instead.
+    @Relationship(inverse: \Equipment.exercisesStorage)
+    var equipmentItemsStorage: [Equipment]?
     /// Empty = bodyweight, no equipment needed. Can mix passive and weighted equipment.
-    var equipmentItems: [Equipment] = []
-    var muscles: [Muscle] = []
-    var categories: [ExerciseCategory] = []
+    var equipmentItems: [Equipment] {
+        get { equipmentItemsStorage ?? [] }
+        set { equipmentItemsStorage = newValue }
+    }
+
+    @Relationship(inverse: \Muscle.exercisesStorage)
+    var musclesStorage: [Muscle]?
+    var muscles: [Muscle] {
+        get { musclesStorage ?? [] }
+        set { musclesStorage = newValue }
+    }
+
+    /// The `@Relationship(inverse:)` annotation for this pair lives on `ExerciseCategory`.
+    var categoriesStorage: [ExerciseCategory]?
+    var categories: [ExerciseCategory] {
+        get { categoriesStorage ?? [] }
+        set { categoriesStorage = newValue }
+    }
+
+    // The relationships below exist only so CloudKit's "every relationship needs an
+    // inverse" rule is satisfied for the one-directional catalog lookups on the other
+    // models (`PersonalRecord.exercise`, `RepSectionExercise.exercise`, etc.) — nothing
+    // in the app reads or writes these back-references, so unlike the three above they
+    // have no non-optional wrapper.
+    @Relationship(inverse: \PersonalRecord.exercise)
+    var personalRecords: [PersonalRecord]?
+    @Relationship(inverse: \RepSectionExercise.exercise)
+    var repSectionExercises: [RepSectionExercise]?
+    @Relationship(inverse: \SectionExerciseEntry.exercise)
+    var sectionExerciseEntries: [SectionExerciseEntry]?
+    @Relationship(inverse: \SetLog.exercise)
+    var setLogs: [SetLog]?
+    @Relationship(inverse: \TimeSectionStep.exercise)
+    var timeSectionSteps: [TimeSectionStep]?
+    @Relationship(inverse: \ExerciseSessionNote.exercise)
+    var exerciseSessionNotes: [ExerciseSessionNote]?
 
     /// The user's personal nickname when set, falling back to the catalog `name`.
     var displayName: String {
@@ -74,6 +115,8 @@ final class Exercise: SyncableModel {
         imageAssetName: String? = nil,
         isCustom: Bool = false,
         isFavorited: Bool = false,
+        allowsBodyweight: Bool = false,
+        isOneSided: Bool = false,
         equipmentItems: [Equipment] = []
     ) {
         self.id = id
@@ -87,11 +130,10 @@ final class Exercise: SyncableModel {
         self.generatedImageStyle = nil
         self.isCustom = isCustom
         self.isFavorited = isFavorited || isCustom
-        self.equipment = nil
-        self.equipmentItems = equipmentItems
+        self.allowsBodyweight = allowsBodyweight
+        self.isOneSided = isOneSided
+        self.equipmentItemsStorage = equipmentItems
         self.updatedAt = .now
         self.deletedAt = nil
-        self.isDirty = true
-        self.remoteSyncedAt = nil
     }
 }

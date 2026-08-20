@@ -4,33 +4,64 @@ import SwiftData
 struct SessionHistoryListView: View {
     @Query(sort: \WorkoutSession.startedAt, order: .reverse) private var allSessions: [WorkoutSession]
 
+    @AppStorage("settings.historyOnlyFinished") private var onlyFinished = true
+
+    /// The default view is "what I actually did" — completed workouts, plus anything
+    /// still live from today so an interrupted workout stays one tap from being
+    /// resumed. A session left paused days ago isn't resumable in practice, just
+    /// clutter, so it stays hidden until the filter comes off.
     private var sessions: [WorkoutSession] {
-        allSessions.filter { $0.deletedAt == nil }
+        let live = allSessions.filter { $0.deletedAt == nil }
+        guard onlyFinished else { return live }
+        return live.filter { session in
+            switch session.status {
+            case .finished:
+                return true
+            case .paused, .inProgress:
+                return Calendar.current.isDateInToday(session.startedAt)
+            case .abandonedUnfinished:
+                return false
+            }
+        }
     }
 
     var body: some View {
         NavigationStack {
-            Group {
-                if sessions.isEmpty {
-                    ContentUnavailableView(
-                        "No History Yet",
-                        systemImage: "clock.arrow.circlepath",
-                        description: Text("Finished and unfinished workouts will show up here.")
-                    )
-                } else {
-                    List(sessions) { session in
-                        NavigationLink {
-                            SessionHistoryDetailView(session: session)
-                        } label: {
-                            sessionRow(session)
+            VStack(spacing: 0) {
+                Toggle("Show only finished workouts", isOn: $onlyFinished)
+                    .font(.subheadline)
+                    .tint(Color.appAccent)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+
+                Group {
+                    if sessions.isEmpty {
+                        ContentUnavailableView(
+                            onlyFinished ? "No Finished Workouts" : "No History Yet",
+                            systemImage: "clock.arrow.circlepath",
+                            description: Text(emptyStateMessage)
+                        )
+                    } else {
+                        List(sessions) { session in
+                            NavigationLink {
+                                SessionHistoryDetailView(session: session)
+                            } label: {
+                                sessionRow(session)
+                            }
                         }
+                        .themedListBackground()
                     }
-                    .themedListBackground()
                 }
             }
             .background(Color.appBackground)
             .navigationTitle("History")
         }
+    }
+
+    private var emptyStateMessage: String {
+        onlyFinished
+            ? "Workouts you finish will show up here. Turn off the filter to see paused and unfinished ones too."
+            : "Finished and unfinished workouts will show up here."
     }
 
     private func sessionRow(_ session: WorkoutSession) -> some View {
