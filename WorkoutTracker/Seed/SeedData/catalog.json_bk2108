@@ -390,9 +390,8 @@
         "Gym mat"
       ],
       "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
       "muscles": [
         "Abs",
         "Obliques"
@@ -409,9 +408,8 @@
         "Gym mat"
       ],
       "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
       "muscles": [
         "Abs",
         "Obliques"
@@ -426,9 +424,8 @@
       ],
       "equipment": [],
       "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
       "muscles": [
         "Abs",
         "Obliques"
@@ -446,9 +443,9 @@
         "Box"
       ],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
+      "label": "90° Rotational Lunge to Box Step-Up",
       "muscles": [
         "Quads",
         "Shoulders",
@@ -456,16 +453,6 @@
       ],
       "name": "90° Rotational Lunge to Box Step-Up",
       "notes": "From a lunge position, rotate the body 90° and step one leg onto a raised box while holding a weight plate overhead.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 15,
-          "trackingMode": "repsWeight",
-          "weight": 25,
-          "equipment": "Discs",
-          "unit": "lb"
-        }
-      ],
       "videolink": "https://www.youtube.com/shorts/AZ6Yawrk2ag"
     },
     {
@@ -474,16 +461,18 @@
         "strength"
       ],
       "equipment": [
-        "Ab roller"
+        "Ab roller",
+        "Gym mat"
       ],
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
       "muscles": [
         "Abs",
-        "Obliques"
+        "Obliques",
+        "Chest"
       ],
-      "name": "Ab roll out",
+      "name": "Ab wheel",
       "notes": "1. **Starting Position**: Kneel on the floor with the ab wheel in front of you.\n2. **Grip the Wheel**: Hold the handles firmly.\n3. **Roll Out**: Slowly roll the wheel forward, extending your body while keeping your core tight.\n4. **Return**: Pull the wheel back towards your knees, maintaining tension in your core.",
       "videolink": "https://www.youtube.com/shorts/MinlHnG7j4k"
     },
@@ -493,9 +482,9 @@
       ],
       "equipment": [],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
+      "label": "Active hip flexor to hamstring stretch (on one knee, go forward/backward)",
       "muscles": [
         "Hamstrings"
       ],
@@ -518,16 +507,6 @@
       ],
       "name": "Alternating Biceps Curls",
       "notes": "Hold two dumbbells, the arms are streched, the hands are on your\nside, the palms face inwards. Bend one arm at a time and bring the weight with a\nfast movement up. At the same time, rotate your arms by 90 degrees at\nthe very beginning of the movement. At the highest point, rotate a\nlittle the weights further outwards. Without a pause, bring the arm back down, slowly, and do the same with the other arm.\n\nDon't allow your body to swing during the exercise, all work is done\nby the biceps, which are the only mucles that should move (pay attention\nto the elbows).",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 8,
-          "trackingMode": "repsWeight",
-          "weight": 16,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ],
       "videolink": "https://www.youtube.com/watch?v=WYezBGuUsdw&pp=ygUeQWx0ZXJuYXRpbmcgYmljZXAgY3VybHMgc2hvcnRz"
     },
     {
@@ -543,19 +522,28 @@
       "muscles": [
         "Biceps"
       ],
-      "name": "Hammer curl Alternated",
+      "name": "Alternating hammer curl",
       "notes": "Stand with your knees slightly bent and your back straight. Hold a dumbbell in each hand, using a neutral grip at your sides.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 13,
-          "trackingMode": "repsWeight",
-          "weight": 18,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ],
       "videolink": "https://www.youtube.com/watch?v=h46ccQsXDEk&pp=ygUnQWx0ZXJuYXRpbmcgZHVtYmJlbGwgaGFtbWVyIGN1cmwgc2hvcnRz0gcJCf4LAYcqIYzv"
+    },
+    {
+      "categories": [
+        "calisthenics",
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell"
+      ],
+      "icon": "figure.core.training",
+      "isCustom": false,
+      "isFavorited": false,
+      "muscles": [
+        "Glutes",
+        "Hamstrings"
+      ],
+      "name": "Arabesque",
+      "notes": "Take all your weight onto one leg and you're going to maintain that position, keeping your hips and pelvis level the whole time. With your back in a neutral position you want to tilt yourself forward kicking your leg back up and then slowly with your glutes bring yourself back up to neutral.",
+      "videolink": "https://www.youtube.com/watch?v=rNoBKXOaVRM&pp=ygUYQXJhYmVzcXVlIGR1bWJlbGwgc2hvcnRz0gcJCf4LAYcqIYzv"
     },
     {
       "categories": [
@@ -569,20 +557,11 @@
       "isCustom": false,
       "isFavorited": true,
       "muscles": [
-        "Shoulders"
+        "Shoulders",
+        "Traps"
       ],
       "name": "Arnold Shoulder Press",
       "notes": "Very common shoulder exercise.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 6,
-          "trackingMode": "repsWeight",
-          "weight": 13.5,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ],
       "videolink": "https://www.youtube.com/shorts/Y_09W4XKDgY"
     },
     {
@@ -590,13 +569,11 @@
         "strength"
       ],
       "equipment": [
-        "Dumbbell",
-        "Discs"
+        "Dumbbell"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
-      "isFavorited": true,
-      "defaultEquipment": "Discs",
+      "isFavorited": false,
       "muscles": [
         "Shoulders"
       ],
@@ -611,37 +588,25 @@
         "Dumbbell"
       ],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
+      "label": "B-stance reciprocal single arm row",
       "muscles": [
         "Lats"
       ],
       "name": "B-Stance Reciprocal Single-Arm Row",
       "notes": "Staggered (B) stance. Perform single-arm rows, alternating sides.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 15,
-          "trackingMode": "repsWeight",
-          "weight": 16,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ],
       "videolink": "https://www.youtube.com/watch?v=agi5afESwPs&pp=ygUpQi1TdGFuY2UgUmVjaXByb2NhbCBTaW5nbGUtQXJtIFJvdyBzaG9ydHM%3D"
     },
     {
       "categories": [
         "calisthenics"
       ],
-      "equipment": [
-        "Gym mat"
-      ],
+      "equipment": [],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "label": "banana kicks",
+      "label": "banana kick",
       "muscles": [
         "Abs",
         "Obliques"
@@ -658,25 +623,14 @@
         "Resistance band"
       ],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
       "label": "Banded catcow",
       "muscles": [
-        "Abs",
-        "lower back"
+        "Abs"
       ],
       "name": "Banded Cat-Cow",
       "notes": "On hands and knees with a band, alternate arching the spine up (cat) and dropping it down (cow).",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 15,
-          "trackingMode": "repsWeight",
-          "weight": 4,
-          "equipment": "Resistance band",
-          "unit": "lb"
-        }
-      ],
       "videolink": "https://www.youtube.com/watch?v=YYPESedXIGU"
     },
     {
@@ -687,25 +641,14 @@
         "Resistance band"
       ],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
       "label": "Banded eccentric single leg slider hamstring curl",
       "muscles": [
         "Hamstrings"
       ],
       "name": "Banded Eccentric Single-Leg Slider Hamstring Curl",
       "notes": "Lying on back, one heel on a slider with band resistance. Slowly extend the leg out, then curl it back in.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 12,
-          "trackingMode": "repsWeight",
-          "weight": 4,
-          "equipment": "Resistance band",
-          "unit": "lb"
-        }
-      ],
       "videolink": "https://www.youtube.com/watch?v=BM-HgRzLhb4"
     },
     {
@@ -716,7 +659,7 @@
         "Resistance band"
       ],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
       "label": "Banded overhead squat",
       "muscles": [
@@ -724,16 +667,6 @@
       ],
       "name": "Banded Overhead Squat",
       "notes": "Squat while holding a resistance band overhead, keeping tension throughout the movement.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 15,
-          "trackingMode": "repsWeight",
-          "weight": 4,
-          "equipment": "Resistance band",
-          "unit": "lb"
-        }
-      ],
       "videolink": "https://www.youtube.com/watch?v=YxuwmkMRSjA"
     },
     {
@@ -745,24 +678,14 @@
         "Resistance band"
       ],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
       "label": "Banded thoracic extension on 45º Roman chair",
       "muscles": [
-        "lower back"
+        "Traps"
       ],
       "name": "Banded Thoracic Extension (45° Roman Chair)",
       "notes": "On a 45° Roman chair, extend the upper (thoracic) spine against band resistance.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 12,
-          "trackingMode": "repsWeight",
-          "weight": 4,
-          "equipment": "Resistance band",
-          "unit": "lb"
-        }
-      ],
       "videolink": "https://www.youtube.com/watch?v=bvWdU8Duo8Y"
     },
     {
@@ -770,65 +693,19 @@
         "strength"
       ],
       "equipment": [
-        "Dumbbell",
-        "Barbell",
-        "Weight vest"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "defaultEquipment": "Weight vest",
-      "label": "Squat",
-      "muscles": [
-        "Glutes",
-        "Hamstrings",
-        "Quads"
-      ],
-      "name": "Squat",
-      "notes": "* The barbell full squat is a **compound exercise** that **targets multiple muscle groups** in the lower body, including the quadriceps, hamstrings, and glutes.\n* Proper form is crucial for maximizing results and preventing injuries during the barbell full squat. This includes maintaining a shoulder-width stance, creating whole body tension, controlling your descent, and maintaining proper depth and knee positioning.\n* Assistance moves such as the front squat, goblet squat, split squat, and Bulgarian split squat can help improve your performance in the barbell full squat by targeting specific muscle groups and improving overall technique.\n* To **achieve new personal records** in your back squat, gradually increase weight over time, vary rep ranges and sets to stimulate muscle growth, and **prioritize rest and recovery** between training sessions.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 12,
-          "trackingMode": "repsWeight",
-          "weight": 70,
-          "equipment": "Barbell",
-          "unit": "lb"
-        }
-      ]
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell",
-        "Weight vest",
         "Barbell"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "defaultEquipment": "Weight vest",
+      "isFavorited": false,
+      "label": "Barbell Squat",
       "muscles": [
         "Glutes",
         "Hamstrings",
         "Quads"
       ],
-      "name": "Sumo Squat",
-      "notes": "open leg feet pointing outward",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 12,
-          "trackingMode": "repsWeight",
-          "weight": 70,
-          "equipment": "Barbell",
-          "unit": "lb"
-        }
-      ]
+      "name": "Barbell Full Squat",
+      "notes": "* The barbell full squat is a **compound exercise** that **targets multiple muscle groups** in the lower body, including the quadriceps, hamstrings, and glutes.\n* Proper form is crucial for maximizing results and preventing injuries during the barbell full squat. This includes maintaining a shoulder-width stance, creating whole body tension, controlling your descent, and maintaining proper depth and knee positioning.\n* Assistance moves such as the front squat, goblet squat, split squat, and Bulgarian split squat can help improve your performance in the barbell full squat by targeting specific muscle groups and improving overall technique.\n* To **achieve new personal records** in your back squat, gradually increase weight over time, vary rep ranges and sets to stimulate muscle growth, and **prioritize rest and recovery** between training sessions."
     },
     {
       "categories": [
@@ -836,59 +713,35 @@
       ],
       "equipment": [
         "Barbell",
-        "Bench",
-        "Dumbbell"
+        "Bench"
       ],
       "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "defaultEquipment": "Barbell",
       "label": "Hip thrust",
       "muscles": [
         "Glutes",
         "lower back"
       ],
-      "name": "Hip Thrust",
-      "notes": "Also doable 1 or 2 dumbells",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 12,
-          "trackingMode": "repsWeight",
-          "weight": 70,
-          "equipment": "Barbell",
-          "unit": "lb"
-        }
-      ]
+      "name": "Barbell Hip Thrust",
+      "notes": ""
     },
     {
       "categories": [
         "strength"
       ],
       "equipment": [
-        "Bench",
-        "EZ-Bar",
-        "Barbell"
+        "Barbell",
+        "Bench"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
-      "isFavorited": true,
-      "defaultEquipment": "EZ-Bar",
+      "isFavorited": false,
       "muscles": [
         "Triceps"
       ],
-      "name": "Skull crasher",
-      "notes": "Position barbell overhead with narrow overhand grip.\n\nLower forearm behind upper arm with elbows remaining overhead. Extend forearm overhead. Lower and repeat.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 4,
-          "trackingMode": "repsWeight",
-          "weight": 60,
-          "equipment": "EZ-Bar",
-          "unit": "lb"
-        }
-      ]
+      "name": "Barbell Triceps Extension",
+      "notes": "Position barbell overhead with narrow overhand grip.\n\nLower forearm behind upper arm with elbows remaining overhead. Extend forearm overhead. Lower and repeat."
     },
     {
       "categories": [
@@ -909,58 +762,19 @@
     },
     {
       "categories": [
-        "strength"
+        "calisthenics"
       ],
       "equipment": [
-        "Gym mat",
-        "Discs",
-        "Dumbbell"
+        "Gym mat"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "defaultEquipment": "Dumbbell",
+      "label": "Normal cruch",
       "muscles": [
         "Abs"
       ],
-      "name": "Ab Crunch",
-      "notes": "Knees bent, feet flat. Crunch shoulders toward knees."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Gym mat",
-        "Discs"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "muscles": [
-        "Abs"
-      ],
-      "name": "Ab Crunch, pulse",
-      "notes": "Knees bent, feet flat. Crunch shoulders toward knees."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Gym mat",
-        "Discs"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "muscles": [
-        "Abs"
-      ],
-      "name": "Ab Crunch, Hold",
+      "name": "Basic Crunch",
       "notes": "Knees bent, feet flat. Crunch shoulders toward knees."
     },
     {
@@ -972,9 +786,8 @@
         "Bench"
       ],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
       "label": "Bench glute stretch with contralateral row (with resistance band)",
       "muscles": [
         "Glutes",
@@ -982,34 +795,21 @@
         "lower back"
       ],
       "name": "Bench Glute Stretch with Contralateral Row",
-      "notes": "One leg stretched on a bench in a glute stretch position. Row with the band using the opposite-side arm.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 15,
-          "trackingMode": "repsWeight",
-          "weight": 4,
-          "equipment": "Resistance band",
-          "unit": "lb"
-        }
-      ],
-      "videolink": "https://youtu.be/hI2irJkxBXw"
+      "notes": "One leg stretched on a bench in a glute stretch position. Row with the band using the opposite-side arm."
     },
     {
       "categories": [
         "strength"
       ],
       "equipment": [
-        "Barbell",
-        "EZ-Bar",
-        "Bench"
+        "Barbell"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
-      "isFavorited": true,
-      "defaultEquipment": "EZ-Bar",
+      "isFavorited": false,
       "muscles": [
         "Chest",
+        "Shoulders",
         "Triceps"
       ],
       "name": "Bench Press Narrow Grip",
@@ -1021,86 +821,16 @@
       ],
       "equipment": [
         "Dumbbell",
-        "Bench",
-        "Barbell"
+        "Bench"
       ],
       "icon": "figure.cooldown",
       "isCustom": false,
       "isFavorited": true,
-      "defaultEquipment": "Dumbbell",
       "muscles": [
         "Chest"
       ],
-      "name": "Benchpress flat",
-      "notes": "1. Setup and Starting Position: Sit at the end of a flat bench with a dumbbell resting vertically against each thigh. Carefully lean back while driving the dumbbells toward your chest with your knees.\n\n2. The “Leg Drive” and Posture: Plant your feet firmly on the floor. Retract your shoulder blades (press them together against the bench) and maintain a slight natural lumbar curve.\n\n3. Starting Position: Push the dumbbells toward the ceiling. Your wrists should be aligned with your elbows. Rotate the dumbbells slightly inward (about 45 degrees) so that your elbows do not splay out too far to the sides, thereby protecting your shoulders.\n\n4. Eccentric Phase (Lowering): Lower the dumbbells in a controlled manner toward the sides of your chest. Your elbows should lower at an angle of about 45–60 degrees relative to your body. Feel the stretch in the lower part of your chest.\n\n5. Concentric Phase (Lift): Push the weight upward in a slight arc (toward the center), without letting the dumbbells collide at the top or fully locking out your elbows to maintain muscle tension. Exhale as you lift.\n\nTranslated with DeepL.com (free version)",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 8,
-          "trackingMode": "repsWeight",
-          "weight": 22.5,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell",
-        "Barbell",
-        "Incline bench"
-      ],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": true,
-      "defaultEquipment": "Dumbbell",
-      "muscles": [
-        "Chest"
-      ],
-      "name": "Benchpress 45 incline",
-      "notes": "1. Setup and Starting Position: Sit at the end of a flat bench with a dumbbell resting vertically against each thigh. Carefully lean back while driving the dumbbells toward your chest with your knees.\n\n2. The “Leg Drive” and Posture: Plant your feet firmly on the floor. Retract your shoulder blades (press them together against the bench) and maintain a slight natural lumbar curve.\n\n3. Starting Position: Push the dumbbells toward the ceiling. Your wrists should be aligned with your elbows. Rotate the dumbbells slightly inward (about 45 degrees) so that your elbows do not splay out too far to the sides, thereby protecting your shoulders.\n\n4. Eccentric Phase (Lowering): Lower the dumbbells in a controlled manner toward the sides of your chest. Your elbows should lower at an angle of about 45–60 degrees relative to your body. Feel the stretch in the lower part of your chest.\n\n5. Concentric Phase (Lift): Push the weight upward in a slight arc (toward the center), without letting the dumbbells collide at the top or fully locking out your elbows to maintain muscle tension. Exhale as you lift.\n\nTranslated with DeepL.com (free version)",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 7,
-          "trackingMode": "repsWeight",
-          "weight": 18,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell",
-        "Barbell",
-        "Incline bench"
-      ],
-      "icon": "figure.cooldown",
-      "isCustom": true,
-      "isFavorited": true,
-      "defaultEquipment": "Dumbbell",
-      "muscles": [
-        "Chest"
-      ],
-      "name": "Benchpress negative incline",
-      "notes": "1. Setup and Starting Position: Sit at the end of a flat bench with a dumbbell resting vertically against each thigh. Carefully lean back while driving the dumbbells toward your chest with your knees.\n\n2. The “Leg Drive” and Posture: Plant your feet firmly on the floor. Retract your shoulder blades (press them together against the bench) and maintain a slight natural lumbar curve.\n\n3. Starting Position: Push the dumbbells toward the ceiling. Your wrists should be aligned with your elbows. Rotate the dumbbells slightly inward (about 45 degrees) so that your elbows do not splay out too far to the sides, thereby protecting your shoulders.\n\n4. Eccentric Phase (Lowering): Lower the dumbbells in a controlled manner toward the sides of your chest. Your elbows should lower at an angle of about 45–60 degrees relative to your body. Feel the stretch in the lower part of your chest.\n\n5. Concentric Phase (Lift): Push the weight upward in a slight arc (toward the center), without letting the dumbbells collide at the top or fully locking out your elbows to maintain muscle tension. Exhale as you lift.\n\nTranslated with DeepL.com (free version)",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 8,
-          "trackingMode": "repsWeight",
-          "weight": 22.5,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "name": "Benchpress Dumbbells",
+      "notes": "1. Setup and Starting Position: Sit at the end of a flat bench with a dumbbell resting vertically against each thigh. Carefully lean back while driving the dumbbells toward your chest with your knees.\n\n2. The “Leg Drive” and Posture: Plant your feet firmly on the floor. Retract your shoulder blades (press them together against the bench) and maintain a slight natural lumbar curve.\n\n3. Starting Position: Push the dumbbells toward the ceiling. Your wrists should be aligned with your elbows. Rotate the dumbbells slightly inward (about 45 degrees) so that your elbows do not splay out too far to the sides, thereby protecting your shoulders.\n\n4. Eccentric Phase (Lowering): Lower the dumbbells in a controlled manner toward the sides of your chest. Your elbows should lower at an angle of about 45–60 degrees relative to your body. Feel the stretch in the lower part of your chest.\n\n5. Concentric Phase (Lift): Push the weight upward in a slight arc (toward the center), without letting the dumbbells collide at the top or fully locking out your elbows to maintain muscle tension. Exhale as you lift.\n\nTranslated with DeepL.com (free version)"
     },
     {
       "categories": [
@@ -1113,8 +843,7 @@
       "isCustom": false,
       "isFavorited": true,
       "muscles": [
-        "Lats",
-        "Shoulders"
+        "Lats"
       ],
       "name": "Bent High Pulls",
       "notes": "Bend over slightly while holding two dumbbells.  Pull the dumbbells up to your chest, keeping your elbows as high as you can."
@@ -1130,48 +859,11 @@
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "isOneSided": true,
       "muscles": [
         "Lats"
       ],
       "name": "Bent Over Dumbbell Rows",
-      "notes": "With dumbbells in hand, bend at the hip until hands hang just below the knees (similar to straight-legged-deadlift starting position). Keep upper body angle constant while contracting your lats to pull you ellbows back pinching the shoulder blades at the top. Try not to stand up with every rep, check hands go below knees on every rep.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 8,
-          "trackingMode": "repsWeight",
-          "weight": 24,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Barbell"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": true,
-      "muscles": [
-        "Lats"
-      ],
-      "name": "Bent Over Rowing",
-      "notes": "1. Holding a barbell with a pronated grip (palms facing down), bend your knees slightly and bring your torso forward, by bending at the waist, while keeping the back straight until it is almost parallel to the floor. Tip: Make sure that you keep the head up. The barbell should hang directly in front of you as your arms hang perpendicular to the floor and your torso. This is your starting position.\n2. Now, while keeping the torso stationary, breathe out and lift the barbell to you. Keep the elbows close to the body and only use the forearms to hold the weight. At the top contracted position, squeeze the back muscles and hold for a brief pause.\n3. Then inhale and slowly lower the barbell back to the starting position.\n4. Repeat for the recommended amount of repetitions.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 12,
-          "trackingMode": "repsWeight",
-          "weight": 80,
-          "equipment": "Barbell",
-          "unit": "lb"
-        }
-      ]
+      "notes": "With dumbbells in hand, bend at the hip until hands hang just below the knees (similar to straight-legged-deadlift starting position). Keep upper body angle constant while contracting your lats to pull you ellbows back pinching the shoulder blades at the top. Try not to stand up with every rep, check hands go below knees on every rep."
     },
     {
       "categories": [
@@ -1185,115 +877,107 @@
       "isFavorited": true,
       "muscles": [
         "Biceps",
-        "Lats"
+        "Lats",
+        "Shoulders"
       ],
-      "name": "Bent Over Rowing Reverse grip",
+      "name": "Bent Over Rowing",
+      "notes": "1. Holding a barbell with a pronated grip (palms facing down), bend your knees slightly and bring your torso forward, by bending at the waist, while keeping the back straight until it is almost parallel to the floor. Tip: Make sure that you keep the head up. The barbell should hang directly in front of you as your arms hang perpendicular to the floor and your torso. This is your starting position.\n2. Now, while keeping the torso stationary, breathe out and lift the barbell to you. Keep the elbows close to the body and only use the forearms to hold the weight. At the top contracted position, squeeze the back muscles and hold for a brief pause.\n3. Then inhale and slowly lower the barbell back to the starting position.\n4. Repeat for the recommended amount of repetitions."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Barbell"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Biceps",
+        "Lats",
+        "Shoulders"
+      ],
+      "name": "Bent Over Rowing Reverse",
       "notes": "The same as *regular* rowing, but holding a reversed grip (your palms pointing forwards):\n\nGrab the barbell with a wide grIp (slightly more than shoulder wide) and lean forward. Your upper body is not quite parallel to the floor, but forms a slight angle. The chest's out during the whole exercise.\n\nPull now the barbell with a fast movement towards your belly button, not further up. Go slowly down to the initial position. Don't swing with your body and keep your arms next to your body."
     },
     {
       "categories": [
-        "strength"
+        "calisthenics"
       ],
-      "equipment": [
-        "Discs",
-        "Gym mat"
-      ],
+      "equipment": [],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "label": "crunch with legs up 90°",
+      "label": "crunch with bend 90° legs",
       "muscles": [
         "Abs"
       ],
-      "name": "Bent-Knee Crunch, Basic",
+      "name": "Bent-Knee Crunch, Basic (Legs at 90°)",
       "notes": "Feet up, knees bent 90°. Crunch toward knees."
+    },
+    {
+      "categories": [
+        "calisthenics"
+      ],
+      "equipment": [],
+      "icon": "figure.core.training",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "crunch with bend 90° legs",
+      "muscles": [
+        "Abs"
+      ],
+      "name": "Bent-Knee Crunch, Hold (Legs at 90°)",
+      "notes": "Feet up, knees bent 90°. Hold at top."
+    },
+    {
+      "categories": [
+        "calisthenics"
+      ],
+      "equipment": [],
+      "icon": "figure.core.training",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "crunch with bend 90° legs",
+      "muscles": [
+        "Abs"
+      ],
+      "name": "Bent-Knee Crunch, Pulse (Legs at 90°)",
+      "notes": "Feet up, knees bent 90°. Small, fast pulses at top."
     },
     {
       "categories": [
         "strength"
       ],
       "equipment": [
-        "Discs",
-        "Gym mat"
+        "Dumbbell"
       ],
-      "icon": "figure.core.training",
+      "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "label": "crunch with legs up 90°, pulse",
       "muscles": [
-        "Abs"
+        "Biceps"
       ],
-      "name": "Bent-Knee Crunch, Pulse",
-      "notes": "Feet up, knees bent 90°. Crunch toward knees."
+      "name": "Biceps Curls With Dumbbell",
+      "notes": "Hold two dumbbells, the arms are streched, the hands are on your side, the palms face inwards. Bend the arms and bring the weight with a fast movement up. At the same time, rotate your arms by 90 degrees at the very beginning of the movement. At the highest point, rotate a little the weights further outwards. Without a pause, bring them down, slowly.\n\nDon't allow your body to swing during the exercise, all work is done by the biceps, which are the only mucles that should move (pay attention to the elbows)."
     },
     {
       "categories": [
         "strength"
       ],
       "equipment": [
-        "Discs",
-        "Gym mat"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "label": "crunch with legs up 90°, hold",
-      "muscles": [
-        "Abs"
-      ],
-      "name": "Bent-Knee Crunch, Hold",
-      "notes": "Feet up, knees bent 90°. Crunch toward knees."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell",
-        "Barbell",
         "EZ-Bar"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
+      "label": "Biceps Curls With EZ-bar",
       "muscles": [
         "Biceps"
       ],
-      "name": "Biceps Curls",
-      "notes": "Hold two dumbbells, the arms are streched, the hands are on your side, the palms face inwards. Bend the arms and bring the weight with a fast movement up. At the same time, rotate your arms by 90 degrees at the very beginning of the movement. At the highest point, rotate a little the weights further outwards. Without a pause, bring them down, slowly.\n\nDon't allow your body to swing during the exercise, all work is done by the biceps, which are the only mucles that should move (pay attention to the elbows).",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 8,
-          "trackingMode": "repsWeight",
-          "weight": 16,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "EZ-Bar",
-        "Dumbbell",
-        "Gym mat"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": true,
-      "defaultEquipment": "EZ-Bar",
-      "label": "Biceps Curls Reverse grip",
-      "muscles": [
-        "Biceps"
-      ],
-      "name": "Biceps Curls With reverse grip",
-      "notes": "Reverse grip bicep curl"
+      "name": "Biceps Curls With SZ-bar",
+      "notes": "Hold the SZ-bar shoulder-wide, the back is straight, the shoulders slightly back, the arms are streched. Bend the arms, bringing the weight up, with a fast movement. Without pausing, let down the bar with a slow and controlled movement.\n\nDon't allow your body to swing during the exercise, all work is done by the biceps, which are the only mucles that should move (pay attention to the elbows)."
     },
     {
       "categories": [
@@ -1314,14 +998,15 @@
     },
     {
       "categories": [
-        "strength"
+        "calisthenics"
       ],
       "equipment": [
         "Gym mat"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
+      "label": "bicycle",
       "muscles": [
         "Abs",
         "Obliques"
@@ -1335,20 +1020,17 @@
       ],
       "equipment": [
         "Dumbbell",
-        "Bench",
-        "Weight vest"
+        "Bench"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "isOneSided": true,
       "muscles": [
         "Glutes",
         "Hamstrings",
         "Quads"
       ],
-      "name": "Bulgarian Squat ",
+      "name": "Bulgarian Squat with Dumbbells",
       "notes": "The Bulgarian split squat consists of performing a squat on one leg with the rear foot resting on a raised platform. Elevating your back leg on a bench creates instability and increases the range of motion of the exercise."
     },
     {
@@ -1361,7 +1043,6 @@
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
       "muscles": [
         "Shoulders",
         "Abs",
@@ -1377,14 +1058,11 @@
         "calisthenics"
       ],
       "equipment": [
-        "Pull-up bar",
-        "Weight belt",
-        "Weight vest"
+        "Pull-up bar"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
       "muscles": [
         "Biceps",
         "Lats",
@@ -1413,34 +1091,89 @@
     },
     {
       "categories": [
-        "strength",
-        "physio"
+        "calisthenics"
       ],
       "equipment": [
-        "Dumbbell",
-        "Barbell"
+        "Gym mat"
+      ],
+      "icon": "figure.core.training",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "normal crunch hold",
+      "muscles": [
+        "Abs"
+      ],
+      "name": "Crunch Hold",
+      "notes": "Knees bent, feet flat. Hold at top of crunch."
+    },
+    {
+      "categories": [
+        "calisthenics"
+      ],
+      "equipment": [
+        "Gym mat"
+      ],
+      "icon": "figure.core.training",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "normal cruch pump",
+      "muscles": [
+        "Abs"
+      ],
+      "name": "Crunch Pulse",
+      "notes": "Knees bent, feet flat. Small, fast pulses at top of crunch."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Gym mat"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "defaultEquipment": "Dumbbell",
+      "muscles": [
+        "Abs",
+        "Chest"
+      ],
+      "name": "Crunches",
+      "notes": "Lay down on your back a soft surface, the feet are on the floor. Ask a partner or use some other help (barbell, etc.) to keep them fixed, your hands are behind your head. From this position move your upper body up till your head or elbows touch your knees. Do this movement by rolling up your back."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
       "muscles": [
         "Glutes",
         "Lats"
       ],
-      "name": "Romanian Deadlifts",
-      "notes": "Stand firmly, with your feet slightly more than shoulder wide apart. Stand directly behind the bar where it should barely touch your shin, your feet pointing a bit out. Bend down with a straight back, the knees also pointing somewhat out. Grab the bar with a shoulder wide grip, one overhand, one underhand (mixed grip).\n\nPull the weight up. At the highest point make a slight hollow back and pull the bar back. Hold 1 or 2 seconds that position. Go down, making sure the back is not bent. Once down you can either go back again as soon as the weights touch the floor, or make a pause, depending on the weight.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 12,
-          "trackingMode": "repsWeight",
-          "weight": 16,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
+      "name": "Dumbbell Deadlifts",
+      "notes": "Stand firmly, with your feet slightly more than shoulder wide apart. Stand directly behind the bar where it should barely touch your shin, your feet pointing a bit out. Bend down with a straight back, the knees also pointing somewhat out. Grab the bar with a shoulder wide grip, one overhand, one underhand (mixed grip).\n\nPull the weight up. At the highest point make a slight hollow back and pull the bar back. Hold 1 or 2 seconds that position. Go down, making sure the back is not bent. Once down you can either go back again as soon as the weights touch the floor, or make a pause, depending on the weight."
+    },
+    {
+      "categories": [
+        "strength"
       ],
-      "videolink": "https://www.youtube.com/watch?v=EJoQgHjMqjw&feature=youtu.be"
+      "equipment": [
+        "Incline bench",
+        "Dumbbell"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "-30 fly",
+      "muscles": [
+        "Chest"
+      ],
+      "name": "Decline Dumbbell Fly (-30°)",
+      "notes": "-30° decline bench, arms extended slightly bent, open and close to sides."
     },
     {
       "categories": [
@@ -1448,14 +1181,35 @@
       ],
       "equipment": [
         "Dumbbell",
-        "Gym mat"
+        "Incline bench"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "-30° db press",
+      "muscles": [
+        "Chest"
+      ],
+      "name": "Decline Dumbbell Press (-30°)",
+      "notes": "-30° decline bench, press dumbbells from 90° elbow bend to full extension."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell"
       ],
       "icon": "figure.jumprope",
       "isCustom": false,
       "isFavorited": true,
       "muscles": [
         "Chest",
+        "Glutes",
+        "Hamstrings",
         "Lats",
+        "Obliques",
+        "Shoulders",
         "Triceps"
       ],
       "name": "Devil’s Press",
@@ -1465,13 +1219,10 @@
       "categories": [
         "calisthenics"
       ],
-      "equipment": [
-        "Weight vest"
-      ],
+      "equipment": [],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "allowsBodyweight": true,
       "label": "diamond push ups",
       "muscles": [
         "Triceps"
@@ -1486,41 +1237,16 @@
       ],
       "equipment": [
         "Parallel Bars",
-        "Weight belt",
-        "Weight vest"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "defaultEquipment": "Weight belt",
-      "muscles": [
-        "Chest",
-        "Triceps"
-      ],
-      "name": "Bar Dips",
-      "notes": "A dip is an upper-body strength exercise. Narrow, shoulder-width dips primarily train the triceps, with major synergists being the anterior deltoid, the pectoralis muscles (sternal, clavicular, and minor), and the rhomboid muscles of the back (in that order).[1] Wide arm training places additional emphasis on the pectoral muscles, similar in respect to the way a wide grip bench press would focus more on the pectorals and less on the triceps."
-    },
-    {
-      "categories": [
-        "calisthenics",
-        "strength"
-      ],
-      "equipment": [
-        "Weight belt",
-        "Weight vest",
         "Rings"
       ],
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "defaultEquipment": "Weight belt",
       "muscles": [
         "Chest",
         "Triceps"
       ],
-      "name": "Ring Dips",
+      "name": "Dips",
       "notes": "A dip is an upper-body strength exercise. Narrow, shoulder-width dips primarily train the triceps, with major synergists being the anterior deltoid, the pectoralis muscles (sternal, clavicular, and minor), and the rhomboid muscles of the back (in that order).[1] Wide arm training places additional emphasis on the pectoral muscles, similar in respect to the way a wide grip bench press would focus more on the pectorals and less on the triceps."
     },
     {
@@ -1530,17 +1256,15 @@
       ],
       "equipment": [
         "Bench",
-        "Box",
-        "Weight vest"
+        "Box"
       ],
       "icon": "figure.cooldown",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
       "muscles": [
         "Triceps"
       ],
-      "name": "Bench dip",
+      "name": "Dips Between Two Benches",
       "notes": "Put two benches so far appart, that you can hold onto one with your hands and are just able to reach the other with your feet. The legs stay during the exercise completely stretched. With your elbows facing back, bend them as much as you can. Push yourself up, but don't stretch out the arms."
     },
     {
@@ -1548,68 +1272,26 @@
         "strength"
       ],
       "equipment": [
-        "Gym mat",
-        "Mini Loop Resistance"
+        "Gym mat"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "allowsBodyweight": true,
+      "label": "Ground routine (round 1)",
       "muscles": [
         "Glutes"
       ],
-      "name": "Donkey Kick bent knee, Pulse",
-      "notes": "All fours, knee bent, kick leg straight pulse up and down."
+      "name": "Donkey Kick Pulse (Bent Knee Up/Down)",
+      "notes": "All fours, knee bent, kick leg straight up and down."
     },
     {
       "categories": [
         "strength"
       ],
-      "equipment": [
-        "Gym mat",
-        "Mini Loop Resistance"
-      ],
+      "equipment": [],
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "muscles": [
-        "Glutes"
-      ],
-      "name": "Donkey Kick bent knee, Hold",
-      "notes": "All fours, knee bent, kick leg straight pulse up and down."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Gym mat",
-        "Mini Loop Resistance",
-        "Dumbbell"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "muscles": [
-        "Glutes"
-      ],
-      "name": "Donkey Kick bent knee",
-      "notes": "All fours, knee bent, kick leg straight pulse up and down, with option of dumbell between knee"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell",
-        "Weight vest"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
       "muscles": [
         "Calves"
       ],
@@ -1620,32 +1302,24 @@
       "categories": [
         "strength"
       ],
-      "equipment": [
-        "Dumbbell",
-        "Weight vest"
-      ],
+      "equipment": [],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "allowsBodyweight": true,
       "muscles": [
         "Calves"
       ],
-      "name": "Calf Raise Feet inward",
+      "name": "Calf Raise feet inward",
       "notes": "The double leg heel raise is important to strengthen and create control and stability around the ankle and knee, and provide balance and control for the hip and pelvis."
     },
     {
       "categories": [
         "strength"
       ],
-      "equipment": [
-        "Dumbbell",
-        "Weight vest"
-      ],
+      "equipment": [],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "allowsBodyweight": true,
       "muscles": [
         "Calves"
       ],
@@ -1667,7 +1341,7 @@
         "Shoulders",
         "Traps"
       ],
-      "name": "Bent Over Face Pull",
+      "name": "Dumbbell Bent Over Face Pull",
       "notes": "This exercise involves using dumbbells to perform a bent over face pull, which targets the upper back and shoulders. The movement involves pulling the weights towards the face while keeping the elbows high and squeezing the shoulder blades together."
     },
     {
@@ -1684,8 +1358,59 @@
         "Biceps",
         "Shoulders"
       ],
-      "name": "Bicep curl to press",
+      "name": "Dumbbell bicep curl to press",
       "notes": "Bend your elbows and lift the dumbbells to your shoulders.\nPush the dumbbells over your head while rotating your arms to make your palms face forward. Reverse it to lower down. Repeat the exercise."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Glutes",
+        "Hamstrings"
+      ],
+      "name": "Dumbbell donkey kick",
+      "notes": "The dumbbell donkey kick is an effective exercise for working the glute and hamstring muscles. This exercise is usually performed on all fours, using a dumbbell to add resistance. The steps for performing it correctly are described below.\nStarting position: Get on all fours on a mat, with your hands aligned under your shoulders and your knees aligned under your hips.\nPlacing the dumbbell: Take a dumbbell and place it behind the knee of the leg you are going to lift. Make sure it is held securely to prevent it from falling during the exercise.\nExercise:\nInhale and, as you exhale, lift the leg with the dumbbell upward, keeping the knee bent at a 90-degree angle.\nRaise the leg until it is parallel to the floor, feeling the contraction in the glutes.\nHold the position for one second at the top and then slowly lower the leg back to the starting position.\nRepetitions: Perform 10 to 15 repetitions per leg, making sure to maintain good form throughout the exercise.\nSets: Complete 2 to 3 sets, depending on your fitness level."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Glutes",
+        "Quads"
+      ],
+      "name": "Dumbbell Front Squat",
+      "notes": "This exercise involves holding a dumbbell in each hand at shoulder height and performing a squat. It targets the lower body muscles, including the quads, hamstrings, and glutes, while also engaging the core and upper body."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell",
+        "Discs"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Quads"
+      ],
+      "name": "Dumbbell Goblet Squat",
+      "notes": "Grasp dumbbell with both hands at the sides of the upper plates. Hold dumbbell in front of chest, close to torso. Place feet about shoulderwide apart, keep knees slightly bent.\n\nSquat down until thighs are parallel to floor. Keep back straight, bend and move hips backward to keep knees above feet. Return, keep knees slightly flexed. Repeat.\n\nKeep bodyweight on heels and look ahead or slightly above to keep back straight."
     },
     {
       "categories": [
@@ -1698,23 +1423,48 @@
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "label": "benchpress closed grip",
+      "label": "Dumbell press closed grip",
       "muscles": [
         "Chest",
         "Triceps"
       ],
       "name": "Dumbbell Hex Press",
-      "notes": "* Engage the muscles\n* Position your feet wide\n* Controlled movement\n* Slow movement\n* Bring the weights toward your lower chest/stomach",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 10,
-          "trackingMode": "repsWeight",
-          "weight": 18,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "notes": "* Engage the muscles\n* Position your feet wide\n* Controlled movement\n* Slow movement\n* Bring the weights toward your lower chest/stomach"
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell",
+        "Bench"
+      ],
+      "icon": "figure.cooldown",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Glutes",
+        "Quads"
+      ],
+      "name": "Dumbbell Hip Thrust",
+      "notes": "This exercise involves sitting on the ground with a dumbbell resting on the hips, then thrusting the hips upward while squeezing the glutes. It is a great exercise for strengthening the glutes and improving hip mobility."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Glutes",
+        "Quads"
+      ],
+      "name": "Dumbbell Lunges Walking",
+      "notes": "- **Starting Position:** Stand with feet hip-width apart and hands either on your hips or holding dumbbells at your sides.\n- **The Stride:** Take a wide step forward with your right leg.\n- **The Descent:** Lower your hips until both knees are bent at approximately **90-degree angles**.\n- **The Transition:** Drive through your front heel to stand up, bringing your back foot forward to step directly into the next lunge."
     },
     {
       "categories": [
@@ -1725,53 +1475,14 @@
         "Preacher Bench"
       ],
       "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
+      "label": "Preacher curl",
       "muscles": [
         "Biceps"
       ],
-      "name": "Preacher Curl, DB",
-      "notes": "Roman chair, curl one dumbbell at a time.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 10,
-          "trackingMode": "repsWeight",
-          "weight": 11.5,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ],
-      "videolink": "https://www.youtube.com/shorts/h7oPi4fCcs4"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Preacher Bench",
-        "EZ-Bar"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": true,
-      "muscles": [
-        "Biceps"
-      ],
-      "name": "Preacher curl, Ez Bar",
-      "notes": "Roman chair, curl one dumbbell at a time.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 6,
-          "trackingMode": "repsWeight",
-          "weight": 75,
-          "equipment": "EZ-Bar",
-          "unit": "lb"
-        }
-      ],
-      "videolink": "https://www.youtube.com/shorts/Lk3njKBdLNU"
+      "name": "Dumbbell Preacher Curl",
+      "notes": "Roman chair, curl one dumbbell at a time."
     },
     {
       "categories": [
@@ -1784,7 +1495,8 @@
       "isCustom": false,
       "isFavorited": true,
       "muscles": [
-        "Lats"
+        "Shoulders",
+        "Traps"
       ],
       "name": "Dumbbell rear delt row",
       "notes": "Hold a dumbbell in each hand. Bend at your hips to make your back almost parallel to the floor. Let your arms hang down. Keep your arms in line with your shoulders. bend and lift your elbows out to the sides until your upper arms are parallel to the floor. Slowly return and repeat"
@@ -1794,92 +1506,18 @@
         "strength"
       ],
       "equipment": [
-        "Dumbbell",
-        "Weight vest",
-        "Discs"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "isOneSided": true,
-      "muscles": [
-        "Glutes",
-        "Quads",
-        "Calves"
-      ],
-      "name": "Lunges",
-      "notes": "This exercise involves holding a dumbbell in each hand and stepping back into a lunge position, then returning to standing. It primarily targets the glutes, hamstrings, and quadriceps."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell",
-        "Weight vest",
-        "Discs"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "isOneSided": true,
-      "muscles": [
-        "Glutes",
-        "Quads",
-        "Calves"
-      ],
-      "name": "Lunges, pulse",
-      "notes": "This exercise involves holding a dumbbell in each hand and stepping back into a lunge position, then returning to standing. It primarily targets the glutes, hamstrings, and quadriceps."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell",
-        "Weight vest",
-        "Discs"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "isOneSided": true,
-      "muscles": [
-        "Glutes",
-        "Quads",
-        "Calves"
-      ],
-      "name": "Lunges, hold",
-      "notes": "This exercise involves holding a dumbbell in each hand and stepping back into a lunge position, then returning to standing. It primarily targets the glutes, hamstrings, and quadriceps."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
         "Dumbbell"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
       "muscles": [
-        "Traps"
+        "Glutes",
+        "Quads",
+        "Calves"
       ],
-      "name": "Shrug Rolling Backward",
-      "notes": "Dumbbell each hand, shrug up, rotate backward.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 12,
-          "trackingMode": "repsWeight",
-          "weight": 18,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "name": "Dumbbell Rear Lunge",
+      "notes": "This exercise involves holding a dumbbell in each hand and stepping back into a lunge position, then returning to standing. It primarily targets the glutes, hamstrings, and quadriceps."
     },
     {
       "categories": [
@@ -1891,21 +1529,47 @@
       "icon": "figure.strengthtraining.traditional",
       "isCustom": true,
       "isFavorited": true,
+      "label": "Rolling Shrug back",
       "muscles": [
         "Traps"
       ],
-      "name": "Shrug Rolling Forward",
-      "notes": "Dumbbell each hand, shrug up, rotate Forward.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 12,
-          "trackingMode": "repsWeight",
-          "weight": 18,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "name": "Rolling Shrug (Backward Rotation)",
+      "notes": "Dumbbell each hand, shrug up, rotate backward."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "Rolling Shrug front",
+      "muscles": [
+        "Traps"
+      ],
+      "name": "Rolling Shrug (Forward Rotation)",
+      "notes": "Dumbbell each hand, shrug up, rotate forward."
+    },
+    {
+      "categories": [
+        "strength",
+        "physio"
+      ],
+      "equipment": [
+        "Dumbbell"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Glutes",
+        "Hamstrings"
+      ],
+      "name": "Dumbbell Romanian Deadlift",
+      "notes": "This exercise involves holding a dumbbell in each hand and bending forward at the hips while keeping the back straight, then returning to a standing position. It primarily targets the hamstrings and glutes."
     },
     {
       "categories": [
@@ -1917,11 +1581,10 @@
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "isOneSided": true,
       "muscles": [
         "Obliques"
       ],
-      "name": "Side Bend, DB",
+      "name": "Dumbbell Side Bend",
       "notes": "This exercise involves holding a dumbbell in one hand and bending sideways to work the oblique muscles on the side of the body. It can be done standing or seated and is often used as a core strengthening exercise."
     },
     {
@@ -1929,20 +1592,17 @@
         "strength"
       ],
       "equipment": [
-        "Dumbbell",
-        "Discs",
-        "Weight vest"
+        "Dumbbell"
       ],
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
-      "isOneSided": true,
       "muscles": [
         "Glutes",
         "Hamstrings",
         "Quads"
       ],
-      "name": "Side Squat",
+      "name": "Dumbbell Side Squat",
       "notes": "This exercise involves holding a dumbbell in one hand and performing a squat while stepping to the side. It targets the legs, glutes, and core muscles."
     },
     {
@@ -1954,23 +1614,31 @@
         "Bench"
       ],
       "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
       "muscles": [
         "Triceps"
       ],
       "name": "Dumbbell Skull Crusher ",
-      "notes": "hammer grip, two dumbbells, lower toward head elbows back, press up.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 7,
-          "trackingMode": "repsWeight",
-          "weight": 11.5,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "notes": "hammer grip, two dumbbells, lower toward head elbows back, press up."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Glutes",
+        "Hamstrings",
+        "Quads"
+      ],
+      "name": "Dumbbell sumo deadlift",
+      "notes": "Lower your dumbbell to the ground between your legs. Assume a wide stance and with a straight back squat down. With the dumbbell standing upright, grip it by the top of the ‘head’ (picture 1).Keeping your chest up and core braced, push the floor away, driving back upwards to a standing position (picture 2). Repeat. If you can easily achieve 20-30 reps, use two dumbbells."
     },
     {
       "categories": [
@@ -1985,7 +1653,7 @@
       "muscles": [
         "Biceps"
       ],
-      "name": " bicep curls, wide",
+      "name": "Dumbbell wide bicep curls",
       "notes": "Hold a dumbbell in each hand with your hands slightly wider than shoulder-width apart and palms facing forward.\nBend your elbows and lift the dumbbells to your shoulders. Slowly return and repeat."
     },
     {
@@ -2013,48 +1681,14 @@
         "Gym mat"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
+      "label": "figure 4",
       "muscles": [
         "Abs"
       ],
-      "name": "Figure-4",
-      "notes": "One leg bent in figure-4, other leg straight. raise straight leg"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Gym mat"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "isOneSided": true,
-      "muscles": [
-        "Abs"
-      ],
-      "name": "Figure-4, raise",
-      "notes": "One leg bent in figure-4, other leg straight. raise straight leg, raise butt at the end"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Gym mat"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "isOneSided": true,
-      "muscles": [
-        "Abs"
-      ],
-      "name": "Figure-4, pulse",
-      "notes": "One leg bent in figure-4, other leg straight. raise straight leg, pulse butt up down"
+      "name": "Figure-4 Crunch",
+      "notes": "One leg bent in figure-4, other leg straight. Crunch toward straight leg."
     },
     {
       "categories": [
@@ -2068,7 +1702,10 @@
       "isCustom": false,
       "isFavorited": true,
       "muscles": [
-        "Chest"
+        "Abs",
+        "Chest",
+        "Shoulders",
+        "Triceps"
       ],
       "name": "Finger Pushup",
       "notes": "1. Hand Positioning:\n- Start in a plank position with your hands directly beneath your shoulders.\n- Spread your fingers wide apart, placing them firmly on the ground.\n2. Finger Placement:\n- Gradually lift your palms off the ground, shifting the weight onto your fingers.\n- Focus on distributing the load evenly across your fingertips and thumbs.\n3. Body Alignment:\n- Maintain a straight line from head to heels to engage your core.\n- Keep your body in a controlled and stable position throughout the exercise.\n4. Lowering Phase:\n- Slowly bend your elbows, lowering your chest towards the ground.\n- Ensure controlled movement, maintaining stability on your fingertips.\n5. Pushing Up:\n- Press through your fingertips to straighten your arms, returning to the starting position.\n- Emphasize the engagement of your fingers and thumbs throughout the push-up."
@@ -2082,14 +1719,13 @@
         "Mini Loop Resistance"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "isOneSided": true,
+      "label": "Ground routine (round 2)",
       "muscles": [
         "Glutes"
       ],
-      "name": "Fire Hydrant",
+      "name": "Fire Hydrant (Bent Knee Sideways)",
       "notes": "All fours, knee bent, lift leg out to the side."
     },
     {
@@ -2097,52 +1733,12 @@
         "strength"
       ],
       "equipment": [
-        "Gym mat",
-        "Mini Loop Resistance"
+        "Gym mat"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "isOneSided": true,
-      "muscles": [
-        "Glutes"
-      ],
-      "name": "Fire Hydrant, Pulse",
-      "notes": "All fours, knee bent, lift leg out to the side. pulse movement on top"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Gym mat",
-        "Mini Loop Resistance"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "isOneSided": true,
-      "muscles": [
-        "Glutes"
-      ],
-      "name": "Fire Hydrant, Hold",
-      "notes": "All fours, knee bent, lift leg out to the side. Hold leg up"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Gym mat",
-        "Mini Loop Resistance"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "isOneSided": true,
+      "label": "Ground routine (round 3)",
       "muscles": [
         "Glutes"
       ],
@@ -2154,122 +1750,65 @@
         "strength"
       ],
       "equipment": [
-        "Gym mat",
-        "Mini Loop Resistance"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "isOneSided": true,
-      "muscles": [
-        "Glutes"
-      ],
-      "name": "Fire Hydrant to Extension, pulse",
-      "notes": "All fours, lift bent knee to side, extend and close leg straight"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Gym mat",
-        "Mini Loop Resistance"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "isOneSided": true,
-      "muscles": [
-        "Glutes"
-      ],
-      "name": "Fire Hydrant Extension Hold",
-      "notes": "All fours, lift bent knee to side, extend leg straight, rHold"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Gym mat",
-        "Discs",
-        "Dumbbell"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "muscles": [
-        "Abs"
-      ],
-      "name": "Flat Leg Crunch",
-      "notes": "Legs straight and relaxed on floor. Short-range crunch, upper abs focus."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Gym mat",
-        "Discs",
-        "Dumbbell"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "muscles": [
-        "Abs"
-      ],
-      "name": "Flat Leg Crunch Hold",
-      "notes": "Legs straight and relaxed on floor. Short-range crunch, upper abs focus."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Gym mat",
-        "Discs",
-        "Dumbbell"
+        "Gym mat"
       ],
       "icon": "figure.core.training",
       "isCustom": true,
       "isFavorited": true,
-      "allowsBodyweight": true,
+      "label": "flat crunch",
       "muscles": [
         "Abs"
       ],
-      "name": "Flat Leg Crunch, Pulse",
+      "name": "Flat Leg Crunch, Basic (Straight Relaxed Legs)",
       "notes": "Legs straight and relaxed on floor. Short-range crunch, upper abs focus."
     },
     {
       "categories": [
         "strength"
       ],
+      "equipment": [],
+      "icon": "figure.core.training",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "flat crunch hold",
+      "muscles": [
+        "Abs"
+      ],
+      "name": "Flat Leg Crunch, Hold (Straight Relaxed Legs)",
+      "notes": "Legs straight and relaxed on floor. Hold at top."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [],
+      "icon": "figure.core.training",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "flat crunch pulse",
+      "muscles": [
+        "Abs"
+      ],
+      "name": "Flat Leg Crunch, Pulse (Straight Relaxed Legs)",
+      "notes": "Legs straight and relaxed on floor. Small, fast pulses at top."
+    },
+    {
+      "categories": [
+        "calisthenics",
+        "strength"
+      ],
       "equipment": [
-        "Dumbbell",
         "Bench"
       ],
-      "icon": "figure.cooldown",
+      "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
       "muscles": [
-        "Chest"
+        "Shoulders",
+        "Triceps"
       ],
-      "name": "Chest Fly",
-      "notes": "Take two dumbbells and lay on a bench, make sure the feet are firmly on the ground and your back is not arched, but has good contact with the bench. The arms are stretched in front of you, about shoulder wide. Bend now the arms a bit and let them down with a half-circle movement to the side. Without changing the angle of the elbow bring them in a fluid movement back up.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 6,
-          "trackingMode": "repsWeight",
-          "weight": 16,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "name": "bench dips",
+      "notes": "Starting position:\n\nSit with your arms behind you, supporting your back.Your fingers should point forward.Your knees should be bent, feet together.\n\nSteps:\n\n1. Raise your hips off the ground, straightening your arms.\n2. Bend your elbows, bringing your hips down.\n3. Straighten your arms, returning to the previous position.\n4. Repeat steps 2 and 3.\n\nNotes:\n\nThe exercise's difficulty depends on how high you bring your hips."
     },
     {
       "categories": [
@@ -2285,45 +1824,8 @@
       "muscles": [
         "Chest"
       ],
-      "name": "Chest Fly, Inverted",
-      "notes": "Take two dumbbells and lay on a bench, make sure the feet are firmly on the ground and your back is not arched, but has good contact with the bench. The arms are stretched in front of you, about shoulder wide. Bend now the arms a bit and let them down with a half-circle movement to the side. Without changing the angle of the elbow bring them in a fluid movement back up.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 8,
-          "trackingMode": "repsWeight",
-          "weight": 13.5,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell",
-        "Bench"
-      ],
-      "icon": "figure.cooldown",
-      "isCustom": false,
-      "isFavorited": true,
-      "muscles": [
-        "Chest"
-      ],
-      "name": "Chest Fly, inclined",
-      "notes": "Take two dumbbells and lay on a bench, make sure the feet are firmly on the ground and your back is not arched, but has good contact with the bench. The arms are stretched in front of you, about shoulder wide. Bend now the arms a bit and let them down with a half-circle movement to the side. Without changing the angle of the elbow bring them in a fluid movement back up.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 8,
-          "trackingMode": "repsWeight",
-          "weight": 18,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "name": "Fly With Dumbbells",
+      "notes": "Take two dumbbells and lay on a bench, make sure the feet are firmly on the ground and your back is not arched, but has good contact with the bench. The arms are stretched in front of you, about shoulder wide. Bend now the arms a bit and let them down with a half-circle movement to the side. Without changing the angle of the elbow bring them in a fluid movement back up."
     },
     {
       "categories": [
@@ -2355,18 +1857,26 @@
       "muscles": [
         "Shoulders"
       ],
-      "name": "Front Raises Alternated",
-      "notes": "To execute the exercise, the lifter stands with their feet shoulder width apart and weights or resistance handles held by their side with a pronated (overhand) grip.\n\nThe movement is to bring the arms up in front of the body to eye level and with only a slight bend in the elbow. This isolates the anterior deltoid muscle (front of the shoulder) and uses the anterior deltoid to lift the weight.\n\nWhen lifting it is important to keep the body still so the anterior deltoid is fully utilised; if the weight cannot be lifted by standing still then it is too heavy and a lower weight is needed. It is important to keep a slight bend in the elbow when lifting as keeping the elbow locked will add stress to the elbow joint and could cause injury.\n\nA neutral grip, similar to that used in the hammer curl, can also be used. With this variation the weight is again raised to eye level, but out to a 45 degree angle from the front of the body. This may be beneficial for those with shoulder injuries, particularly those related to the rotator cuff.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 8,
-          "trackingMode": "repsWeight",
-          "weight": 11.5,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "name": "Front Raises",
+      "notes": "To execute the exercise, the lifter stands with their feet shoulder width apart and weights or resistance handles held by their side with a pronated (overhand) grip.\n\nThe movement is to bring the arms up in front of the body to eye level and with only a slight bend in the elbow. This isolates the anterior deltoid muscle (front of the shoulder) and uses the anterior deltoid to lift the weight.\n\nWhen lifting it is important to keep the body still so the anterior deltoid is fully utilised; if the weight cannot be lifted by standing still then it is too heavy and a lower weight is needed. It is important to keep a slight bend in the elbow when lifting as keeping the elbow locked will add stress to the elbow joint and could cause injury.\n\nA neutral grip, similar to that used in the hammer curl, can also be used. With this variation the weight is again raised to eye level, but out to a 45 degree angle from the front of the body. This may be beneficial for those with shoulder injuries, particularly those related to the rotator cuff."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Barbell"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Abs",
+        "Glutes",
+        "Quads"
+      ],
+      "name": "Front Squats",
+      "notes": "This variation of the squat trains the hamstrings and gluteus maximus. It also works the back extensors and abductors."
     },
     {
       "categories": [
@@ -2379,56 +1889,67 @@
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
       "muscles": [
         "Hamstrings"
       ],
-      "name": "Good Morning",
+      "name": "weighted Good Morning",
       "notes": "Stand with your feet more than shoulder-width apart (wider stance) and place your hands on your hips. Hinge at your hips and lower your upper body towards the ground while keeping your back straight then come back up."
     },
     {
       "categories": [
-        "physio"
+        "physio",
+        "strength"
       ],
       "equipment": [
         "Bench",
         "Resistance band"
       ],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
-      "label": "Band Chop w Outside Knee on Bench",
+      "label": "Band chop with outside knee on bench",
       "muscles": [
         "Obliques",
         "lower back",
         "Abs"
       ],
       "name": "Half-Kneeling Band Wood Chop (Outside Knee on Bench)",
-      "notes": "Half-kneeling with the outside knee up on a bench. Perform a diagonal chopping motion with the band.",
-      "videolink": "https://www.youtube.com/watch?v=3oX-e1Q1ijM"
+      "notes": "Half-kneeling with the outside knee up on a bench. Perform a diagonal chopping motion with the band."
     },
     {
       "categories": [
-        "physio"
+        "physio",
+        "strength"
       ],
       "equipment": [
         "Gym mat",
         "Resistance band"
       ],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
-      "label": "bench glute stretch w contralateral row",
+      "label": "Half kneeling rotational row cross body with contralateral glute stretch",
       "muscles": [
-        "lower back",
-        "Glutes",
         "Lats"
       ],
       "name": "Half-Kneeling Cross-Body Rotational Row with Contralateral Glute Stretch",
-      "notes": "Half-kneeling position, stretching the opposite-side glute, while performing a rotational cross-body row.",
-      "videolink": "https://www.youtube.com/watch?v=hI2irJkxBXw"
+      "notes": "Half-kneeling position, stretching the opposite-side glute, while performing a rotational cross-body row."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Biceps"
+      ],
+      "name": "Hammer Curls",
+      "notes": "- **Start:** Hold dumbbells at your sides with palms facing your torso.\n- **Curl:** Lift the weights toward your shoulders while maintaining the neutral grip (like holding a hammer).\n- **Squeeze:** Contract the biceps at the top without moving your elbows forward.\n- **Lower:** Slowly return to the starting position with full control."
     },
     {
       "categories": [
@@ -2439,12 +1960,11 @@
         "Rings"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
       "label": "Hanging Alternating Knee Raise",
       "muscles": [
-        "Abs",
-        "Obliques"
+        "Abs"
       ],
       "name": "Hanging Alternating Knee Raise",
       "notes": "Hang from bar, raise knees one at a time, alternating."
@@ -2458,7 +1978,7 @@
         "Rings"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
       "label": "Hanging Around the World",
       "muscles": [
@@ -2477,14 +1997,13 @@
         "Rings"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "label": "Hanging Knees Raise",
+      "label": "Hanging Double Knee Raise",
       "muscles": [
-        "Abs",
-        "Obliques"
+        "Abs"
       ],
-      "name": "Hanging Knees Raise",
+      "name": "Hanging Double Knee Raise",
       "notes": "Hang from bar, raise both knees together."
     },
     {
@@ -2496,12 +2015,13 @@
         "Rings"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
+      "label": "Hanging Hollow Hold (Arched, Still)",
       "muscles": [
         "Abs"
       ],
-      "name": "Hanging Hollow Hold",
+      "name": "Hanging Hollow Hold (Arched, Still)",
       "notes": "Hang from bar, hold body still in arched position."
     },
     {
@@ -2513,13 +2033,13 @@
         "Rings"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
       "label": "Hanging Straight Leg Raise",
       "muscles": [
         "Abs"
       ],
-      "name": "Hanging Leg Raise",
+      "name": "Hanging Straight Leg Raise",
       "notes": "Hang from bar, raise a straight leg in front."
     },
     {
@@ -2529,7 +2049,7 @@
       "equipment": [],
       "icon": "figure.run",
       "isCustom": false,
-      "isFavorited": false,
+      "isFavorited": true,
       "muscles": [
         "Abs",
         "Calves",
@@ -2564,120 +2084,18 @@
         "strength"
       ],
       "equipment": [
-        "Roman Chair",
-        "Discs"
+        "Roman Chair"
       ],
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
       "muscles": [
-        "lower back"
+        "Traps",
+        "lower back",
+        "Lats"
       ],
       "name": "Hyperextensions",
       "notes": "Lie on the roman chair with your navel at the front edge, allowing your upper body to hang freely. Tighten all your back muscles and raise your torso until you're horizontal, but no higher. Lower yourself slowly, maintaining a steady flow of muscles."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Roman Chair",
-        "Discs"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "muscles": [
-        "lower back"
-      ],
-      "name": "Hyperextension, Pulse",
-      "notes": "Lie on the roman chair with your navel at the front edge, allowing your upper body to hang freely. Tighten all your back muscles and raise your torso until you're horizontal, but no higher. Lower yourself slowly, maintaining a steady flow of muscles."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Roman Chair",
-        "Discs"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "muscles": [
-        "lower back"
-      ],
-      "name": "Hyperextensions Hold",
-      "notes": "Lie on the roman chair with your navel at the front edge, allowing your upper body to hang freely. Tighten all your back muscles and raise your torso until you're horizontal, but no higher. Lower yourself slowly, maintaining a steady flow of muscles."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Roman Chair",
-        "Discs"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "isOneSided": true,
-      "muscles": [
-        "lower back"
-      ],
-      "name": "Hyperextensions One leg",
-      "notes": "Lie on the roman chair with your navel at the front edge, allowing your upper body to hang freely. Tighten all your back muscles and raise your torso until you're horizontal, but no higher. Lower yourself slowly, maintaining a steady flow of muscles."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Roman Chair",
-        "Discs"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "muscles": [
-        "lower back"
-      ],
-      "name": "Hyperextensions Rounded spine",
-      "notes": "Rounded spine when going up and down to full extension"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell",
-        "Incline bench",
-        "Discs"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": true,
-      "defaultEquipment": "Dumbbell",
-      "muscles": [
-        "Lats"
-      ],
-      "name": "Inclined Reverse Fly",
-      "notes": "The incline dumbbell reverse fly is an upper-body exercise targeting the posterior or rear deltoids, as well as the postural muscles of the upper back. Because it targets such small muscles, this exercise is usually performed with light weight for high reps, such as 10-15 reps per set or more.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 8,
-          "trackingMode": "repsWeight",
-          "weight": 9,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
     },
     {
       "categories": [
@@ -2691,7 +2109,47 @@
       "isCustom": false,
       "isFavorited": true,
       "muscles": [
+        "Chest",
+        "Shoulders",
+        "Triceps"
+      ],
+      "name": "45 Press - Dumbbell",
+      "notes": "This is a variation of the flat bench press designed to emphasize the clavicular head of the pectoralis major (the upper portion). By tilting the torso, the angle of the push changes, shifting more tension to the upper chest and shoulders, which helps achieve a more aesthetic, balanced, and three-dimensional development of the torso.\n\n1. Bench Adjustment and Preparation: Set the bench to an incline of between 30 and 45 degrees (an incline greater than 45° will place too much strain on the shoulders and reduce the stimulus to the chest). Sit down with a dumbbell on each thigh.\n\n2. Starting position: Lean back, resting your back against the bench, while using your knees one after the other to push the dumbbells upward to shoulder height.\n\n3. Anatomical Stabilization: Plant your feet firmly on the floor. Retract your scapulas (bring your shoulder blades together and press them into the bench) to protect your shoulders and stabilize the load.\n\n4. Eccentric Phase (Lowering): Lower the dumbbells slowly and in a controlled manner toward the upper part of your chest. Your elbows should not splay out to the sides (90°); maintain a safe angle of about 45 to 60 degrees relative to your torso.\n\n5. Concentric Phase (Lift): Push the dumbbells vertically upward as you exhale. Follow a slightly converging path (without letting them touch at the top). Stop the movement just before locking out your elbows to maintain muscle tension in the upper pectoral."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell",
+        "Incline bench"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Shoulders",
+        "Traps",
         "Lats"
+      ],
+      "name": "Incline Bench Reverse Fly",
+      "notes": "The incline dumbbell reverse fly is an upper-body exercise targeting the posterior or rear deltoids, as well as the postural muscles of the upper back. Because it targets such small muscles, this exercise is usually performed with light weight for high reps, such as 10-15 reps per set or more."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell",
+        "Incline bench"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Biceps",
+        "Lats",
+        "Traps"
       ],
       "name": "Incline Chest-Supported Dumbbell Row",
       "notes": "Set up an adjustable bench at a 45-degree angle.\nLay on your stomach with your head hanging just above the edge of the bench.\nGrab a dumbbell in each hand and set up with a good posture – core and lats engaged and shoulders neutral.\nRow the dumbbells toward the top of the stomach and squeeze the back at the top of the rep.\nFinally, lower the dumbbells back to the starting position and repeat until all reps are completed."
@@ -2705,7 +2163,25 @@
         "Dumbbell"
       ],
       "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "45° fly",
+      "muscles": [
+        "Chest"
+      ],
+      "name": "Incline Dumbbell Fly (45°)",
+      "notes": "45° incline bench, arms extended slightly bent, open and close to sides."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Incline bench",
+        "Dumbbell"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": true,
       "isFavorited": true,
       "label": "\"reverse Fly\" triceps",
       "muscles": [
@@ -2716,22 +2192,54 @@
     },
     {
       "categories": [
+        "calisthenics",
         "strength"
       ],
       "equipment": [
-        "Dumbbell",
-        "Discs"
+        "Rings"
+      ],
+      "icon": "figure.core.training",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Abs",
+        "Biceps",
+        "Chest",
+        "Lats"
+      ],
+      "name": "Inverted Rows",
+      "notes": "Maintain a straight body, retract your shoulder blades, and pull your\nchest to the bar for an effective back and upper body workout."
+    },
+    {
+      "categories": [
+        "calisthenics",
+        "strength"
+      ],
+      "equipment": [],
+      "icon": "figure.core.training",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Glutes",
+        "Quads"
+      ],
+      "name": "Isometric Squat to Failure",
+      "notes": "sometric Squat to Failure: A Strength Training Technique\n\nDefinition\n\nThe isometric squat to failure is a variation of the squat exercise where you hold a static squat position at a specific angle, maintaining the position until your muscles can no longer sustain the contraction."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Kettlebell"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "isOneSided": true,
-      "defaultEquipment": "Dumbbell",
       "muscles": [
         "Glutes"
       ],
-      "name": "One Legged Deadlift",
+      "name": "Kettlebell One Legged Deadlift",
       "notes": "This exercise involves holding a kettlebell in one hand and standing on one leg while bending forward to touch the kettlebell to the ground. It targets the hamstrings, glutes, and lower back while also improving balance and stability."
     },
     {
@@ -2742,16 +2250,32 @@
         "Dumbbell"
       ],
       "icon": "figure.flexibility",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "foot loaded split stand hip rotation",
+      "muscles": [
+        "Glutes"
+      ],
+      "name": "KB-Loaded Split Stance Hip Rotation",
+      "notes": "DB stance holding a kettlebell. Rotate the hips."
+    },
+    {
+      "categories": [
+        "strength",
+        "calisthenics"
+      ],
+      "equipment": [
+        "Rings"
+      ],
+      "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "isOneSided": true,
       "muscles": [
-        "Glutes",
-        "lower back"
+        "Abs",
+        "Obliques"
       ],
-      "name": "Loaded Split Stance Hip Rotation",
-      "notes": "stance holding a kettlebell. Rotate the hips.",
-      "videolink": "https://www.youtube.com/watch?v=JwEoH1EWsHk"
+      "name": "Knee Raises",
+      "notes": "The 90° leg raise on the bar is a very intense exercise that involves all the abdominal muscles."
     },
     {
       "categories": [
@@ -2763,10 +2287,10 @@
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
-      "isOneSided": true,
       "label": "glutes kickback",
       "muscles": [
-        "Glutes"
+        "Glutes",
+        "Hamstrings"
       ],
       "name": "Kneeling kickbacks",
       "notes": "Starting position:\n\nGet down on all fours.\n\nSteps:\n\n1. Push one foot back until fully extended, concentrating on the gluteus muscles.\n2. Stay for one second, then return to the initial position.\n3. Repeat, alternating feet."
@@ -2782,7 +2306,6 @@
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
-      "isOneSided": true,
       "muscles": [
         "Calves",
         "Hamstrings"
@@ -2804,17 +2327,44 @@
         "Shoulders"
       ],
       "name": "Lateral Raises",
-      "notes": "This exercise works the deltoid muscle of the shoulder. The movement starts with the arms straight, and the hands holding weights at the sides or in front of the body. Body is in a slight forward-leaning position with hips and knees bent a little. Arms are kept straight or slightly bent, and raised through an arc of movement in the coronal plane that terminates when the hands are at approximately shoulder height. Weights are lowered to the starting position, completing one rep. When using a cable machine the individual stands with the coronal plane in line with the pulley, which is at or near the ground.[9] The exercise can be completed one shoulder at a time (with the other hand used to stabilize the body against the weight moved), or with both hands simultaneously if two parallel pulleys are available.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 9,
-          "trackingMode": "repsWeight",
-          "weight": 11.5,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "notes": "This exercise works the deltoid muscle of the shoulder. The movement starts with the arms straight, and the hands holding weights at the sides or in front of the body. Body is in a slight forward-leaning position with hips and knees bent a little. Arms are kept straight or slightly bent, and raised through an arc of movement in the coronal plane that terminates when the hands are at approximately shoulder height. Weights are lowered to the starting position, completing one rep. When using a cable machine the individual stands with the coronal plane in line with the pulley, which is at or near the ground.[9] The exercise can be completed one shoulder at a time (with the other hand used to stabilize the body against the weight moved), or with both hands simultaneously if two parallel pulleys are available."
+    },
+    {
+      "categories": [
+        "strength",
+        "calisthenics"
+      ],
+      "equipment": [
+        "Rings"
+      ],
+      "icon": "figure.cooldown",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Abs",
+        "Obliques",
+        "Quads"
+      ],
+      "name": "Hanging Leg raises ",
+      "notes": "with a firm grip with both hands on the bar, raise your outstretched legs, until you reach a 90° angle with your torso."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell"
+      ],
+      "icon": "figure.core.training",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Glutes",
+        "Hamstrings",
+        "Quads"
+      ],
+      "name": "DB Lunges",
+      "notes": "Starting position:\n\nStand with back straight.\n\nSteps:\n\n1. Take a large step forward with your left leg.\n2. Bring your pelvis down until you almost touch the floor with your right knee.\n3. Bring your pelvis back up.\n4. Return to the starting position by stepping back.\n5. Repeat, switching legs each time."
     },
     {
       "categories": [
@@ -2825,45 +2375,48 @@
         "Bench"
       ],
       "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
-      "label": "one DB cross",
+      "label": "1db cross",
       "muscles": [
         "Triceps"
       ],
       "name": "Lying Dumbbell Triceps Extension (Cross-Face)",
-      "notes": "Lying down, lower dumbbell across face, extend back up.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 9,
-          "trackingMode": "repsWeight",
-          "weight": 10,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "notes": "Lying down, lower dumbbell across face, extend back up."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [],
+      "icon": "figure.core.training",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Abs"
+      ],
+      "name": "Medicine ball booklet crunch",
+      "notes": "Using a medicine ball as an overload will make the exercise heavier."
     },
     {
       "categories": [
         "strength"
       ],
       "equipment": [
-        "Discs"
+        "Barbell"
       ],
-      "icon": "figure.core.training",
+      "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
       "muscles": [
-        "Abs"
+        "Shoulders"
       ],
-      "name": "V ups",
-      "notes": "Using a medicine ball as an overload will make the exercise heavier."
+      "name": "Overhead Barbell Press",
+      "notes": "- **Setup:** Stand with feet together and grip the bar slightly wider than shoulders.\n- **Position:** Rest the bar on your upper chest.\n- **Press:** Brace your core and push the bar straight up until your arms lock out.\n- **Finish:** Control the bar back down to your chest.\n- https://youtu.be/ZXpdJOLNoWw?si=u27cGyODoblXHBu1"
     },
     {
       "categories": [
+        "mobility",
         "strength"
       ],
       "equipment": [
@@ -2874,33 +2427,20 @@
       "isCustom": false,
       "isFavorited": true,
       "muscles": [
-        "Triceps"
+        "Traps"
       ],
       "name": "Overhead Triceps Extension",
-      "notes": "**Overhead Triceps Extension with EZ Bar – Quick Guide**\n\nThe **overhead position** *emphasizes the long head* of the triceps (because it's stretched under load), the exercise **does engage all three triceps heads** (long, lateral, and medial) to some degree during extension.\n\n1. **Setup**:\n   Sit on a bench (or stand) and hold an EZ bar with a narrow, overhand\n   grip. Lift the bar overhead, arms fully extended. Keep your core tight\n   and elbows close to your head.\n2. **Execution**:\n   Slowly lower the bar behind your head by bending your elbows until they\n   reach ~90°. Keep elbows pointed forward (not flaring out).\n3. **Finish**: Extend your arms back up to the starting position, squeezing your triceps at the top.\n\n**Tips**:\n\n* Control the movement to avoid straining your shoulders.\n* Use a moderate weight for full range of motion.\n* Keep your back straight and avoid arching.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 6,
-          "trackingMode": "repsWeight",
-          "weight": 50,
-          "equipment": "EZ-Bar",
-          "unit": "lb"
-        }
-      ]
+      "notes": "**Overhead Triceps Extension with EZ Bar – Quick Guide**\n\nThe **overhead position** *emphasizes the long head* of the triceps (because it's stretched under load), the exercise **does engage all three triceps heads** (long, lateral, and medial) to some degree during extension.\n\n1. **Setup**:\n   Sit on a bench (or stand) and hold an EZ bar with a narrow, overhand\n   grip. Lift the bar overhead, arms fully extended. Keep your core tight\n   and elbows close to your head.\n2. **Execution**:\n   Slowly lower the bar behind your head by bending your elbows until they\n   reach ~90°. Keep elbows pointed forward (not flaring out).\n3. **Finish**: Extend your arms back up to the starting position, squeezing your triceps at the top.\n\n**Tips**:\n\n* Control the movement to avoid straining your shoulders.\n* Use a moderate weight for full range of motion.\n* Keep your back straight and avoid arching."
     },
     {
       "categories": [
         "calisthenics",
         "strength"
       ],
-      "equipment": [
-        "Weight vest"
-      ],
+      "equipment": [],
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
       "muscles": [
         "Shoulders"
       ],
@@ -2912,18 +2452,14 @@
         "calisthenics",
         "strength"
       ],
-      "equipment": [
-        "Discs",
-        "Dumbbell",
-        "Weight vest"
-      ],
+      "equipment": [],
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
-      "defaultEquipment": "Dumbbell",
       "muscles": [
         "Glutes",
-        "Hamstrings"
+        "Hamstrings",
+        "Shoulders"
       ],
       "name": "Pistol Squat",
       "notes": "1. Stand with feet hip-width apart, toes pointed forward, and chest tall.\n2. Extend your leg straight out; extend both arms in front of you, at shoulder level. Brace your core and look straight ahead.\n3. Slowly squat down.\n4. (optional) pause at the bottom.\n\nKeep your (free) leg and arms extended for the whole duration."
@@ -2932,9 +2468,7 @@
       "categories": [
         "strength"
       ],
-      "equipment": [
-        "Gym mat"
-      ],
+      "equipment": [],
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
@@ -2952,9 +2486,7 @@
       "categories": [
         "strength"
       ],
-      "equipment": [
-        "Gym mat"
-      ],
+      "equipment": [],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
@@ -2972,16 +2504,33 @@
         "strength"
       ],
       "equipment": [
+        "EZ-Bar",
+        "Preacher Bench"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Biceps"
+      ],
+      "name": "Preacher Curls",
+      "notes": "Place the EZ curl bar on the rest handles in front of the preacher bench. Lean over the bench and grab the EZ curl bar with palms up. Sit down on the preacher bench seat so your upper arms rest on top of the pad and your chest is pressed against the pad. Lower the weight until your elbows are extended and arms are straight. Bring the weights back up to the starting point by contracting biceps. Repeat"
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
         "Gym mat"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "label": "lower back crunch arms backward",
+      "label": "lower back routine (arms extended backward - normal)",
       "muscles": [
         "lower back"
       ],
-      "name": "Prone Extension with Arm Reach",
+      "name": "Prone Back Extension with Arm Reach, Basic",
       "notes": "Lying face-down, lift torso, then extend arms backward."
     },
     {
@@ -2992,14 +2541,14 @@
         "Gym mat"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "label": "lower back crunch arms backward - pulse",
+      "label": "lower back routine (arms extended backward - hold)",
       "muscles": [
         "lower back"
       ],
-      "name": "Prone Extension with Arm Reach, Pulse",
-      "notes": "Lying face-down, lift torso, then extend arms backward."
+      "name": "Prone Back Extension with Arm Reach, Hold",
+      "notes": "Lying face-down, lift torso with arms extended backward. Hold."
     },
     {
       "categories": [
@@ -3009,14 +2558,14 @@
         "Gym mat"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "label": "lower back crunch arms backward - Hold",
+      "label": "lower back routine (arms extended backward - pump)",
       "muscles": [
         "lower back"
       ],
-      "name": "Prone Extension with Arm Reach, Hold",
-      "notes": "Lying face-down, lift torso, then extend arms backward."
+      "name": "Prone Back Extension with Arm Reach, Pulse",
+      "notes": "Lying face-down, lift torso with arms extended backward. Small pulses extending and closing arms with a slight torso movement."
     },
     {
       "categories": [
@@ -3026,9 +2575,9 @@
         "Gym mat"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "label": "lower back side to side",
+      "label": "lower back routine (side to side - normal)",
       "muscles": [
         "lower back"
       ],
@@ -3043,31 +2592,14 @@
         "Gym mat"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "label": "lower back side to side, Alt. pulse",
-      "muscles": [
-        "lower back"
-      ],
-      "name": "Prone Back Extension with Side Bend, Pulse",
-      "notes": "Lying face-down, lift torso and move side to side, 3 for each side"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Gym mat"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "label": "lower back side to side, Hold",
+      "label": "lower back routine (side to side - hold)",
       "muscles": [
         "lower back"
       ],
       "name": "Prone Back Extension with Side Bend, Hold",
-      "notes": "Lying face-down, lift torso and move side to side, Hold up side to side"
+      "notes": "Lying face-down, lift torso and hold up. Move side to side while staying raised."
     },
     {
       "categories": [
@@ -3077,9 +2609,26 @@
         "Gym mat"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "label": "lower back crunch",
+      "label": "lower back routine (side to side - pump, 3 per side)",
+      "muscles": [
+        "lower back"
+      ],
+      "name": "Prone Back Extension with Side Bend, Pulse",
+      "notes": "Lying face-down, lift torso. Small pulses side to side, 3 per side."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Gym mat"
+      ],
+      "icon": "figure.core.training",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "lower back routine (lying on stomach, lift torso - normal)",
       "muscles": [
         "lower back"
       ],
@@ -3094,14 +2643,14 @@
         "Gym mat"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "label": "lower back crunch, Pulse",
+      "label": "lower back routine (lying on stomach, lift torso - hold)",
       "muscles": [
         "lower back"
       ],
-      "name": "Prone Back Extension, Pulse",
-      "notes": "Lying face-down, lift torso up and down using lower back."
+      "name": "Prone Back Extension, Hold",
+      "notes": "Lying face-down, lift torso. Hold at the top."
     },
     {
       "categories": [
@@ -3111,14 +2660,14 @@
         "Gym mat"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "label": "lower back crunch, Hold",
+      "label": "lower back routine (lying on stomach, lift torso - pump)",
       "muscles": [
         "lower back"
       ],
-      "name": "Prone Back Extension, Hold",
-      "notes": "Lying face-down, lift torso up and down using lower back."
+      "name": "Prone Back Extension, Pulse",
+      "notes": "Lying face-down, lift torso. Small, fast pulses at the top."
     },
     {
       "categories": [
@@ -3127,40 +2676,37 @@
       ],
       "equipment": [
         "Rings",
-        "Weight belt",
-        "Weight vest"
+        "Weight belt"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "defaultEquipment": "Weight belt",
       "muscles": [
-        "Lats"
+        "Biceps",
+        "Lats",
+        "Shoulders",
+        "Traps"
       ],
       "name": "Pull-ups",
       "notes": "Grab the pull up bar with a wide grip, the body is hanging freely. Keep your chest out and pull yourself up till your chin reaches the bar or it touches your neck, if you want to pull behind you. Go with a slow and controlled movement down, always keeping the chest out."
     },
     {
       "categories": [
-        "strength",
-        "calisthenics"
+        "calisthenics",
+        "strength"
       ],
       "equipment": [
-        "Rings",
-        "Weight belt",
-        "Weight vest"
+        "Dumbbell"
       ],
-      "icon": "figure.strengthtraining.traditional",
+      "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "defaultEquipment": "Weight belt",
       "muscles": [
-        "Lats"
+        "Glutes",
+        "Traps"
       ],
-      "name": "Archer Pull-ups",
-      "notes": "Grab the pull up bar with a wide grip, the body is hanging freely. Keep your chest out and pull yourself up till your chin reaches the bar or it touches your neck, if you want to pull behind you. Go with a slow and controlled movement down, always keeping the chest out."
+      "name": "Push Press",
+      "notes": "Clean your dumbbells onto your shoulders, palms facing in. Take a breath and brace your core. (picture 1)Dip at the knees and use your legs to help (picture 2) press your dumbbells overhead. Lower under control with a slow tempo to your shoulders and repeat."
     },
     {
       "categories": [
@@ -3173,29 +2719,14 @@
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
+      "label": "Push ups",
       "muscles": [
-        "Chest"
+        "Abs",
+        "Chest",
+        "Shoulders",
+        "Triceps"
       ],
-      "name": "Push Up",
-      "notes": "The push-up is a fundamental bodyweight exercise that targets the chest, arms, and shoulders while engaging the core for stability. It requires no equipment and is excellent for building upper body strength.\n\nInstructions:\n\n1. Start in a plank position with hands placed slightly wider than shoulder-width, feet together, and body in a straight line from head to heels.\n2. Engage your core and lower your body by bending your elbows, keeping them close to your body or flared slightly outward.\n3. Lower until your chest nearly touches the ground while maintaining a neutral spine.\n4. Push through your palms to return to the starting position, fully extending your arms."
-    },
-    {
-      "categories": [
-        "calisthenics",
-        "strength"
-      ],
-      "equipment": [
-        "Weight vest"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": true,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "muscles": [
-        "Chest"
-      ],
-      "name": "Archer Push-Up",
+      "name": "Push-Up",
       "notes": "The push-up is a fundamental bodyweight exercise that targets the chest, arms, and shoulders while engaging the core for stability. It requires no equipment and is excellent for building upper body strength.\n\nInstructions:\n\n1. Start in a plank position with hands placed slightly wider than shoulder-width, feet together, and body in a straight line from head to heels.\n2. Engage your core and lower your body by bending your elbows, keeping them close to your body or flared slightly outward.\n3. Lower until your chest nearly touches the ground while maintaining a neutral spine.\n4. Push through your palms to return to the starting position, fully extending your arms."
     },
     {
@@ -3210,9 +2741,11 @@
       "isCustom": false,
       "isFavorited": true,
       "muscles": [
-        "Chest"
+        "Chest",
+        "Shoulders",
+        "Triceps"
       ],
-      "name": "Push-Ups, Decline",
+      "name": "Push-Ups | Decline",
       "notes": "Decline push-ups are another modified version of the traditional push-up that target the upper body muscles in a different way. To perform a decline push-up, elevate your feet on an elevated surface, such as a bench, chair, or step, while placing your hands on the ground in a push-up position. Lower your body towards the ground while maintaining a straight line from your shoulders to your ankles, and then push back up to the starting position.\nUnlike the inclined push-up, the decline push-up places more emphasis on the shoulders and triceps, while still engaging the chest muscles to a lesser extent. By elevating your feet, you increase the difficulty of the exercise by placing more weight on your upper body, forcing your shoulders and triceps to work harder to push your body back up. The decline push-up can be a great way to challenge your upper body strength and improve your ability to perform other push-up variations. As with any exercise, be sure to use proper form and start with a height that is appropriate for your strength and fitness level."
     },
     {
@@ -3226,22 +2759,11 @@
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "label": "Reverse fly standing",
       "muscles": [
         "Lats"
       ],
       "name": "Rear Delt Raises",
-      "notes": "standing with the dumbbells on the floor bend over at 45 Degrees and then slowly raise each dumbbell to shoulder height and hold for a couple seconds before lowering to the starting position. use cench to put head if better",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 9,
-          "trackingMode": "repsWeight",
-          "weight": 8,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "notes": "standing with the dumbbells on the floor bend over at 45 Degrees and then slowly raise each dumbbell to shoulder height and hold for a couple seconds before lowering to the starting position. use cench to put head if better"
     },
     {
       "categories": [
@@ -3252,27 +2774,15 @@
         "Resistance band"
       ],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
       "label": "Abductor lounge with resistance band",
       "muscles": [
         "Glutes",
         "Abductors"
       ],
       "name": "Resistance Band Abductor Lunge",
-      "notes": "Lunge with a resistance band around the legs, engaging the hip abductors.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 12,
-          "trackingMode": "repsWeight",
-          "weight": 4,
-          "equipment": "Resistance band",
-          "unit": "lb"
-        }
-      ],
-      "videolink": "https://www.youtube.com/watch?v=oEUPlcrTJfA"
+      "notes": "Lunge with a resistance band around the legs, engaging the hip abductors."
     },
     {
       "categories": [
@@ -3282,14 +2792,14 @@
         "Resistance band"
       ],
       "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
+      "label": "In Resistance lounge",
       "muscles": [
         "Quads",
         "Glutes"
       ],
-      "name": "Lunge Inward Pull",
+      "name": "Resistance Band Lunge (Inward Pull)",
       "notes": "Lunge with band around front leg, pulling inward."
     },
     {
@@ -3300,15 +2810,15 @@
         "Resistance band"
       ],
       "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
+      "label": "Out resistance lounge",
       "muscles": [
-        "Quads",
-        "Glutes"
+        "Glutes",
+        "Quads"
       ],
-      "name": "Lunge Inward Pul, Pulse",
-      "notes": "Lunge with band around front leg, pulling inward."
+      "name": "Resistance Band Lunge (Outward Pull)",
+      "notes": "Lunge with band around front leg, pulling outward."
     },
     {
       "categories": [
@@ -3318,79 +2828,7 @@
         "Resistance band"
       ],
       "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": true,
-      "isOneSided": true,
-      "muscles": [
-        "Quads",
-        "Glutes"
-      ],
-      "name": "Lunge Inward Pull, Hold",
-      "notes": "Lunge with band around front leg, pulling inward."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Resistance band"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": true,
-      "isOneSided": true,
-      "muscles": [
-        "Quads",
-        "Glutes"
-      ],
-      "name": "Lunge Outward Pull",
-      "notes": "Lunge with band around front leg, pulling inward."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Resistance band"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": true,
-      "isOneSided": true,
-      "muscles": [
-        "Quads",
-        "Glutes"
-      ],
-      "name": "Lunge Outward Pull, Pulse",
-      "notes": "Lunge with band around front leg, pulling inward."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Resistance band"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
-      "isFavorited": true,
-      "isOneSided": true,
-      "muscles": [
-        "Quads",
-        "Glutes"
-      ],
-      "name": "Lunge Outward Pull, Hold",
-      "notes": "Lunge with band around front leg, pulling inward."
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Resistance band"
-      ],
-      "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
       "label": "Resistance pull",
       "muscles": [
@@ -3405,16 +2843,14 @@
       ],
       "equipment": [],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
       "label": "Reverse clamshell, using something between knee",
       "muscles": [
         "Glutes"
       ],
       "name": "Reverse Clamshell (Object Between Knees)",
-      "notes": "Side-lying, knees bent with an object held between them. Lift ankles apart, keeping knees together.",
-      "videolink": "https://www.youtube.com/watch?v=rgxjSqIY5TE&feature=youtu.be"
+      "notes": "Side-lying, knees bent with an object held between them. Lift ankles apart, keeping knees together."
     },
     {
       "categories": [
@@ -3436,32 +2872,84 @@
       "categories": [
         "strength"
       ],
-      "equipment": [
-        "TRX"
-      ],
+      "equipment": [],
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
       "muscles": [
-        "Hamstrings"
+        "Abs",
+        "Glutes",
+        "Quads"
       ],
-      "name": "TRX Fallback (Nordic-Style Hamstring Fallback)",
+      "name": "Reverse Nordic Curl",
       "notes": "Natural Leg Extension is alternative to Leg Extension machine with no equipment."
+    },
+    {
+      "categories": [
+        "calisthenics",
+        "strength"
+      ],
+      "equipment": [
+        "Rings",
+        "Weight belt"
+      ],
+      "icon": "figure.core.training",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "Ring Chin up",
+      "muscles": [
+        "Lats",
+        "Biceps"
+      ],
+      "name": "Ring Chin-Up",
+      "notes": ""
+    },
+    {
+      "categories": [
+        "calisthenics",
+        "strength"
+      ],
+      "equipment": [
+        "Weight belt",
+        "Rings"
+      ],
+      "icon": "figure.core.training",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "Ring Pull up",
+      "muscles": [
+        "Lats"
+      ],
+      "name": "Ring Pull-Up",
+      "notes": ""
     },
     {
       "categories": [
         "calisthenics"
       ],
       "equipment": [
-        "Rings",
-        "Weight vest",
-        "Weight belt"
+        "Rings"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "defaultEquipment": "Weight vest",
+      "label": "Ring pull",
+      "muscles": [
+        "Lats"
+      ],
+      "name": "Ring Row (Inverted Row)",
+      "notes": "Rings at knee height, legs extended, body flat. Pull body up."
+    },
+    {
+      "categories": [
+        "calisthenics"
+      ],
+      "equipment": [
+        "Rings"
+      ],
+      "icon": "figure.core.training",
+      "isCustom": true,
+      "isFavorited": true,
       "label": "ring hold",
       "muscles": [
         "Shoulders",
@@ -3477,15 +2965,11 @@
         "calisthenics"
       ],
       "equipment": [
-        "Rings",
-        "Weight vest",
-        "Weight belt"
+        "Rings"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "defaultEquipment": "Weight vest",
       "label": "T hold progression",
       "muscles": [
         "Shoulders"
@@ -3496,33 +2980,55 @@
     {
       "categories": [
         "strength",
-        "mobility",
-        "warmups"
+        "physio"
+      ],
+      "equipment": [
+        "Roman Chair"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "lower back on Romanian chair (rounded spine to go down)",
+      "muscles": [
+        "lower back"
+      ],
+      "name": "Roman Chair Hyperextension, Rounded Spine Descent",
+      "notes": "On Roman chair, round the spine while lowering down."
+    },
+    {
+      "categories": [
+        "physio",
+        "strength"
       ],
       "equipment": [
         "Gym mat",
         "Dumbbell"
       ],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
       "label": "Prevention",
       "muscles": [
         "Shoulders"
       ],
       "name": "Rotator Cuff Prevention Raise (Kneeling)",
-      "notes": "Kneeling, elbow on knee. Raise and lower arm rotating shoulder.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 10,
-          "trackingMode": "repsWeight",
-          "weight": 9,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "notes": "Kneeling, elbow on knee. Raise and lower arm rotating shoulder."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Mini Loop Resistance"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Glutes"
+      ],
+      "name": "band glute kickback",
+      "notes": "A rubber band glute kickback is an exercise performed on hands and knees, where you anchor a resistance band to your foot and kick your heel back and up, squeezing your glute at the top of the movement, while maintaining a stable core and flat back to target and strengthen the gluteal muscles."
     },
     {
       "categories": [
@@ -3532,9 +3038,8 @@
         "Resistance band"
       ],
       "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
       "muscles": [
         "Glutes"
       ],
@@ -3547,15 +3052,14 @@
         "strength"
       ],
       "equipment": [
-        "Discs",
-        "Dumbbell"
+        "Discs"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
       "muscles": [
         "Abs",
+        "Lats",
         "Obliques"
       ],
       "name": "Russian Twist",
@@ -3570,23 +3074,32 @@
         "Bench"
       ],
       "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
+      "label": "Db press 90° hands",
       "muscles": [
         "Shoulders"
       ],
-      "name": " Shoulder Press Grip 90°",
-      "notes": "Seated 90° bench, palms rotated facing you, press from ear height to full extension.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 6,
-          "trackingMode": "repsWeight",
-          "weight": 16,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "name": "Seated Dumbbell Shoulder Press (Rotated Grip)",
+      "notes": "Seated 90° bench, palms rotated facing you, press from ear height to full extension."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "EZ-Bar",
+        "Bench"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "Ez bar sit",
+      "muscles": [
+        "Triceps"
+      ],
+      "name": "Seated EZ Bar Triceps Extension",
+      "notes": "Seated, lower EZ bar behind head elbows back, press up."
     },
     {
       "categories": [
@@ -3609,13 +3122,11 @@
       ],
       "equipment": [
         "Dumbbell",
-        "Bench",
-        "Discs"
+        "Bench"
       ],
       "icon": "figure.cooldown",
       "isCustom": false,
       "isFavorited": true,
-      "defaultEquipment": "Dumbbell",
       "muscles": [
         "Lats"
       ],
@@ -3631,24 +3142,14 @@
         "Incline bench"
       ],
       "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
       "label": "1db press sit",
       "muscles": [
         "Triceps"
       ],
-      "name": "Seated Overhead Triceps Extension 1DB",
-      "notes": "Seated, one dumbbell held with both hands overhead, lower behind head, press up.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 12,
-          "trackingMode": "repsWeight",
-          "weight": 20.5,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "name": "Seated Two-Hand Dumbbell Overhead Triceps Extension",
+      "notes": "Seated, one dumbbell held with both hands overhead, lower behind head, press up."
     },
     {
       "categories": [
@@ -3664,18 +3165,25 @@
       "muscles": [
         "Biceps"
       ],
-      "name": "Seated Full Extension bicep curl",
-      "notes": "* Sit on bench with 60° incline\n* Hold dumbbells beside body near the ground, palms facing outwards, arms fully extended\n* Move dumbbells up using only biceps and without momentum",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 6,
-          "trackingMode": "repsWeight",
-          "weight": 13.5,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "name": "Seated W Curl",
+      "notes": "* Sit on bench with 60° incline\n* Hold dumbbells beside body near the ground, palms facing outwards, arms fully extended\n* Move dumbbells up using only biceps and without momentum"
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Barbell",
+        "Bench"
+      ],
+      "icon": "figure.cooldown",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Shoulders"
+      ],
+      "name": "Shoulder Press, Barbell",
+      "notes": "Sit on a bench, the back rest should be almost vertical. Take a barbell with a shoulder wide grip and bring it up to chest height. Press the weight up, but don't stretch the arms completely. Go slowly down and repeat."
     },
     {
       "categories": [
@@ -3691,18 +3199,8 @@
       "muscles": [
         "Shoulders"
       ],
-      "name": "Shoulder Press",
-      "notes": "Sit on a bench, the back rest should be almost vertical. Take two dumbbells and bring them up to shoulder height, the palms and the elbows point during the whole exercise to the front. Press the weights up, at the highest point they come very near but don't touch. Go slowly down and repeat.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 10,
-          "trackingMode": "repsWeight",
-          "weight": 16,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "name": "Shoulder Press, Dumbbells",
+      "notes": "Sit on a bench, the back rest should be almost vertical. Take two dumbbells and bring them up to shoulder height, the palms and the elbows point during the whole exercise to the front. Press the weights up, at the highest point they come very near but don't touch. Go slowly down and repeat."
     },
     {
       "categories": [
@@ -3717,30 +3215,18 @@
       "muscles": [
         "Shoulders"
       ],
-      "name": "Shrugs",
-      "notes": "Stand with straight body, the hands are hanging freely on the side and hold each a dumbbell. Lift from this position the shoulders as high as you can, but don't bend the arms during the movement. On the highest point, make a short pause of 1 or 2 seconds before returning slowly to the initial position.\n\nWhen training with a higher weight, make sure that you still do the whole movement!",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 12,
-          "trackingMode": "repsWeight",
-          "weight": 22.5,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "name": "Shrugs, Dumbbells",
+      "notes": "Stand with straight body, the hands are hanging freely on the side and hold each a dumbbell. Lift from this position the shoulders as high as you can, but don't bend the arms during the movement. On the highest point, make a short pause of 1 or 2 seconds before returning slowly to the initial position.\n\nWhen training with a higher weight, make sure that you still do the whole movement!"
     },
     {
       "categories": [
         "strength"
       ],
-      "equipment": [
-        "Bench"
-      ],
+      "equipment": [],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
+      "label": "Plank bench abductors pump",
       "muscles": [
         "Glutes",
         "Abductors"
@@ -3756,16 +3242,31 @@
         "Ab roller"
       ],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
       "label": "Abductor side plank with ball reach",
       "muscles": [
         "Obliques"
       ],
       "name": "Side Plank with Ball Push-Away Rotation",
-      "notes": "Side plank on left elbow, left leg bent 90°, right leg straight on top. Ball under right hand, push it away while rotating the torso, extending the right arm until facing the floor.",
-      "videolink": "https://www.youtube.com/watch?v=ONpAAqdwbtQ"
+      "notes": "Side plank on left elbow, left leg bent 90°, right leg straight on top. Ball under right hand, push it away while rotating the torso, extending the right arm until facing the floor."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell"
+      ],
+      "icon": "figure.cooldown",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Glutes",
+        "Hamstrings"
+      ],
+      "name": "Single-Leg Deadlift with Dumbbell",
+      "notes": "Starting Position: Stand upright with a slight bend in your knees, holding a dumbbell in one or both hands. Shift your weight onto your supporting leg (e.g., your right leg) and lift your non-supporting foot slightly off the floor.\n\nThe Hinge: Keeping your back flat and core engaged, hinge at your hips, pushing your glutes backward. As your torso lowers, extend your non-supporting leg straight back behind you for balance, keeping your hips square to the floor. The dumbbell(s) should lower toward the ground along the line of your supporting leg.\n\nRange of Motion: Continue lowering your torso until it is nearly parallel to the floor, or you feel an intense stretch in your supporting hamstring, ensuring your back remains neutral throughout the movement.\n\nReturn to Start: Pause at the bottom, then contract your glutes and hamstrings to slowly raise your torso back to the starting position. Your non-supporting leg should return in line with the supporting one.\n\nSwitch Sides: After completing your desired number of repetitions on one side, switch your weight and repeat the movement on the other leg."
     },
     {
       "categories": [
@@ -3776,27 +3277,47 @@
         "Dumbbell"
       ],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "isOneSided": true,
       "label": "Single leg goblet squat on bench",
       "muscles": [
         "Quads"
       ],
-      "name": "Single-Leg Goblet Squat to Bench ",
-      "notes": "Single-leg squat holding weight goblet-style at chest. Lower down until lightly touching a bench behind you, then stand back up.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 12,
-          "trackingMode": "repsWeight",
-          "weight": 10,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
+      "name": "Single-Leg Goblet Squat to Bench (Depth Stop)",
+      "notes": "Single-leg squat holding weight goblet-style at chest. Lower down until lightly touching a bench behind you, then stand back up."
+    },
+    {
+      "categories": [
+        "strength"
       ],
-      "videolink": "https://www.youtube.com/watch?v=MTnN7ID3AIY"
+      "equipment": [],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "lower back on Romanian chair (one leg, straight spine, staying up, 90° torso rotation)",
+      "muscles": [
+        "lower back"
+      ],
+      "name": "Single-Leg Roman Chair Hyperextension ",
+      "notes": "On Roman chair, one leg only. Keep spine straight, stay up"
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "EZ-Bar",
+        "Bench"
+      ],
+      "icon": "figure.cooldown",
+      "isCustom": false,
+      "isFavorited": true,
+      "label": "Skullcrusher EZ-bar",
+      "muscles": [
+        "Triceps"
+      ],
+      "name": "Skullcrusher SZ-bar",
+      "notes": "Hold the SZ-bar and lay down on a flat bench in such a way that around 1/4 of your head is over the edge. Stretch your arms with the bar and bend them so that the bar is lowered. Just before it touches your forehead, push it up.\n\nPay attention to your elbows and arms: only the triceps are doing the work, the rest of the arms should not move."
     },
     {
       "categories": [
@@ -3808,11 +3329,11 @@
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "isOneSided": true,
       "muscles": [
+        "Calves",
         "Glutes",
         "Hamstrings",
+        "Obliques",
         "Quads"
       ],
       "name": "Sliding Lateral Lunge",
@@ -3830,36 +3351,57 @@
       "muscles": [
         "forearm"
       ],
-      "name": "fingerboard hanging",
+      "name": "Sloper hanging",
       "notes": "Hanging on sloper holds of a fingerboard for a amount of seconds"
+    },
+    {
+      "categories": [
+        "calisthenics",
+        "strength"
+      ],
+      "equipment": [],
+      "icon": "figure.core.training",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Abs",
+        "Glutes",
+        "Hamstrings",
+        "Quads"
+      ],
+      "name": "Slow Squat",
+      "notes": "A tempo-based squat that uses controlled movement to increase muscle tension and improve lower-body stability.\n1. Lower: Descend slowly for 3 seconds.\n2. Pause: Hold at the bottom for 1 second.\n3. Stand: Return to the starting position at a normal pace.\n4. Form: Keep your chest up and weight in your heels."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell"
+      ],
+      "icon": "figure.core.training",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Calves"
+      ],
+      "name": "Standing Calf Raises",
+      "notes": "Get onto the calf raises machine, you should able to completely push your calves down. Stand straight, don't make a hollow back and don't bend your legs. Pull yourself up as high as you can. Make a small pause of 1 - 2 seconds and go slowly down."
     },
     {
       "categories": [
         "physio"
       ],
-      "equipment": [
-        "Dumbbell"
-      ],
+      "equipment": [],
       "icon": "figure.flexibility",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
+      "label": "Standing DB hip flexion",
       "muscles": [
         "Quads"
       ],
-      "name": "Standing DB Hip Flexion",
-      "notes": "Standing, holding a kettlebell, raise the knee up against resistance.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 8,
-          "trackingMode": "repsWeight",
-          "weight": 13.5,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ],
-      "videolink": "https://www.youtube.com/watch?v=4Dgk8ESauPE"
+      "name": "Standing kettlebell Hip Flexion",
+      "notes": "Standing, holding a kettlebell, raise the knee up against resistance."
     },
     {
       "categories": [
@@ -3867,102 +3409,80 @@
       ],
       "equipment": [
         "Discs",
-        "Bench",
-        "Weight vest"
+        "Bench"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
-      "defaultEquipment": "Discs",
       "muscles": [
         "Calves",
         "Glutes",
         "Hamstrings",
         "Quads"
       ],
-      "name": "Step-ups Alt",
+      "name": "Step-ups",
       "notes": "Starting position:\n\nStand facing a chair.\n\nSteps:\n\n1. Step up onto the chair.\n2. Step off the chair.\n3. Repeat."
     },
     {
       "categories": [
-        "strength"
+        "calisthenics"
       ],
       "equipment": [],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
+      "label": "crunch with streight leg up",
       "muscles": [
         "Abs"
       ],
-      "name": "Crunch W Straight Leg Raised",
+      "name": "Straight Leg Raised Crunch, Basic",
       "notes": "Legs straight, raised toward ceiling. Crunch toward feet."
     },
     {
       "categories": [
-        "strength"
+        "calisthenics"
       ],
       "equipment": [],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
+      "label": "crunch with streight leg up",
       "muscles": [
         "Abs"
       ],
-      "name": "Crunch W Straight Leg Raised, Hold",
+      "name": "Straight Leg Raised Crunch, Hold",
       "notes": "Legs straight, raised toward ceiling. Hold at top."
     },
     {
       "categories": [
-        "strength"
+        "calisthenics"
       ],
       "equipment": [],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
+      "label": "crunch with streight leg up",
       "muscles": [
         "Abs"
       ],
-      "name": "Crunch W Straight Leg Raised, Pulse",
+      "name": "Straight Leg Raised Crunch, Pulse",
       "notes": "Legs straight, raised toward ceiling. Small, fast pulses at top."
     },
     {
       "categories": [
-        "strength"
+        "strength",
+        "warmups"
       ],
       "equipment": [
-        "TRX",
-        "Rings",
-        "Weight vest"
+        "TRX"
       ],
       "icon": "figure.run",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
       "muscles": [
         "Chest"
       ],
-      "name": "Suspended Push Ups",
-      "notes": "Suspension exercise with trx for chest training"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "TRX",
-        "Rings",
-        "Weight vest"
-      ],
-      "icon": "figure.run",
-      "isCustom": false,
-      "isFavorited": true,
-      "allowsBodyweight": true,
-      "isOneSided": true,
-      "muscles": [
-        "Chest"
-      ],
-      "name": "Suspended Archer Push Ups",
+      "name": "Suspended crossess",
       "notes": "Suspension exercise with trx for chest training"
     },
     {
@@ -3975,7 +3495,6 @@
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
       "isFavorited": true,
-      "isOneSided": true,
       "muscles": [
         "Traps"
       ],
@@ -3991,24 +3510,30 @@
         "Dumbbell"
       ],
       "icon": "figure.strengthtraining.traditional",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
+      "label": "3 points push",
       "muscles": [
         "Triceps"
       ],
       "name": "Triceps Kickback (3-Point Stance)",
-      "notes": "One hand on bench, dumbbell in other hand. Push weight back with triceps.",
-      "personalRecords": [
-        {
-          "holdSeconds": null,
-          "reps": 12,
-          "trackingMode": "repsWeight",
-          "weight": 18,
-          "equipment": "Dumbbell",
-          "unit": "kg"
-        }
-      ]
+      "notes": "One hand on bench, dumbbell in other hand. Push weight back with triceps."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Dumbbell"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Triceps"
+      ],
+      "name": "Triceps Overhead (Dumbbell)",
+      "notes": "* Keep the elbows fixed\n* Engage the muscles\n* Don't use momentum\n* Controlled movement\n* Slow movement\n* Don't overextend"
     },
     {
       "categories": [
@@ -4018,7 +3543,7 @@
         "TRX"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
       "label": "Trx cross",
       "muscles": [
@@ -4035,7 +3560,24 @@
         "TRX"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
+      "isFavorited": true,
+      "label": "Trx fall back",
+      "muscles": [
+        "Hamstrings"
+      ],
+      "name": "TRX Fallback (Nordic-Style Hamstring Fallback)",
+      "notes": "Kneeling facing TRX, lean back slowly controlling the fall, pull back up with TRX."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "TRX"
+      ],
+      "icon": "figure.core.training",
+      "isCustom": true,
       "isFavorited": true,
       "label": "Trx bridge",
       "muscles": [
@@ -4053,7 +3595,7 @@
         "TRX"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
       "label": "Trx I",
       "muscles": [
@@ -4065,21 +3607,20 @@
     },
     {
       "categories": [
-        "strength",
-        "calisthenics"
+        "strength"
       ],
       "equipment": [
-        "TRX",
-        "Weight vest"
+        "TRX"
       ],
       "icon": "figure.core.training",
       "isCustom": false,
       "isFavorited": true,
-      "allowsBodyweight": true,
       "muscles": [
-        "Lats"
+        "Biceps",
+        "Lats",
+        "Shoulders"
       ],
-      "name": "Ring Rows",
+      "name": "TRX Rows",
       "notes": "This exercise serves as a lead-up to Pull Ups."
     },
     {
@@ -4090,7 +3631,7 @@
         "TRX"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
       "label": "Trx triceps",
       "muscles": [
@@ -4107,11 +3648,11 @@
         "TRX"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
       "label": "Trx Y",
       "muscles": [
-        "Lats"
+        "Traps"
       ],
       "name": "TRX Y Raise",
       "notes": "Facing TRX, extend arms from front up to Y position."
@@ -4139,34 +3680,10 @@
     },
     {
       "categories": [
-        "calisthenics",
         "strength"
       ],
       "equipment": [
-        "Parallettes",
-        "Resistance band"
-      ],
-      "icon": "figure.core.training",
-      "isCustom": false,
-      "isFavorited": true,
-      "muscles": [
-        "Abs",
-        "Chest",
-        "Obliques",
-        "Shoulders",
-        "Triceps"
-      ],
-      "name": "Tuck planche Supported",
-      "notes": "Basic calisthenics progression for the full planche"
-    },
-    {
-      "categories": [
-        "strength"
-      ],
-      "equipment": [
-        "Dumbbell",
-        "Barbell",
-        "EZ-Bar"
+        "Dumbbell"
       ],
       "icon": "figure.strengthtraining.traditional",
       "isCustom": false,
@@ -4176,8 +3693,61 @@
         "Shoulders",
         "Traps"
       ],
-      "name": "Upright Row",
+      "name": "Upright Row w/ Dumbbells",
       "notes": "Hold a dumbbell in each hand in front of your body. Keep your palms towards your body. Lift you hands straight up until your hands are under your chin, then lower them. Repeat the exercise."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "EZ-Bar"
+      ],
+      "icon": "figure.cooldown",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Biceps",
+        "Shoulders",
+        "Traps"
+      ],
+      "name": "Upright Row, SZ-bar",
+      "notes": "Stand straight, your feet are shoulder-width apart. Hold the SZ-bar with an overhand grip on your thighs, the arms are stretched. Lift the bar close to the body till your chin. The elbows point out so that at the highest point they form a V. Make here a short pause before going slowly down and repeating the movement."
+    },
+    {
+      "categories": [
+        "strength"
+      ],
+      "equipment": [
+        "Discs"
+      ],
+      "icon": "figure.strengthtraining.traditional",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Obliques",
+        "Abs"
+      ],
+      "name": "Weighted Crunch",
+      "notes": "The Weighted Crunch is a variation of the classic crunch exercise that involves adding resistance (a weight) to increase the intensity of the abdominal work.\n\n1. Lay down\n2. (Optional) Bend your knees to add difficulty\n3. (Optional) Bend your knees and let your feet rest on a bench or a box or something (90 degree angle on knees)\n4. Lift your head and torso **while bending your back forward** (if you don't it's a sit-up and also involves some back muscles). The higher you go, the more you should feel your abs contracting.\n5. Go back to starting position an repeat"
+    },
+    {
+      "categories": [
+        "calisthenics",
+        "strength"
+      ],
+      "equipment": [
+        "Weight vest"
+      ],
+      "icon": "figure.core.training",
+      "isCustom": false,
+      "isFavorited": true,
+      "muscles": [
+        "Chest",
+        "Triceps"
+      ],
+      "name": "Weighted push-ups",
+      "notes": "- **Setup:** Begin in a standard plank position with a weight plate balanced securely on your upper back.\n- **Alignment:** Maintain a straight line from your head to your heels, engaging your core to prevent your back from sagging.\n- **Execution:** Lower your body until your chest nearly touches the floor, keeping your elbows at a **forty-five degrees**.\n- **Ascent:** Press through your palms to return to the starting position, fully extending your arms."
     },
     {
       "categories": [
@@ -4187,9 +3757,8 @@
         "Gym mat"
       ],
       "icon": "figure.core.training",
-      "isCustom": false,
+      "isCustom": true,
       "isFavorited": true,
-      "isOneSided": true,
       "label": "\"X\" abs",
       "muscles": [
         "Abs",
