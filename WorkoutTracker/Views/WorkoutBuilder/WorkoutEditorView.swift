@@ -192,7 +192,7 @@ struct WorkoutEditorView: View {
         case .repsWeight:
             return "\(entry.targetSets) sets · rest \(entry.customRestSeconds.map { "\($0)s" } ?? "default")"
         case .maxHoldTime:
-            return "\(entry.targetSets) sets · max hold · \(entry.headStartSeconds)s head start"
+            return "\(entry.targetSets) sets · max time · \(entry.headStartSeconds)s head start"
         }
     }
 

@@ -75,16 +75,30 @@ enum WorkoutImportService {
         )
         summary.sections += 1
 
+        // Both are omitted from the file when they match the app's own defaults, so an
+        // absent key means "leave it alone" rather than "reset it".
+        if let autostart = seed.autostart, type != .rep {
+            try WorkoutEditingService.updateAutostart(section, to: autostart, context: context)
+        }
+        if let repeatCount = seed.repeatCount, repeatCount > 1 {
+            try WorkoutEditingService.updateRepeatCount(section, to: repeatCount, context: context)
+        }
+
         switch type {
         case .time:
             try importTimeSteps(seed.timeSteps ?? [], into: section, resolver: resolver, summary: &summary, context: context)
         case .rep:
             try importRepExercises(seed.repExercises ?? [], into: section, resolver: resolver, summary: &summary, context: context)
-        case .emom, .amrap:
-            // Not produced by workouts.json today; the section is still created so a
-            // file that starts using them imports as an empty section rather than
-            // failing outright.
-            break
+        case .emom:
+            if let rounds = seed.emomRoundCount {
+                try WorkoutEditingService.updateEmomRoundCount(section, to: rounds, context: context)
+            }
+            try importQuickExercises(seed.quickExercises ?? [], into: section, resolver: resolver, summary: &summary, context: context)
+        case .amrap:
+            if let seconds = seed.amrapDurationSeconds {
+                try WorkoutEditingService.updateAmrapDuration(section, to: seconds, context: context)
+            }
+            try importQuickExercises(seed.quickExercises ?? [], into: section, resolver: resolver, summary: &summary, context: context)
         }
     }
 
@@ -140,7 +154,7 @@ enum WorkoutImportService {
     ) throws {
         for seed in seeds {
             guard let exercise = resolver.exercise(named: seed.exercise) else { continue }
-            try WorkoutEditingService.addRepExercise(
+            let entry = try WorkoutEditingService.addRepExercise(
                 to: section,
                 exercise: exercise,
                 targetSets: seed.targetSets,
@@ -148,9 +162,36 @@ enum WorkoutImportService {
                 customRestSeconds: seed.customRestSeconds,
                 trackingMode: seed.trackingMode.flatMap(RepExerciseTrackingMode.init(rawValue:)) ?? .repsWeight,
                 headStartSeconds: seed.headStartSeconds ?? 3,
+                // Both are only meaningful when the catalog exercise allows them; the
+                // file shouldn't be able to turn on an option the exercise forbids.
+                allowsBodyweight: (seed.allowsBodyweight ?? false) && exercise.allowsBodyweight,
+                tracksSides: (seed.tracksSides ?? false) && exercise.isOneSided,
                 context: context
             )
+            // Not an `addRepExercise` parameter — set on the returned entry, the same
+            // way `importTimeSteps` sets a step's color. Resolved against the
+            // exercise's own equipment so a stale name is ignored rather than applied.
+            if let name = seed.preferredEquipment,
+               let equipment = exercise.equipmentItems.first(where: { $0.name == name && $0.isWeighted }) {
+                entry.preferredEquipment = equipment
+                entry.markDirty()
+                try context.save()
+            }
             summary.repExercises += 1
+        }
+    }
+
+    private static func importQuickExercises(
+        _ seeds: [QuickExerciseSeed],
+        into section: WorkoutSection,
+        resolver: ExerciseResolver,
+        summary: inout WorkoutImportSummary,
+        context: ModelContext
+    ) throws {
+        for seed in seeds {
+            guard let exercise = resolver.exercise(named: seed.exercise) else { continue }
+            try WorkoutEditingService.addQuickExercise(to: section, exercise: exercise, context: context)
+            summary.quickExercises += 1
         }
     }
 
@@ -215,8 +256,19 @@ enum WorkoutImportService {
         let name: String?
         let sectionDescription: String?
         let sectionType: String
+        /// Time/EMOM/AMRAP only — absent means the app's default (start on arrival).
+        let autostart: Bool?
+        /// Absent (or 1) means the section runs once.
+        let repeatCount: Int?
+        let emomRoundCount: Int?
+        let amrapDurationSeconds: Int?
         let timeSteps: [TimeStepSeed]?
         let repExercises: [RepExerciseSeed]?
+        let quickExercises: [QuickExerciseSeed]?
+    }
+
+    private struct QuickExerciseSeed: Decodable {
+        let exercise: String
     }
 
     private struct TimeStepSeed: Decodable {
@@ -236,6 +288,11 @@ enum WorkoutImportService {
         /// Absent means "use the app's default rest", not zero.
         let customRestSeconds: Int?
         let headStartSeconds: Int?
+        let allowsBodyweight: Bool?
+        let tracksSides: Bool?
+        /// Name of the weighted equipment this workout uses for the exercise, when it
+        /// has more than one. Absent falls back to the exercise's own resolution.
+        let preferredEquipment: String?
     }
 
     // MARK: - Loading
@@ -258,6 +315,7 @@ struct WorkoutImportSummary {
     var sections = 0
     var timeSteps = 0
     var repExercises = 0
+    var quickExercises = 0
 }
 
 enum WorkoutImportError: LocalizedError {

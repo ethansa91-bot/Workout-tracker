@@ -33,7 +33,7 @@ struct SessionHistoryDetailView: View {
                             if log.isCancelled {
                                 Text("Cancelled").font(.caption).foregroundStyle(.secondary)
                             } else if let holdSeconds = log.holdSeconds {
-                                Text("Held \(holdSeconds)s")
+                                Text("\(holdSeconds)s")
                                     .font(.subheadline)
                             } else {
                                 HStack(spacing: 4) {

@@ -284,7 +284,7 @@ struct RepSectionEditorView: View {
             let rest = entry.customRestSeconds ?? AppSettings.defaultRestSeconds
             parts = ["\(entry.targetSets) sets", "rest \(rest)s"]
         case .maxHoldTime:
-            parts = ["\(entry.targetSets) sets", "max hold", "\(entry.headStartSeconds)s head start"]
+            parts = ["\(entry.targetSets) sets", "max time", "\(entry.headStartSeconds)s head start"]
         }
         if entry.isTrackingSides { parts.append("left/right") }
         if entry.allowsBodyweight { parts.append("bodyweight ok") }
@@ -399,7 +399,7 @@ private struct RepEntryInlineEditor: View {
                 set: { entry.trackingMode = $0; save() }
             )) {
                 Text("Reps & Weight").tag(RepExerciseTrackingMode.repsWeight)
-                Text("Max Hold Time").tag(RepExerciseTrackingMode.maxHoldTime)
+                Text("Max Time").tag(RepExerciseTrackingMode.maxHoldTime)
             }
             .pickerStyle(.segmented)
 

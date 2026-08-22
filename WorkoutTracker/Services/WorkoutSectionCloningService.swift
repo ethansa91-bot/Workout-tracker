@@ -39,6 +39,74 @@ enum WorkoutSectionCloningService {
         try context.save()
     }
 
+    /// Where a batch of copies belongs: immediately after the last row they came
+    /// from, so a clone shows up next to what you cloned rather than at the far end of
+    /// a long section. Copies keep their original relative order as one block.
+    private static func insertIndex<T: Identifiable>(in items: [T], ids: Set<UUID>) -> Int where T.ID == UUID {
+        guard let last = items.lastIndex(where: { ids.contains($0.id) }) else { return items.count }
+        return last + 1
+    }
+
+    // MARK: - Cloning an arbitrary selection
+    //
+    // The range-based methods above back the section editors' multi-select, which only
+    // enables Clone for an adjacent run, and append their copies to the end. The recap
+    // page lets you tick any rows at all, so these take a set of ids instead — and put
+    // the copies right after the last row they came from rather than at the end.
+
+    static func cloneTimeSteps(in section: WorkoutSection, ids: Set<UUID>, context: ModelContext) throws {
+        let workout = try requireUnlockedParent(of: section)
+        var steps = section.sortedTimeSteps
+        let clones = steps.filter { ids.contains($0.id) }.map { original -> TimeSectionStep in
+            let clone = TimeSectionStep(section: section, sortOrder: 0, stepType: original.stepType, exercise: original.exercise, durationSeconds: original.durationSeconds)
+            clone.color = original.color
+            return clone
+        }
+        guard !clones.isEmpty else { return }
+
+        clones.forEach { context.insert($0) }
+        steps.insert(contentsOf: clones, at: insertIndex(in: steps, ids: ids))
+        TimeSectionStep.resequence(steps)
+        section.markDirty()
+        workout?.markDirty()
+        try context.save()
+    }
+
+    /// `preferredEquipment` is deliberately not carried over — no clone path in this
+    /// service copies it, so the copy falls back to the exercise's default the same way
+    /// a range-clone or an imported template does.
+    static func cloneRepExercises(in section: WorkoutSection, ids: Set<UUID>, context: ModelContext) throws {
+        let workout = try requireUnlockedParent(of: section)
+        var entries = section.sortedRepExercises
+        let clones = entries.filter { ids.contains($0.id) }.map { original in
+            RepSectionExercise(section: section, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds, allowsBodyweight: original.allowsBodyweight, tracksSides: original.tracksSides)
+        }
+        guard !clones.isEmpty else { return }
+
+        clones.forEach { context.insert($0) }
+        entries.insert(contentsOf: clones, at: insertIndex(in: entries, ids: ids))
+        RepSectionExercise.resequence(entries)
+        section.markDirty()
+        workout?.markDirty()
+        try context.save()
+    }
+
+    static func cloneQuickExercises(in section: WorkoutSection, ids: Set<UUID>, context: ModelContext) throws {
+        let workout = try requireUnlockedParent(of: section)
+        var entries = section.sortedQuickExercises
+        let clones = entries.filter { ids.contains($0.id) }.map { original in
+            SectionExerciseEntry(section: section, sortOrder: 0, exercise: original.exercise)
+        }
+        guard !clones.isEmpty else { return }
+
+        clones.forEach { context.insert($0) }
+        entries.insert(contentsOf: clones, at: insertIndex(in: entries, ids: ids))
+        SectionExerciseEntry.resequence(entries)
+        section.markDirty()
+        workout?.markDirty()
+        try context.save()
+    }
+
     /// Duplicates a whole section — every step/exercise it contains — inserting the copy
     /// immediately after the original in the workout's section order.
     @discardableResult

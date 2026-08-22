@@ -61,7 +61,7 @@ struct PersonalRecordEditView: View {
 
                 Picker("Record type", selection: $trackingMode) {
                     Text("Weight & Reps").tag(RepExerciseTrackingMode.repsWeight)
-                    Text("Max Hold Time").tag(RepExerciseTrackingMode.maxHoldTime)
+                    Text("Max Time").tag(RepExerciseTrackingMode.maxHoldTime)
                 }
                 .pickerStyle(.segmented)
 
@@ -81,7 +81,7 @@ struct PersonalRecordEditView: View {
                     }
                     Stepper("Reps: \(reps)", value: $reps, in: 0...200)
                 } else {
-                    Stepper("Hold time: \(holdSeconds)s", value: $holdSeconds, in: 0...3600)
+                    Stepper("Max time: \(holdSeconds)s", value: $holdSeconds, in: 0...3600)
                 }
             }
             .themedListBackground()

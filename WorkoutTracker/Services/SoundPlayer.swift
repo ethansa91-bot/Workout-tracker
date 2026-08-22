@@ -23,9 +23,14 @@ enum TimerSoundProfile: String, CaseIterable, Identifiable, Codable {
 enum SoundPlayer {
     private static let sampleRate: Double = 44100
     private static let toneFrequency: Double = 880
-    private static let warningBeepDuration: TimeInterval = 0.15
-    private static let warningBeepSpacing: TimeInterval = 0.25
-    private static let completeBeepDuration: TimeInterval = warningBeepDuration * 2
+    /// A fifth above the end tone, so the warning is distinguishable by pitch and not
+    /// just by rhythm — the two cues fire seconds apart and used to sound alike.
+    private static let warningToneFrequency: Double = 1320
+    private static let warningBeepDuration: TimeInterval = 0.08
+    private static let warningBeepSpacing: TimeInterval = 0.12
+    private static let completeBeepDuration: TimeInterval = 0.3
+    /// The head-start tick keeps the old, slower beep length and the base pitch.
+    private static let tickBeepDuration: TimeInterval = 0.15
 
     // Keeps strong references to in-flight players so ARC doesn't stop playback
     // partway through — nothing else on the caller side holds one.
@@ -37,14 +42,14 @@ enum SoundPlayer {
         play(tone(duration: completeBeepDuration))
     }
 
-    /// A quick triple beep of the same tone at the profile's warning mark (5s or 10s
-    /// remaining). `endOnly` never fires here — the "end" cue is always played
-    /// separately, by the caller, when the countdown actually reaches zero.
+    /// A quick double beep, higher-pitched than the end tone, at the profile's warning
+    /// mark (5s or 10s remaining). `endOnly` never fires here — the "end" cue is always
+    /// played separately, by the caller, when the countdown actually reaches zero.
     static func playWarningIfNeeded(remainingSeconds: Int, profile: TimerSoundProfile) {
         switch profile {
         case .endOnly: return
-        case .warn5: if remainingSeconds == 5 { playTripleBeep() }
-        case .warn10: if remainingSeconds == 10 { playTripleBeep() }
+        case .warn5: if remainingSeconds == 5 { playDoubleBeep() }
+        case .warn10: if remainingSeconds == 10 { playDoubleBeep() }
         }
     }
 
@@ -52,12 +57,12 @@ enum SoundPlayer {
     /// starts counting up. `playTimerComplete()` doubles as the "go" cue once the
     /// head start reaches zero.
     static func playHeadStartTick() {
-        play(tone(duration: warningBeepDuration))
+        play(tone(duration: tickBeepDuration))
     }
 
-    private static func playTripleBeep() {
-        let beep = tone(duration: warningBeepDuration)
-        for i in 0..<3 {
+    private static func playDoubleBeep() {
+        let beep = tone(duration: warningBeepDuration, frequency: warningToneFrequency)
+        for i in 0..<2 {
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * warningBeepSpacing) {
                 play(beep)
             }
@@ -80,14 +85,14 @@ enum SoundPlayer {
 
     /// Generates a sine-wave beep as in-memory 16-bit PCM WAV data, with a short
     /// fade in/out to avoid a click at the edges.
-    private static func tone(duration: TimeInterval) -> Data {
+    private static func tone(duration: TimeInterval, frequency: Double = toneFrequency) -> Data {
         let frameCount = Int(sampleRate * duration)
         let fadeFrames = max(1, Int(sampleRate * 0.01))
 
         var pcmData = Data(capacity: frameCount * 2)
         for frame in 0..<frameCount {
             let t = Double(frame) / sampleRate
-            var value = Float(sin(2 * .pi * toneFrequency * t))
+            var value = Float(sin(2 * .pi * frequency * t))
             if frame < fadeFrames {
                 value *= Float(frame) / Float(fadeFrames)
             } else if frame > frameCount - fadeFrames {

@@ -52,7 +52,7 @@ struct EmomSessionRunnerView: View {
 
     /// Same share of the container the Follow Along runner gives its timer, so the
     /// countdown reads at a comparable size across section types.
-    private var timerHeightFraction: CGFloat { horizontalSizeClass == .regular ? 0.45 : 0.3 }
+    private var timerHeightFraction: CGFloat { horizontalSizeClass == .regular ? 0.45 : 0.24 }
 
     var body: some View {
         if currentRound < totalRounds {
@@ -86,16 +86,9 @@ struct EmomSessionRunnerView: View {
             // timer does, instead of a fixed size floating in mostly empty space.
             let glyphSize = geometry.size.height * 0.4
 
+            // Timer leads, round count follows — the same order AMRAP uses, so the two
+            // runners read the same way round.
             HStack(spacing: 0) {
-                Text("Round \(currentRound + 1) of \(totalRounds)")
-                    .font(.system(size: glyphSize * 0.5, weight: .bold, design: .rounded))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.5)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-
-                Divider()
-
                 VStack(spacing: 4) {
                     if isRunning {
                         Text(timeString(remainingSeconds))
@@ -115,9 +108,20 @@ struct EmomSessionRunnerView: View {
                 }
                 .frame(maxWidth: .infinity)
                 // Local pause only — the session clock keeps running and the grid
-                // below stays fully visible and interactive.
+                // below stays fully visible and interactive. Stays bound to the
+                // countdown, which is the half that pauses.
                 .contentShape(Rectangle())
                 .onTapGesture { isRunning.toggle() }
+
+                Divider()
+                    .frame(maxHeight: .infinity)
+
+                Text("Round \(currentRound + 1) of \(totalRounds)")
+                    .font(.system(size: glyphSize * 0.5, weight: .bold, design: .rounded))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.5)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }

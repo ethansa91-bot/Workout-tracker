@@ -48,12 +48,12 @@ struct RecordsListView: View {
                 case .repsWeight:
                     return "\(formattedWeight(record.weight ?? 0)) × \(record.reps ?? 0)"
                 case .maxHoldTime:
-                    return "\(record.holdSeconds ?? 0)s hold"
+                    return "\(record.holdSeconds ?? 0)s"
                 }
             } else if let derivedBestSet {
                 return "\(formattedWeight(derivedBestSet.weight)) × \(derivedBestSet.reps)"
             } else if let derivedHold {
-                return "\(derivedHold)s hold"
+                return "\(derivedHold)s"
             }
             return ""
         }

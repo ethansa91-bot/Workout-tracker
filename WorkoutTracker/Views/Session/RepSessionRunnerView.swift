@@ -294,7 +294,7 @@ struct RepSessionRunnerView: View {
             let bestHold = record?.holdSeconds ?? SetLogQueries.bestHoldEver(exercise: exercise, context: context)
             let lastHold = SetLogQueries.lastHoldSeconds(exercise: exercise, excluding: session, context: context)
             guard let bestHold else { return "No record set yet" }
-            var text = "\(bestHold)s hold"
+            var text = "\(bestHold)s"
             if let lastHold { text += " · last \(lastHold)s" }
             return text
         }

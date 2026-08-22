@@ -32,6 +32,10 @@ final class Exercise: SyncableModel {
     /// Trains one side at a time (split squats, single-arm rows). Unlocks the
     /// per-workout "track left/right separately" option.
     var isOneSided: Bool = false
+    /// Name of the weighted item among `equipmentItems` to prefer when more than one
+    /// is attached. nil (or a name no longer attached) falls back to the first, which
+    /// is what every exercise did before this existed.
+    var defaultEquipmentName: String?
     var updatedAt: Date = Date.now
     var deletedAt: Date?
 
@@ -99,10 +103,16 @@ final class Exercise: SyncableModel {
     }
 
     /// The weighted item among `equipmentItems`, if any — used to resolve weight
-    /// options/unit. If more than one is attached, the first is used; logging weight
+    /// options/unit. When several are attached, `defaultEquipmentName` picks which;
+    /// without a usable choice the first is used, as it always was. Logging weight
     /// against multiple simultaneous equipment per set isn't supported.
     var weightedEquipment: Equipment? {
-        equipmentItems.first(where: \.isWeighted)
+        let weighted = equipmentItems.filter(\.isWeighted)
+        if let name = defaultEquipmentName,
+           let chosen = weighted.first(where: { $0.name == name }) {
+            return chosen
+        }
+        return weighted.first
     }
 
     init(
@@ -117,6 +127,7 @@ final class Exercise: SyncableModel {
         isFavorited: Bool = false,
         allowsBodyweight: Bool = false,
         isOneSided: Bool = false,
+        defaultEquipmentName: String? = nil,
         equipmentItems: [Equipment] = []
     ) {
         self.id = id
@@ -132,6 +143,7 @@ final class Exercise: SyncableModel {
         self.isFavorited = isFavorited || isCustom
         self.allowsBodyweight = allowsBodyweight
         self.isOneSided = isOneSided
+        self.defaultEquipmentName = defaultEquipmentName
         self.equipmentItemsStorage = equipmentItems
         self.updatedAt = .now
         self.deletedAt = nil

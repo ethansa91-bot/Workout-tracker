@@ -11,6 +11,7 @@ struct SettingsView: View {
     @State private var resetErrorMessage: String?
     @State private var testDataMessage: String?
     @State private var importMessage: String?
+    @State private var showingExportPicker = false
 
     var body: some View {
         NavigationStack {
@@ -51,6 +52,16 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Button("Export Workouts") {
+                        showingExportPicker = true
+                    }
+                } header: {
+                    Text("Export")
+                } footer: {
+                    Text("Choose which workouts to include, then save a JSON file. Section templates are always included. The file uses the same format as the app's bundled starter workouts.")
+                }
+
+                Section {
                     Button("Import Workouts") {
                         importWorkouts()
                     }
@@ -85,6 +96,9 @@ struct SettingsView: View {
             }
             .themedListBackground()
             .navigationTitle("Settings")
+            .sheet(isPresented: $showingExportPicker) {
+                WorkoutExportPickerSheet()
+            }
             .alert(
                 "Delete all data?",
                 isPresented: $showingResetConfirm

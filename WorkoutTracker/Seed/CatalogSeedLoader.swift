@@ -34,7 +34,8 @@ enum CatalogSeedLoader {
         let exerciseCategoriesByName = seedExerciseCategories(context: context)
         let musclesByName = seedMuscles(catalog.muscles, categoriesByName: muscleCategoriesByName, context: context)
         let equipmentByName = seedEquipment(catalog.equipment, context: context)
-        seedExercises(catalog.exercises, musclesByName: musclesByName, equipmentByName: equipmentByName, categoriesByName: exerciseCategoriesByName, context: context)
+        let exercisesByName = seedExercises(catalog.exercises, musclesByName: musclesByName, equipmentByName: equipmentByName, categoriesByName: exerciseCategoriesByName, context: context)
+        seedPersonalRecords(catalog.exercises, exercisesByName: exercisesByName, equipmentByName: equipmentByName, context: context)
 
         try context.save()
         UserDefaults.standard.set(true, forKey: SeedDataLoader.seededFlagKey)
@@ -96,6 +97,29 @@ enum CatalogSeedLoader {
         /// Matches the JSON key exactly — most `catalog.json` exercises simply omit
         /// this key, which decodes to `nil` for free since it's Optional.
         let videolink: String?
+        /// Written by the Catalog Builder only when true, so an absent key means false
+        /// rather than "unknown" — same for `isOneSided` below.
+        let allowsBodyweight: Bool?
+        let isOneSided: Bool?
+        /// Which weighted equipment this exercise means by default, when it has more
+        /// than one attached. Absent means "the first one".
+        let defaultEquipment: String?
+        /// Records are kept per equipment — a barbell best and a dumbbell best aren't
+        /// the same lift. Absent for every exercise that has no record set.
+        let personalRecords: [PersonalRecordEntry]?
+    }
+
+    private struct PersonalRecordEntry: Decodable {
+        /// nil for a record with no equipment attached — valid, and the only shape a
+        /// hold-time record takes, since it has no load.
+        let equipment: String?
+        let trackingMode: String?
+        let weight: Double?
+        let reps: Int?
+        let holdSeconds: Int?
+        /// The unit `weight` is expressed in, stamped at authoring time so the number
+        /// keeps its meaning if the exercise's equipment changes later.
+        let unit: String?
     }
 
     // MARK: - Fixed taxonomy (same lists as SeedDataLoader/WgerCategoryRevert)
@@ -220,11 +244,15 @@ enum CatalogSeedLoader {
         equipmentByName: [String: Equipment],
         categoriesByName: [String: ExerciseCategory],
         context: ModelContext
-    ) {
+    ) -> [String: Exercise] {
         let existing = existingByID(Exercise.self, context: context, id: \.id)
+        var result: [String: Exercise] = [:]
         for entry in entries {
             let id = SeedIdentity.uuid("catalogExercise", entry.name)
-            guard existing[id] == nil else { continue }
+            if let exercise = existing[id] {
+                result[entry.name] = exercise
+                continue
+            }
             let exercise = Exercise(
                 id: id,
                 name: entry.name,
@@ -235,11 +263,52 @@ enum CatalogSeedLoader {
                 imageAssetName: ExerciseImageMapping.assetName[entry.name],
                 isCustom: entry.isCustom,
                 isFavorited: entry.isFavorited,
+                allowsBodyweight: entry.allowsBodyweight ?? false,
+                isOneSided: entry.isOneSided ?? false,
+                defaultEquipmentName: entry.defaultEquipment,
                 equipmentItems: entry.equipment.compactMap { equipmentByName[$0] }
             )
             exercise.muscles = entry.muscles.compactMap { musclesByName[$0] }
             exercise.categories = entry.categories.compactMap { categoriesByName[$0] }
             context.insert(exercise)
+            result[entry.name] = exercise
+        }
+        return result
+    }
+
+    // MARK: - Personal records
+
+    /// Records ride along in `catalog.json` on their exercise. Like every other seeder
+    /// here the id is derived from what identifies the row — exercise + equipment —
+    /// rather than left to the random-UUID default, so reseeding is idempotent and a
+    /// reinstall doesn't duplicate every record against what's already synced.
+    private static func seedPersonalRecords(
+        _ entries: [ExerciseEntry],
+        exercisesByName: [String: Exercise],
+        equipmentByName: [String: Equipment],
+        context: ModelContext
+    ) {
+        let existing = existingByID(PersonalRecord.self, context: context, id: \.id)
+        for entry in entries {
+            guard let records = entry.personalRecords, let exercise = exercisesByName[entry.name] else { continue }
+            for record in records {
+                let equipmentName = record.equipment ?? ""
+                let id = SeedIdentity.uuid("personalRecord", "\(entry.name)|\(equipmentName)")
+                guard existing[id] == nil else { continue }
+                let mode = record.trackingMode.flatMap(RepExerciseTrackingMode.init(rawValue:)) ?? .repsWeight
+                let equipment = record.equipment.flatMap { equipmentByName[$0] }
+                context.insert(PersonalRecord(
+                    id: id,
+                    exercise: exercise,
+                    equipment: equipment,
+                    // Only a weight has a unit; a hold-time record has no load at all.
+                    weightUnit: mode == .repsWeight ? (record.unit ?? equipment?.effectiveWeightUnit) : nil,
+                    trackingMode: mode,
+                    weight: mode == .repsWeight ? record.weight : nil,
+                    reps: mode == .repsWeight ? record.reps : nil,
+                    holdSeconds: mode == .maxHoldTime ? record.holdSeconds : nil
+                ))
+            }
         }
     }
 

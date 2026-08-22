@@ -58,7 +58,7 @@ struct AmrapSessionRunnerView: View {
 
     /// Same share of the container the Follow Along runner gives its timer, so the
     /// countdown reads at a comparable size across section types.
-    private var timerHeightFraction: CGFloat { horizontalSizeClass == .regular ? 0.45 : 0.3 }
+    private var timerHeightFraction: CGFloat { horizontalSizeClass == .regular ? 0.45 : 0.24 }
 
     var body: some View {
         GeometryReader { geometry in
@@ -113,6 +113,7 @@ struct AmrapSessionRunnerView: View {
                         .onTapGesture { isRunning.toggle() }
 
                         Divider()
+                            .frame(maxHeight: .infinity)
 
                         VStack(spacing: 4) {
                             Text("\(completedRounds)")

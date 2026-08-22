@@ -105,7 +105,7 @@ struct HoldSetRowView: View {
     @ViewBuilder
     private var content: some View {
         if isLogged {
-            Text("\(recordedSeconds)s held")
+            Text("\(recordedSeconds)s")
                 .font(valueFont)
         } else {
             switch phase {
