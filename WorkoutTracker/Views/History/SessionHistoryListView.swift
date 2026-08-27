@@ -2,66 +2,89 @@ import SwiftUI
 import SwiftData
 
 struct SessionHistoryListView: View {
+    @Environment(\.modelContext) private var context
     @Query(sort: \WorkoutSession.startedAt, order: .reverse) private var allSessions: [WorkoutSession]
 
-    @AppStorage("settings.historyOnlyFinished") private var onlyFinished = true
+    @State private var pendingDelete: WorkoutSession?
 
-    /// The default view is "what I actually did" — completed workouts, plus anything
-    /// still live from today so an interrupted workout stays one tap from being
-    /// resumed. A session left paused days ago isn't resumable in practice, just
-    /// clutter, so it stays hidden until the filter comes off.
     private var sessions: [WorkoutSession] {
-        let live = allSessions.filter { $0.deletedAt == nil }
-        guard onlyFinished else { return live }
-        return live.filter { session in
-            switch session.status {
-            case .finished:
-                return true
-            case .paused, .inProgress:
-                return Calendar.current.isDateInToday(session.startedAt)
-            case .abandonedUnfinished:
-                return false
-            }
-        }
+        allSessions.filter { $0.deletedAt == nil }
     }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                Toggle("Show only finished workouts", isOn: $onlyFinished)
-                    .font(.subheadline)
-                    .tint(Color.appAccent)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+                PageTitleBand(title: "History", reservesButtonRow: true)
 
                 Group {
                     if sessions.isEmpty {
                         ContentUnavailableView(
-                            onlyFinished ? "No Finished Workouts" : "No History Yet",
+                            "No History Yet",
                             systemImage: "clock.arrow.circlepath",
-                            description: Text(emptyStateMessage)
+                            description: Text("Workouts you start will show up here.")
                         )
                     } else {
-                        List(sessions) { session in
-                            NavigationLink {
-                                SessionHistoryDetailView(session: session)
-                            } label: {
-                                sessionRow(session)
+                        List {
+                            ForEach(sessions) { session in
+                                NavigationLink {
+                                    SessionHistoryDetailView(session: session)
+                                } label: {
+                                    sessionRow(session)
+                                }
+                                .fullBleedRow(isLast: session.id == sessions.last?.id)
+                                // A finished workout is the record you came here for —
+                                // only the unfinished ones are clutter worth clearing.
+                                .swipeActions(edge: .trailing) {
+                                    if session.status != .finished {
+                                        Button(role: .destructive) {
+                                            pendingDelete = session
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                                }
+                                .contextMenu {
+                                    if session.status != .finished {
+                                        Button(role: .destructive) {
+                                            pendingDelete = session
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                                }
                             }
                         }
-                        .themedListBackground()
+                        .fullBleedList()
+                        .alert("Delete this session?", isPresented: deleteAlertBinding) {
+                            Button("Delete", role: .destructive) { deleteSession() }
+                            Button("Cancel", role: .cancel) { pendingDelete = nil }
+                        } message: {
+                            Text("Everything logged in it will be permanently deleted.")
+                        }
                     }
                 }
             }
             .background(Color.appBackground)
-            .navigationTitle("History")
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 
-    private var emptyStateMessage: String {
-        onlyFinished
-            ? "Workouts you finish will show up here. Turn off the filter to see paused and unfinished ones too."
-            : "Finished and unfinished workouts will show up here."
+
+    private var deleteAlertBinding: Binding<Bool> {
+        Binding(
+            get: { pendingDelete != nil },
+            set: { if !$0 { pendingDelete = nil } }
+        )
+    }
+
+    private func deleteSession() {
+        guard let session = pendingDelete, session.status != .finished else {
+            pendingDelete = nil
+            return
+        }
+        WorkoutSessionService.delete(session, context: context)
+        pendingDelete = nil
     }
 
     private func sessionRow(_ session: WorkoutSession) -> some View {
@@ -78,7 +101,8 @@ struct SessionHistoryListView: View {
             Spacer()
             StatusPill(text: info.0, tint: info.2)
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
     private func statusInfo(_ session: WorkoutSession) -> (String, String, Color) {

@@ -5,6 +5,8 @@ struct ArchivedWorkoutsView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \Workout.createdAt, order: .reverse) private var allWorkouts: [Workout]
 
+    @State private var pendingDelete: Workout?
+
     private var archivedWorkouts: [Workout] {
         allWorkouts.filter { $0.deletedAt == nil && $0.isArchived }
     }
@@ -20,11 +22,10 @@ struct ArchivedWorkoutsView: View {
             } else {
                 List {
                     ForEach(archivedWorkouts) { workout in
-                        NavigationLink {
-                            SessionRecapView(workout: workout)
-                        } label: {
+                        NavigationLink(value: WorkoutRoute(workout: workout)) {
                             workoutRow(workout)
                         }
+                        .fullBleedRow(isLast: workout.id == archivedWorkouts.last?.id)
                         .swipeActions(edge: .leading) {
                             Button {
                                 unarchiveWorkout(workout)
@@ -33,20 +34,46 @@ struct ArchivedWorkoutsView: View {
                             }
                             .tint(.green)
                         }
+                        .swipeActions(edge: .trailing) {
+                            // Same rule as the Workouts list: history behind a workout
+                            // means archive-only.
+                            if !workout.isLocked {
+                                Button(role: .destructive) {
+                                    pendingDelete = workout
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
                         .contextMenu {
                             Button {
                                 unarchiveWorkout(workout)
                             } label: {
                                 Label("Unarchive", systemImage: "archivebox.fill")
                             }
+                            if !workout.isLocked {
+                                Button(role: .destructive) {
+                                    pendingDelete = workout
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                         }
                     }
                 }
-                .themedListBackground()
+                .fullBleedList()
+                .alert("Delete \"\(pendingDelete?.name ?? "")\"?", isPresented: deleteAlertBinding) {
+                    Button("Delete", role: .destructive) { deleteWorkout() }
+                    Button("Cancel", role: .cancel) { pendingDelete = nil }
+                } message: {
+                    Text("This workout and all its sections will be permanently deleted.")
+                }
             }
         }
         .background(Color.appBackground)
-        .navigationTitle("Archives")
+        .safeAreaInset(edge: .top, spacing: 0) { PushedTitleBand(title: "Archives") }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private func workoutRow(_ workout: Workout) -> some View {
@@ -63,11 +90,31 @@ struct ArchivedWorkoutsView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
     private func workoutTypeIcon(_ workout: Workout) -> String {
         workout.displayType.iconSymbolName
+    }
+
+    private var deleteAlertBinding: Binding<Bool> {
+        Binding(
+            get: { pendingDelete != nil },
+            set: { if !$0 { pendingDelete = nil } }
+        )
+    }
+
+    /// Hard delete — `sectionsStorage` cascades. The `isLocked` re-check guards the gap
+    /// between the swipe and the confirmation.
+    private func deleteWorkout() {
+        guard let workout = pendingDelete, !workout.isLocked else {
+            pendingDelete = nil
+            return
+        }
+        context.delete(workout)
+        try? context.save()
+        pendingDelete = nil
     }
 
     private func unarchiveWorkout(_ workout: Workout) {

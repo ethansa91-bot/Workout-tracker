@@ -1,6 +1,17 @@
 import SwiftUI
 import SwiftData
 
+/// One route type for the whole stack, not one per screen.
+///
+/// `ArchivedWorkoutsView` is pushed into `WorkoutListView`'s stack and shares its typed
+/// path — and a typed path only carries its own element type, so a separate route struct
+/// for Archives could never enter it and its links would silently do nothing. A single
+/// type keeps both screens pushing onto the one path, and a single
+/// `navigationDestination` on the stack root handles them.
+struct WorkoutRoute: Hashable {
+    let workout: Workout
+}
+
 private enum WorkoutsPane: String, CaseIterable, Identifiable {
     case workouts, templates, library
 
@@ -23,17 +34,23 @@ struct WorkoutListView: View {
     @State private var showingNewWorkoutAlert = false
     @State private var newWorkoutName = ""
     @State private var showingNewTemplateSheet = false
-    @State private var newWorkoutDestination: WorkoutEditDestination?
     @State private var newTemplateDestination: WorkoutSection?
+    @State private var pendingDelete: Workout?
+    /// Held here rather than left to the stack, so cloning a locked workout can pop the
+    /// original and push the copy in its place.
+    @State private var path: [WorkoutRoute] = []
 
     private var workouts: [Workout] {
         allWorkouts.filter { $0.deletedAt == nil && !$0.isArchived }
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             VStack(spacing: 0) {
-                paneSelector
+                // The Library pane has neither Archives nor +, so iOS shrinks the bar
+                // there — the band holds that row open instead.
+                PageAccessoryBand(reservesButtonRow: selectedPane == .library) { paneSelector }
+                    .animation(nil, value: selectedPane)
                 Group {
                     switch selectedPane {
                     case .workouts: workoutsContent
@@ -41,10 +58,13 @@ struct WorkoutListView: View {
                     case .library: LibraryHomeView()
                     }
                 }
+                .animation(nil, value: selectedPane)
             }
             .background(Color.appBackground)
-            .navigationTitle("Overview")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            // Header height comes from the band, not from the bar, so an absent button
+            // here costs nothing — the item simply isn't declared.
             .toolbar {
                 if selectedPane == .workouts {
                     ToolbarItem(placement: .topBarLeading) {
@@ -76,38 +96,60 @@ struct WorkoutListView: View {
                 Button("Create") {
                     let trimmed = newWorkoutName.trimmingCharacters(in: .whitespaces)
                     guard !trimmed.isEmpty else { return }
-                    createWorkout(name: trimmed, kind: .personalized)
+                    createWorkout(name: trimmed)
                 }
             }
             .sheet(isPresented: $showingNewTemplateSheet) {
                 NewSectionTemplateSheet(onCreate: createTemplate)
             }
-            .navigationDestination(item: $newWorkoutDestination) { destination in
-                switch destination {
-                case .workout(let workout):
-                    SessionRecapView(workout: workout)
-                case .section(let section):
-                    SectionEditorView(section: section, onSaveNavigatesToRecap: true)
+            .navigationDestination(for: WorkoutRoute.self) { route in
+                SessionRecapView(workout: route.workout) { clone in
+                    // Replace, not stack: backing out of the copy should reach the list,
+                    // not the locked workout the user was just told they can't edit.
+                    path.removeLast()
+                    path.append(WorkoutRoute(workout: clone))
                 }
             }
             .navigationDestination(item: $newTemplateDestination) { section in
-                SectionEditorView(section: section)
+                SectionDetailView(section: section)
             }
         }
     }
 
-    /// Same look as the Settings weight-unit selector — a native segmented `Picker`,
-    /// with the selected segment tinted in the app's green accent.
+    /// Hand-built rather than a segmented `Picker`: the app tints every
+    /// `UISegmentedControl`'s selected segment green through a global appearance proxy
+    /// (see `AppearanceConfiguration`), which is invisible against this band. Eight other
+    /// pickers depend on that proxy, so this one inverts the palette locally instead —
+    /// white pill, green label — without touching the global setting.
     private var paneSelector: some View {
-        Picker("View", selection: $selectedPane) {
+        HStack(spacing: 4) {
             ForEach(WorkoutsPane.allCases) { pane in
-                Text(pane.label).tag(pane)
+                let isSelected = pane == selectedPane
+                Button {
+                    // Killed at the mutation, not just around it: `selectedPane` drives
+                    // the band's reserved button row and the whole pane swap, and a bare
+                    // assignment still inherits any ambient transaction from upstream.
+                    // Same reasoning as `withoutCollapseAnimation` in SessionRecapView.
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) { selectedPane = pane }
+                } label: {
+                    Text(pane.label)
+                        .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                        .foregroundStyle(isSelected ? Color.appAccent : .white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 7)
+                        .background {
+                            if isSelected {
+                                Capsule().fill(.white)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
             }
         }
-        .pickerStyle(.segmented)
-        .tint(Color.appAccent)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(3)
+        .background(Capsule().fill(.white.opacity(0.15)))
     }
 
     @ViewBuilder
@@ -122,9 +164,7 @@ struct WorkoutListView: View {
             List {
                 Section {
                     ForEach(workouts) { workout in
-                        NavigationLink {
-                            SessionRecapView(workout: workout)
-                        } label: {
+                        NavigationLink(value: WorkoutRoute(workout: workout)) {
                             workoutRow(workout)
                         }
                         .swipeActions(edge: .leading) {
@@ -136,6 +176,15 @@ struct WorkoutListView: View {
                             .tint(.blue)
                         }
                         .swipeActions(edge: .trailing) {
+                            // Deleting a workout with history behind it would strand
+                            // that history, so it's archive-only once locked.
+                            if !workout.isLocked {
+                                Button(role: .destructive) {
+                                    pendingDelete = workout
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                             Button {
                                 archiveWorkout(workout)
                             } label: {
@@ -154,13 +203,34 @@ struct WorkoutListView: View {
                             } label: {
                                 Label("Archive", systemImage: "archivebox")
                             }
+                            if !workout.isLocked {
+                                Button(role: .destructive) {
+                                    pendingDelete = workout
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                         }
+                        .fullBleedRow(isLast: workout.id == workouts.last?.id)
                     }
                 } footer: {
-                    Text("A lock means that workout has already been used and can't be edited or deleted. Swipe right on a workout to clone it, or left to archive it.")
+                    Text("A lock means that workout has already been used, so it can't be edited or deleted. Swipe right on a workout to clone it, or left to archive or delete it.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.appInkMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
                 }
             }
-            .themedListBackground()
+            .fullBleedList()
+            .alert("Delete \"\(pendingDelete?.name ?? "")\"?", isPresented: deleteAlertBinding) {
+                Button("Delete", role: .destructive) { deleteWorkout() }
+                Button("Cancel", role: .cancel) { pendingDelete = nil }
+            } message: {
+                Text("This workout and all its sections will be permanently deleted.")
+            }
         }
     }
 
@@ -184,7 +254,8 @@ struct WorkoutListView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
     private func workoutTypeIcon(_ workout: Workout) -> String {
@@ -195,24 +266,37 @@ struct WorkoutListView: View {
         _ = WorkoutCloningService.clone(workout, context: context)
     }
 
+    private var deleteAlertBinding: Binding<Bool> {
+        Binding(
+            get: { pendingDelete != nil },
+            set: { if !$0 { pendingDelete = nil } }
+        )
+    }
+
+    /// Hard delete — `sectionsStorage` cascades, so the sections and their steps go
+    /// with it. The `isLocked` re-check guards the gap between the swipe and the
+    /// confirmation, in which a session could have started.
+    private func deleteWorkout() {
+        guard let workout = pendingDelete, !workout.isLocked else {
+            pendingDelete = nil
+            return
+        }
+        context.delete(workout)
+        try? context.save()
+        pendingDelete = nil
+    }
+
     private func archiveWorkout(_ workout: Workout) {
         workout.isArchived = true
         workout.markDirty()
         try? context.save()
     }
 
-    private func createWorkout(name: String, kind: WorkoutKind) {
-        let workout = WorkoutEditingService.createWorkout(name: name, kind: kind, context: context)
-        guard kind != .personalized else {
-            newWorkoutDestination = .workout(workout)
-            return
-        }
-        do {
-            let section = try WorkoutEditingService.addSection(to: workout, type: kind == .byTime ? .time : .rep, context: context)
-            newWorkoutDestination = .section(section)
-        } catch {
-            newWorkoutDestination = .workout(workout)
-        }
+    private func createWorkout(name: String) {
+        let workout = WorkoutEditingService.createWorkout(name: name, context: context)
+        // Onto the same path the list pushes with, so a workout opens the same way
+        // however it was reached — and a clone can replace it later.
+        path.append(WorkoutRoute(workout: workout))
     }
 
     private func createTemplate(name: String, description: String?, type: WorkoutSectionType) {

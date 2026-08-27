@@ -29,7 +29,7 @@ enum WorkoutSectionCloningService {
         guard range.lowerBound >= 0, range.upperBound <= entries.count, !range.isEmpty else { return }
 
         let clones = entries[range].map { original in
-            RepSectionExercise(section: section, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds, allowsBodyweight: original.allowsBodyweight, tracksSides: original.tracksSides)
+            RepSectionExercise(section: section, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds, allowsBodyweight: original.allowsBodyweight, tracksSides: original.tracksSides, preferredEquipment: original.preferredEquipment, prefersBodyweight: original.prefersBodyweight)
         }
         clones.forEach { context.insert($0) }
         entries.insert(contentsOf: clones, at: entries.count)
@@ -79,7 +79,7 @@ enum WorkoutSectionCloningService {
         let workout = try requireUnlockedParent(of: section)
         var entries = section.sortedRepExercises
         let clones = entries.filter { ids.contains($0.id) }.map { original in
-            RepSectionExercise(section: section, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds, allowsBodyweight: original.allowsBodyweight, tracksSides: original.tracksSides)
+            RepSectionExercise(section: section, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds, allowsBodyweight: original.allowsBodyweight, tracksSides: original.tracksSides, preferredEquipment: original.preferredEquipment, prefersBodyweight: original.prefersBodyweight)
         }
         guard !clones.isEmpty else { return }
 
@@ -188,7 +188,9 @@ enum WorkoutSectionCloningService {
                 trackingMode: entry.trackingMode,
                 headStartSeconds: entry.headStartSeconds,
                 allowsBodyweight: entry.allowsBodyweight,
-                tracksSides: entry.tracksSides
+                tracksSides: entry.tracksSides,
+                preferredEquipment: entry.preferredEquipment,
+                prefersBodyweight: entry.prefersBodyweight
             )
             context.insert(entryCopy)
         }

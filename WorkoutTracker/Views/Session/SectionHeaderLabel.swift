@@ -13,19 +13,26 @@ func repeatLabel(_ count: Int) -> String {
 struct SectionHeaderLabel: View {
     let section: WorkoutSection
     let repeatIndex: Int
+    /// Follow Along tints this with the current step's color so the title reads as part
+    /// of that step. `nil` keeps the muted gray the other runners use.
+    var tint: Color?
 
     private var text: String {
+        // The "Section:" prefix belongs to the Follow Along header, where the row is
+        // pinned and needs to say what it is. The other runners keep the bare caption.
+        let name = tint == nil ? section.displayName : "Section: \(section.displayName)"
         let total = section.effectiveRepeatCount
-        guard total > 1 else { return section.displayName }
-        return "\(section.displayName) · Round \(min(repeatIndex + 1, total)) of \(total)"
+        guard total > 1 else { return name }
+        return "\(name) · Round \(min(repeatIndex + 1, total)) of \(total)"
     }
 
     var body: some View {
         Text(text)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
+            .font(tint == nil ? .caption.weight(.semibold) : .headline)
+            .foregroundStyle(tint == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(tint!))
             .lineLimit(1)
             .minimumScaleFactor(0.7)
+            .padding(.vertical, 2)
             .frame(maxWidth: .infinity, alignment: .center)
     }
 }

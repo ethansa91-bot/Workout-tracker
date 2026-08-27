@@ -38,8 +38,10 @@ enum WorkoutImportService {
         summary: inout WorkoutImportSummary,
         context: ModelContext
     ) throws {
-        let kind = seed.kind.flatMap(WorkoutKind.init(rawValue:)) ?? .personalized
-        let workout = WorkoutEditingService.createWorkout(name: seed.name, kind: kind, context: context)
+        // A `kind` key from an older export is read and discarded: workouts no longer
+        // have a type, so such a file imports as an ordinary workout whose sections
+        // carry the only type that matters.
+        let workout = WorkoutEditingService.createWorkout(name: seed.name, context: context)
         summary.workouts += 1
 
         if let notes = seed.notes?.nilIfBlank {
@@ -177,6 +179,13 @@ enum WorkoutImportService {
                 entry.markDirty()
                 try context.save()
             }
+            // Same guard as `allowsBodyweight` above: only honored when the exercise
+            // itself can be done unloaded.
+            if seed.prefersBodyweight == true, exercise.allowsBodyweightSource {
+                entry.prefersBodyweight = true
+                entry.markDirty()
+                try context.save()
+            }
             summary.repExercises += 1
         }
     }
@@ -293,6 +302,8 @@ enum WorkoutImportService {
         /// Name of the weighted equipment this workout uses for the exercise, when it
         /// has more than one. Absent falls back to the exercise's own resolution.
         let preferredEquipment: String?
+        /// Bodyweight is this entry's default load, ignoring `preferredEquipment`.
+        let prefersBodyweight: Bool?
     }
 
     // MARK: - Loading

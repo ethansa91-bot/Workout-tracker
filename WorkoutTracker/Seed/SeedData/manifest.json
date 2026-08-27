@@ -1,0 +1,16 @@
+{
+  "appVersion" : "1.0",
+  "counts" : {
+    "equipment" : 22,
+    "exercises" : 182,
+    "icons" : 0,
+    "images" : 0,
+    "muscles" : 15,
+    "personalRecords" : 46,
+    "templates" : 12,
+    "workouts" : 7
+  },
+  "exportedAt" : "2026-08-23T22:27:05Z",
+  "formatVersion" : 1,
+  "includesSessionHistory" : false
+}

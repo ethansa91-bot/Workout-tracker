@@ -40,6 +40,11 @@ extension Color {
     /// highlight, used instead of a heavier accent tint (e.g. an expanded accordion row).
     static let appHighlightGray = Color(light: UIColor(white: 0.91, alpha: 1),
                                          dark: UIColor(white: 0.24, alpha: 1))
+    /// Deep gray for the schedule's full-bleed day headers — dark enough to carry white
+    /// text in either theme, and neutral so the dated bands don't compete with the
+    /// accent-green title above them.
+    static let appHeaderGray = Color(light: UIColor(white: 0.28, alpha: 1),
+                                      dark: UIColor(white: 0.22, alpha: 1))
 
     // MARK: - Follow-along step colors
     //
@@ -113,5 +118,306 @@ extension View {
     func themedListBackground() -> some View {
         scrollContentBackground(.hidden)
             .background(Color.appBackground)
+    }
+}
+
+extension View {
+    /// A full-width row band, flush to both screen edges. Deliberately not `cardStyle()`:
+    /// its rounded shadow needs a gutter to fall into, which is exactly what makes rows
+    /// float inset from a full-bleed header.
+    ///
+    /// Requires `.listStyle(.plain)` on the enclosing list — an inset-grouped section
+    /// keeps its own side margins whatever the row insets say.
+    ///
+    /// `isLast` closes off a group: the separator is drawn between adjacent rows only, so
+    /// a single-row group gets none at all.
+    func fullBleedRow(isLast: Bool = true) -> some View {
+        self
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // A trailing inset, not zero on all four sides: a `NavigationLink` in a list
+            // puts its disclosure chevron against the row's trailing edge, and zeroing
+            // that edge parked the chevron hard against the screen. The 16pt here is what
+            // pulls it in level with the content. `listRowBackground` still paints the
+            // band edge to edge, so the row itself stays full-bleed.
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 16))
+            .listRowBackground(Color.appSurface)
+            .listRowSeparator(isLast ? .hidden : .visible, edges: .bottom)
+            .listRowSeparatorTint(Color.appHairline)
+            // Both ends sit 16pt from the screen, so the line is symmetric and its right
+            // end lands exactly under the chevron. The trailing guide is the row's own
+            // edge, not `width - 16`: the row is already inset 16pt on that side by
+            // `listRowInsets`, so subtracting again would stop the line 32pt in — short
+            // of the chevron it's meant to line up with.
+            .alignmentGuide(.listRowSeparatorLeading) { _ in 16 }
+            .alignmentGuide(.listRowSeparatorTrailing) { $0.width }
+    }
+
+    /// The standard configuration for a list using `fullBleedRow` — plain style is what
+    /// lets rows and headers reach the screen edges, and the zero min row height keeps a
+    /// zero-inset row from being padded back out to 44pt.
+    func fullBleedList() -> some View {
+        self
+            .listStyle(.plain)
+            .listSectionSpacing(0)
+            .environment(\.defaultMinListRowHeight, 0)
+            .themedListBackground()
+    }
+}
+
+/// A tab root's title, drawn in-content rather than as a navigation title.
+///
+/// Deliberately not a `UINavigationBar` appearance override: `AppearanceConfiguration`
+/// documents a concrete bug where that made nav titles vanish once a list had real rows.
+/// A view using this should set `.navigationTitle("")` so the two don't stack.
+/// An `accessory` is drawn below the title inside the same band — a tab's own control
+/// (Overview's pane picker) reading as part of the header rather than floating under it.
+/// The height a navigation-bar button occupies, reserved at the top of every band.
+///
+/// Buttons live in the bar above, which iOS sizes to its contents — so a screen with no
+/// button had a shorter bar and everything below it shifted up. Reserving the strip in
+/// the band instead means content starts at the same place whether a button is there or
+/// not, with no dependency on what the bar contains.
+enum HeaderMetrics {
+    /// Breathing room above the band's title — deliberately small, because the
+    /// navigation bar above already holds the toolbar buttons.
+    static let bandTopInset: CGFloat = 4
+    /// Stands in for the button row on a screen that has no toolbar button.
+    ///
+    /// On iPhone the navigation bar shrinks when a screen has no toolbar item, so those
+    /// pages rendered a visibly shorter header; reserving the row inside the band evens
+    /// them up. Matched to the *rendered* bar rather than the 44pt button alone, since
+    /// iOS pads above and below the glass capsule.
+    ///
+    /// Deliberately a plain `Color.clear` strip rather than an empty `ToolbarItem`: iOS
+    /// draws a glass platter behind whatever a bar item holds, so an invisible one still
+    /// renders as a ghost button.
+    ///
+    /// Zero on iPad, whose bar keeps its height with or without an item — reserving there
+    /// added the gap it exists to prevent.
+    static var buttonRowHeight: CGFloat {
+        UIDevice.current.userInterfaceIdiom == .phone ? 53 : 0
+    }
+    static let bandBottomInset: CGFloat = 12
+    static let bandHorizontalInset: CGFloat = 20
+    /// Gutter for a row of `SelectableChip`s.
+    ///
+    /// Less than the 16pt a text row uses, because a chip draws 10pt of padding inside
+    /// its own capsule — matching the outer value would push the chip's text 10pt right
+    /// of the section title above it. 6 + 10 lands the text on the same 16pt line.
+    static let chipGutter: CGFloat = 6
+}
+
+extension View {
+    /// The shared geometry of every green header band.
+    func headerBandStyle(reservesButtonRow: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // A frame that collapses to zero rather than an `if`: inserting and removing
+            // a view is a structural change SwiftUI animates, which made the header
+            // concertina when Overview's picker moved between a pane with a toolbar
+            // button and one without. A height is just a layout value.
+            Color.clear
+                .frame(height: reservesButtonRow ? HeaderMetrics.buttonRowHeight : 0)
+            self
+        }
+            .padding(.top, HeaderMetrics.bandTopInset)
+            .padding(.bottom, HeaderMetrics.bandBottomInset)
+            .padding(.horizontal, HeaderMetrics.bandHorizontalInset)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.appAccent)
+    }
+}
+
+struct PageTitleBand<Accessory: View>: View {
+    let title: String
+    /// True on a screen with no toolbar button, so the band holds that row open itself
+    /// and every tab's header stays the same height.
+    var reservesButtonRow: Bool = false
+    @ViewBuilder var accessory: Accessory
+
+    private var hasAccessory: Bool { Accessory.self != EmptyView.self }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: hasAccessory ? 12 : 0) {
+            HStack {
+                Text(title)
+                    .font(.appSerif(.title2))
+                    .foregroundStyle(.white)
+                Spacer()
+            }
+            accessory
+        }
+        .headerBandStyle(reservesButtonRow: reservesButtonRow)
+    }
+}
+
+extension PageTitleBand where Accessory == EmptyView {
+    init(title: String, reservesButtonRow: Bool = false) {
+        self.init(title: title, reservesButtonRow: reservesButtonRow, accessory: { EmptyView() })
+    }
+}
+
+/// A pushed screen's green header — the same band the tab roots get, sized to match,
+/// for screens that keep their back button. Pair with `.navigationTitle("")` and
+/// `.navigationBarTitleDisplayMode(.inline)` so the title doesn't render twice.
+/// A muted section label on the cream ground, standing in for a grouped list's header
+/// now that `.plain` renders headers unstyled and flush-left.
+struct FormSectionHeader: View {
+    let text: String
+
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        Text(text)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Color.appInkMuted)
+            // Stock headers uppercase their text.
+            .textCase(nil)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.top, 20)
+            .padding(.bottom, 6)
+            .listRowInsets(EdgeInsets())
+            // Sits on the cream ground rather than on a white band, the way a grouped
+            // header did.
+            .listRowBackground(Color.clear)
+    }
+}
+
+/// The footnote under a section — an aside on the cream ground, not a row. Pairs with
+/// `FormSectionHeader`, and exists for the same reason: `.plain` renders a stock footer as
+/// an opaque band, which reads as another list row rather than as commentary.
+struct FormSectionFooter: View {
+    let text: String
+
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(Color.appInkMuted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+            .padding(.bottom, 4)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+    }
+}
+
+extension View {
+    /// The horizontal gutter a form control needs once row insets are zeroed — without
+    /// it a Stepper's ± or a segmented control sits flush against the screen edge.
+    func formRowPadding() -> some View {
+        padding(.horizontal, 16)
+            .padding(.vertical, 10)
+    }
+
+    /// A form control as a full-bleed row: its own gutter, then the shared band.
+    func formRow(isLast: Bool = true) -> some View {
+        formRowPadding()
+            .fullBleedRow(isLast: isLast)
+    }
+}
+
+/// A pushed screen's green header.
+///
+/// Carries the screen's identity so the content below it never has to repeat the name:
+/// an optional one-line `subtitle` that expands on tap, and an optional trailing control
+/// (typically the pencil that opens the screen's edit sheet).
+struct PushedTitleBand<Trailing: View>: View {
+    let title: String
+    var subtitle: String? = nil
+    @ViewBuilder var trailing: Trailing
+
+    @State private var subtitleExpanded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(.appSerif(.title2))
+                    .foregroundStyle(.white)
+                trailing
+                Spacer()
+            }
+
+            // One line until tapped: a description is usually a paragraph, and a header
+            // that grows to fit one pushes the whole page down.
+            if let subtitle, !subtitle.isEmpty {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { subtitleExpanded.toggle() }
+                } label: {
+                    HStack(alignment: .top, spacing: 6) {
+                        Text(subtitle)
+                            .font(.footnote)
+                            .foregroundStyle(.white.opacity(0.85))
+                            .lineLimit(subtitleExpanded ? nil : 1)
+                            .truncationMode(.tail)
+                            .multilineTextAlignment(.leading)
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .rotationEffect(.degrees(subtitleExpanded ? 90 : 0))
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        // Same inset as the tab bands — here it clears the back button too.
+        .headerBandStyle()
+    }
+}
+
+extension PushedTitleBand where Trailing == EmptyView {
+    init(title: String, subtitle: String? = nil) {
+        self.init(title: title, subtitle: subtitle, trailing: { EmptyView() })
+    }
+}
+
+/// The in-content search field the green-band screens use instead of `.searchable`,
+/// which renders in the navigation bar — with the title emptied for the band, that
+/// leaves the field stranded in a bare bar above it.
+///
+/// A full-width white strip rather than a floating pill, so it reads as part of the page
+/// the way the rows below it do.
+struct InlineSearchField: View {
+    let prompt: String
+    @Binding var text: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(Color.appInkMuted)
+            TextField(prompt, text: $text)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            if !text.isEmpty {
+                Button {
+                    text = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(Color.appInkMuted)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+        .background(Color.appSurface)
+    }
+}
+
+/// A band carrying only a control — no title row at all, so the accessory sits close
+/// under the toolbar. An empty title string wouldn't do: `Text("")` still reserves a
+/// line's height.
+struct PageAccessoryBand<Accessory: View>: View {
+    var reservesButtonRow: Bool = false
+    @ViewBuilder var accessory: Accessory
+
+    var body: some View {
+        accessory
+            .headerBandStyle(reservesButtonRow: reservesButtonRow)
     }
 }

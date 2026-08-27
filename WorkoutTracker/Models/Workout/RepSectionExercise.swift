@@ -27,6 +27,12 @@ final class RepSectionExercise: SyncableModel, Orderable {
     /// Which weighted equipment this workout uses for the exercise, when the exercise
     /// has more than one attached. nil falls back to the exercise's own resolution.
     var preferredEquipment: Equipment?
+    /// This entry's default load is bodyweight rather than any weighted equipment.
+    /// Distinct from `allowsBodyweight`, which only *offers* the Body position on the
+    /// stepper: this makes it the starting selection. `preferredEquipment` is ignored
+    /// while this is true. Non-optional with a `false` default so entries written
+    /// before it existed decode correctly — every one of them was weighted.
+    var prefersBodyweight: Bool = false
     var updatedAt: Date = Date.now
     var deletedAt: Date?
 
@@ -45,7 +51,9 @@ final class RepSectionExercise: SyncableModel, Orderable {
         trackingMode: RepExerciseTrackingMode = .repsWeight,
         headStartSeconds: Int = 3,
         allowsBodyweight: Bool = false,
-        tracksSides: Bool = false
+        tracksSides: Bool = false,
+        preferredEquipment: Equipment? = nil,
+        prefersBodyweight: Bool = false
     ) {
         self.id = id
         self.section = section
@@ -57,6 +65,8 @@ final class RepSectionExercise: SyncableModel, Orderable {
         self.headStartSeconds = headStartSeconds
         self.allowsBodyweight = allowsBodyweight
         self.tracksSides = tracksSides
+        self.preferredEquipment = preferredEquipment
+        self.prefersBodyweight = prefersBodyweight
         self.updatedAt = .now
         self.deletedAt = nil
     }

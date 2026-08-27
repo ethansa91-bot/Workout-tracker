@@ -8,6 +8,9 @@ struct SessionScrubStripView: View {
     let currentIndex: Int
     let completedIndices: Set<Int>
     let onSelect: (Int) -> Void
+    /// Height derived from the container's width by the caller, so the strip reserves
+    /// exactly what its chips occupy rather than the widest-device maximum.
+    var fixedHeight: CGFloat?
 
     /// Small-screen baseline (iPhone SE/mini logical width) chip sizing scales from.
     private static let referenceWidth: CGFloat = 375
@@ -23,6 +26,14 @@ struct SessionScrubStripView: View {
     private static func chipWidth(for availableWidth: CGFloat) -> CGFloat {
         let growth = min(max(availableWidth / referenceWidth, 1.0), maxGrowth)
         return baseChipWidth * growth
+    }
+
+    /// The height the strip actually needs at a given width. The chips scale with the
+    /// screen, so reserving the maximum unconditionally left 7–14pt of dead space
+    /// inside the strip on anything narrower than the widest phone — space no amount
+    /// of outer padding could reclaim, because it was inside this view's own frame.
+    static func height(for availableWidth: CGFloat) -> CGFloat {
+        chipWidth(for: availableWidth) * heightRatio
     }
 
     var body: some View {
@@ -46,7 +57,8 @@ struct SessionScrubStripView: View {
                 }
             }
         }
-        .frame(height: Self.maxChipHeight)
+        // Falls back to the maximum only when a caller hasn't supplied a width.
+        .frame(height: fixedHeight ?? Self.maxChipHeight)
     }
 
     private func stepChip(_ step: TimeSectionStep, index: Int, width: CGFloat, height: CGFloat) -> some View {
@@ -75,9 +87,8 @@ struct SessionScrubStripView: View {
         // shape's bounds instead of straddling the edge — stroke's half-outside overflow
         // was getting clipped at the chip's own top/bottom edge, cutting the corners.
         .overlay {
-            if let stepColor = step.color?.color {
-                RoundedRectangle(cornerRadius: 12).strokeBorder(stepColor, lineWidth: 2)
-            }
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(step.resolvedColor.color, lineWidth: 2)
         }
     }
 
@@ -96,7 +107,7 @@ struct SessionScrubStripView: View {
     /// fill still shows the actual color (or the default accent if it has none).
     private func background(for index: Int) -> AnyShapeStyle {
         if index == currentIndex {
-            return AnyShapeStyle(steps[index].color?.color ?? .accentColor)
+            return AnyShapeStyle(steps[index].resolvedColor.color)
         }
         if completedIndices.contains(index) { return AnyShapeStyle(Color.secondary.opacity(0.3)) }
         return AnyShapeStyle(Color.secondary.opacity(0.12))

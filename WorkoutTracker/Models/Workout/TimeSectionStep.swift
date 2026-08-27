@@ -65,15 +65,15 @@ final class TimeSectionStep: SyncableModel, Orderable {
         set { colorRaw = newValue?.rawValue }
     }
 
-    /// The color an exercise step displays as in the section/workout lists — whatever
-    /// was manually chosen, or green by default when nothing was. `nil` for rest/get
-    /// ready steps, which have no color picker and stay plain gray in those lists.
-    /// The live scrub strip during a session uses raw `color` instead (not this) —
-    /// there, an unset color means the old plain gray/no-border look, not a green
-    /// default; only an explicit choice gets the colored treatment.
-    var effectiveColor: PaletteColor? {
-        guard stepType == .exercise else { return nil }
-        return color ?? .green
+    /// The color a step actually displays as. "Never chosen" is a real selection
+    /// rather than an absent one: green for exercises, gray for Rest and Get Ready.
+    ///
+    /// Nothing is stored — `color` stays nil until the user picks one — so this is
+    /// purely how a nil *reads*, which keeps export/import round-tripping unchanged
+    /// (a never-set step still writes no `color` key).
+    var resolvedColor: PaletteColor {
+        if let color { return color }
+        return stepType == .exercise ? .green : .gray
     }
 
     init(id: UUID = UUID(), section: WorkoutSection? = nil, sortOrder: Int, stepType: TimeStepType, exercise: Exercise? = nil, durationSeconds: Int) {

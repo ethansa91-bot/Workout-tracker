@@ -27,7 +27,7 @@ struct SectionTemplatesView: View {
                 List {
                     ForEach(templates) { section in
                         NavigationLink {
-                            SectionEditorView(section: section)
+                            SectionDetailView(section: section)
                         } label: {
                             templateRow(section)
                         }
@@ -39,9 +39,10 @@ struct SectionTemplatesView: View {
                             }
                             .tint(Color.appDanger)
                         }
+                        .fullBleedRow(isLast: section.id == templates.last?.id)
                     }
                 }
-                .themedListBackground()
+                .fullBleedList()
             }
         }
         .background(Color.appBackground)
@@ -75,8 +76,10 @@ struct SectionTemplatesView: View {
                         .lineLimit(1)
                 }
             }
+            Spacer()
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
 

@@ -56,6 +56,8 @@ final class Equipment: SyncableModel {
 
     @Relationship(inverse: \PersonalRecord.equipment)
     var personalRecords: [PersonalRecord]?
+    @Relationship(inverse: \PersonalRecordEntry.equipment)
+    var personalRecordEntries: [PersonalRecordEntry]?
 
     init(
         id: UUID = UUID(),

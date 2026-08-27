@@ -44,7 +44,6 @@ enum WorkoutExportService {
         WorkoutOut(
             name: workout.name,
             notes: workout.notes,
-            kind: workout.kind.rawValue,
             isArchived: workout.isArchived,
             sections: workout.sortedSections.map(sectionOut)
         )
@@ -94,7 +93,8 @@ enum WorkoutExportService {
             headStartSeconds: entry.headStartSeconds,
             allowsBodyweight: entry.allowsBodyweight,
             tracksSides: entry.tracksSides,
-            preferredEquipment: entry.preferredEquipment?.name
+            preferredEquipment: entry.preferredEquipment?.name,
+            prefersBodyweight: entry.prefersBodyweight
         )
     }
 
@@ -116,7 +116,6 @@ enum WorkoutExportService {
     private struct WorkoutOut: Encodable {
         let name: String
         let notes: String?
-        let kind: String
         let isArchived: Bool
         let sections: [SectionOut]
     }
@@ -150,6 +149,7 @@ enum WorkoutExportService {
         let allowsBodyweight: Bool
         let tracksSides: Bool
         let preferredEquipment: String?
+        let prefersBodyweight: Bool
     }
 
     private struct QuickExerciseOut: Encodable {

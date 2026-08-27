@@ -30,9 +30,7 @@ struct SessionHistoryDetailView: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            if log.isCancelled {
-                                Text("Cancelled").font(.caption).foregroundStyle(.secondary)
-                            } else if let holdSeconds = log.holdSeconds {
+                            if let holdSeconds = log.holdSeconds {
                                 Text("\(holdSeconds)s")
                                     .font(.subheadline)
                             } else {
@@ -76,13 +74,20 @@ struct SessionHistoryDetailView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .themedListBackground()
-        .navigationTitle(session.workout?.name ?? "Session")
+        .fullBleedList()
+        .safeAreaInset(edge: .top, spacing: 0) { PushedTitleBand(title: session.workout?.name ?? "Session") }
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
     }
 
+    /// Cancelled sets are excluded, matching how the rest of the app already treats
+    /// them — `SessionSummaryView`'s count, `RecordsListView`'s query and every
+    /// `SetLogQueries` predicate all skip them. History was the one place still
+    /// listing them, which made a session read busier than what was actually done.
     private var sortedSetLogs: [SetLog] {
-        session.setLogs.sorted { $0.loggedAt < $1.loggedAt }
+        session.setLogs
+            .filter { !$0.isCancelled }
+            .sorted { $0.loggedAt < $1.loggedAt }
     }
 
     /// Side-tracked exercises log two sets per index, so the side has to appear or the

@@ -27,6 +27,8 @@ struct RepSessionRunnerView: View {
     /// Briefly true after a save: the Save button is disabled and the set number is
     /// highlighted, so the change is visible before the card moves on.
     @State private var isSaving = false
+    /// Bumped the moment the forward nav button unlocks, to fire its one-shot pulse.
+    @State private var nextPulseTrigger = 0
 
     /// What an exercise's weight is being loaded with for this session. Session-local
     /// rather than persisted: the workout's own `preferredEquipment` is the default,
@@ -42,6 +44,8 @@ struct RepSessionRunnerView: View {
     }
 
     @State private var weightSourceByEntry: [UUID: WeightSource] = [:]
+    /// Which exercise card has its record-history popover open, if any.
+    @State private var historyPopoverEntryID: UUID?
 
     private var entries: [RepSectionExercise] { section.sortedRepExercises }
     private var currentIndex: Int { session.currentExerciseIndex ?? 0 }
@@ -53,13 +57,9 @@ struct RepSessionRunnerView: View {
     var body: some View {
         if let entry = currentEntry, let exercise = entry.exercise {
             VStack(spacing: 0) {
+                // No insets: the band runs edge to edge like every other runner's
+                // header, so its own fill is what meets the screen sides.
                 header(exercise: exercise, entry: entry)
-                    // Less above than around — the nav bar already sits directly over
-                    // this, so a full pad on top just pushes the timer down the screen.
-                    .padding(.horizontal)
-                    .padding(.top, 4)
-                    .padding(.bottom)
-                Divider()
                 GeometryReader { geometry in
                     if isWideLayout(geometry) {
                         wideBody(entry: entry, exercise: exercise)
@@ -136,56 +136,67 @@ struct RepSessionRunnerView: View {
         }
     }
 
+    /// The same full-width accent band the Follow Along / EMOM / AMRAP runners use, so
+    /// every runner opens the same way. Two panels sit directly on the fill — separated
+    /// by a white hairline, since a `Divider` is invisible against a solid color — rather
+    /// than as cards floating on the page background.
     private func header(exercise: Exercise, entry: RepSectionExercise) -> some View {
         GeometryReader { geometry in
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .top, spacing: 0) {
                 RestTimerView(
                     totalSeconds: entry.customRestSeconds ?? AppSettings.defaultRestSeconds,
                     soundProfile: soundProfile,
                     isSessionActive: session.status == .inProgress,
                     startSignal: $restStartSignal,
-                    stopSignal: $restStopSignal
+                    stopSignal: $restStopSignal,
+                    onAccent: true
                 )
-                // A quarter of the row, so the timer keeps the same proportion on any
+                // A third of the row, so the timer keeps the same proportion on any
                 // width rather than a fixed square that crowds a small phone.
                 .frame(width: geometry.size.width * 0.33)
 
+                Rectangle()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(width: 1)
+                    .frame(maxHeight: .infinity)
+
                 VStack(alignment: .leading, spacing: 0) {
-                    // Tinted band: which part of the workout you're in, set apart from
-                    // the exercise details below it.
+                    // Which part of the workout you're in, set apart from the exercise
+                    // details below it.
                     Text(sectionBannerText)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.appAccent)
+                        .foregroundStyle(.white.opacity(0.85))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                        .padding(.horizontal, 10)
+                        .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(exercise.displayName).font(.appSerif(.title3))
+                        Text(exercise.displayName)
+                            .font(.appSerif(.title3))
+                            .foregroundStyle(.white)
                         if !exercise.equipmentItems.isEmpty {
                             Label(exercise.equipmentItems.map(\.name).joined(separator: ", "), systemImage: "dumbbell.fill")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.white.opacity(0.85))
                         }
                         if !exercise.muscles.isEmpty {
                             Text(exercise.muscles.map(\.name).sorted().joined(separator: ", "))
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.white.opacity(0.85))
                         }
                     }
-                    .padding(.horizontal, 10)
+                    .padding(.horizontal, 12)
                     .padding(.top, 6)
 
                     Spacer(minLength: 0)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.appSurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
         }
         .frame(height: 132)
+        .background(Color.appAccent)
     }
 
     /// "Section: Abs 2 of 3" — the round is dropped when the section runs once.
@@ -199,9 +210,9 @@ struct RepSessionRunnerView: View {
     /// the set controls, and the session note attached below a divider.
     private func setBlock(entry: RepSectionExercise, exercise: Exercise) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            if entry.trackingMode == .repsWeight {
-                equipmentLine(entry: entry, exercise: exercise)
-            }
+            // Both modes: a max-time hold can be loaded too, and the same
+            // "locked once a set is logged" rule applies to either.
+            equipmentLine(entry: entry, exercise: exercise)
             recordLine(entry: entry, exercise: exercise)
 
             Divider()
@@ -215,6 +226,12 @@ struct RepSessionRunnerView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity)
+        // A child whose minimum exceeds the proposal makes `.padding` overrun rather
+        // than clamp, and a leading-aligned parent dumps all of that overflow on the
+        // right — which put this card's trailing edge off screen. Clipping guarantees
+        // the card never paints wider than the width it was handed, whatever a row
+        // inside it asks for at large type sizes.
+        .clipped()
         .cardStyle()
     }
 
@@ -257,7 +274,16 @@ struct RepSessionRunnerView: View {
     @ViewBuilder
     private func recordLine(entry: RepSectionExercise, exercise: Exercise) -> some View {
         let equipment = chosenEquipment(for: entry, exercise: exercise)
-        let record = PersonalRecordQueries.current(for: exercise, equipment: equipment, context: context)
+        // Looked up by the shape this entry tracks: a max-time record and a weight/reps
+        // record for the same equipment are different records, and reading either as the
+        // other used to overwrite it.
+        let record = PersonalRecordQueries.current(
+            for: exercise,
+            equipment: equipment,
+            trackingMode: entry.trackingMode,
+            isBodyweight: isBodyweightSource(for: entry, exercise: exercise),
+            context: context
+        )
 
         HStack(spacing: 6) {
             Image(systemName: "trophy.fill")
@@ -268,9 +294,82 @@ struct RepSessionRunnerView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+            // Only when there's something to show: a record that has never been beaten has
+            // no progression, and an always-present button that usually does nothing is worse
+            // than no button.
+            if let record, !record.history.isEmpty {
+                Button {
+                    historyPopoverEntryID = entry.id
+                } label: {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.caption)
+                        .foregroundStyle(Color.appAccent)
+                }
+                .buttonStyle(.borderless)
+                .popover(isPresented: historyBinding(for: entry.id)) {
+                    recordHistoryPopover(record)
+                }
+            }
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Same reason `.popover(item:)` isn't used in `SectionCardView`: it would try to
+    /// present on every exercise card on screen, so the open one is tracked by id.
+    private func historyBinding(for id: UUID) -> Binding<Bool> {
+        Binding(
+            get: { historyPopoverEntryID == id },
+            set: { if !$0 && historyPopoverEntryID == id { historyPopoverEntryID = nil } }
+        )
+    }
+
+    /// The record's progression, newest first — the standing record on top, then every
+    /// value it superseded. Read-only: mid-workout is the wrong moment to prune history,
+    /// so deleting an entry stays on the Records tab.
+    private func recordHistoryPopover(_ record: PersonalRecord) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Record progression")
+                .font(.headline)
+                .foregroundStyle(Color.appInk)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    // A record carries no achievement date of its own, so `updatedAt` is
+                    // the best stamp available — the same one `setRecord` files the values
+                    // it supersedes under.
+                    historyPopoverRow(
+                        text: PersonalRecordFormatting.summary(record),
+                        date: record.updatedAt,
+                        isCurrent: true
+                    )
+                    // `history` already drops tombstones and sorts newest first.
+                    ForEach(record.history) { entry in
+                        historyPopoverRow(
+                            text: PersonalRecordFormatting.summary(entry),
+                            date: entry.achievedAt,
+                            isCurrent: false
+                        )
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(16)
+        .frame(width: 260, height: 280)
+        .presentationCompactAdaptation(.popover)
+        .presentationBackground(.ultraThinMaterial)
+    }
+
+    private func historyPopoverRow(text: String, date: Date, isCurrent: Bool) -> some View {
+        HStack(spacing: 8) {
+            Text(text)
+                .font(.subheadline.weight(isCurrent ? .semibold : .regular))
+                .foregroundStyle(Color.appInk)
+            Spacer(minLength: 8)
+            Text(date.formatted(date: .abbreviated, time: .omitted))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 
     private func recordSummary(
@@ -291,8 +390,10 @@ struct RepSessionRunnerView: View {
             }
             return text
         case .maxHoldTime:
-            let bestHold = record?.holdSeconds ?? SetLogQueries.bestHoldEver(exercise: exercise, context: context)
-            let lastHold = SetLogQueries.lastHoldSeconds(exercise: exercise, excluding: session, context: context)
+            // `record` is already resolved for this equipment by the caller, and the
+            // history fallbacks are scoped to match — a loaded hold is its own record.
+            let bestHold = record?.holdSeconds ?? SetLogQueries.bestHoldEver(exercise: exercise, equipment: equipment, context: context)
+            let lastHold = SetLogQueries.lastHoldSeconds(exercise: exercise, equipment: equipment, excluding: session, context: context)
             guard let bestHold else { return "No record set yet" }
             var text = "\(bestHold)s"
             if let lastHold { text += " · last \(lastHold)s" }
@@ -312,7 +413,14 @@ struct RepSessionRunnerView: View {
         let logs = loggedSets(for: entry)
         let last = SetLogQueries.lastBestSet(exercise: exercise, excluding: session, context: context)
         let bestHold = entry.trackingMode == .maxHoldTime
-            ? (PersonalRecordQueries.current(for: exercise, context: context)?.holdSeconds ?? SetLogQueries.bestHoldEver(exercise: exercise, context: context))
+            ? (PersonalRecordQueries.current(
+                    for: exercise,
+                    equipment: chosenEquipment(for: entry, exercise: exercise),
+                    trackingMode: .maxHoldTime,
+                    isBodyweight: isBodyweightSource(for: entry, exercise: exercise),
+                    context: context
+               )?.holdSeconds
+                ?? SetLogQueries.bestHoldEver(exercise: exercise, equipment: chosenEquipment(for: entry, exercise: exercise), context: context))
             : nil
 
         if let key = activeSetKey(for: entry) {
@@ -370,6 +478,12 @@ struct RepSessionRunnerView: View {
                                 headStartSeconds: entry.headStartSeconds,
                                 previousBest: bestHold,
                                 recordedSeconds: .constant(log.holdSeconds ?? 0),
+                                // Read back off the log, not the live source: a saved set
+                                // is a record of what it was actually performed with.
+                                weightMode: log.isBodyweight == true ? .bodyweight : .stepper,
+                                weightUnit: log.weightUnit,
+                                weight: .constant(log.weight),
+                                isBodyweight: .constant(log.isBodyweight == true),
                                 isLogged: true,
                                 onLog: {},
                                 onCancel: { cancelSet(log) }
@@ -499,7 +613,7 @@ struct RepSessionRunnerView: View {
                                     isLogged: false,
                                     isWorseThanLast: false,
                                     isProminent: true,
-                                    allowsBodyweight: entry.allowsBodyweight,
+                                    allowsBodyweight: allowsBodyweightSource(for: entry, exercise: exercise),
                                     showsSaveButton: false,
                                     isSaving: isSaving,
                                     onLog: {},
@@ -533,7 +647,7 @@ struct RepSessionRunnerView: View {
                         isLogged: false,
                         isWorseThanLast: false,
                         isProminent: true,
-                        allowsBodyweight: entry.allowsBodyweight,
+                        allowsBodyweight: allowsBodyweightSource(for: entry, exercise: exercise),
                         isSaving: isSaving,
                         onLog: { logSet(entry: entry, key: key) },
                         onCancel: {}
@@ -546,6 +660,12 @@ struct RepSessionRunnerView: View {
                     headStartSeconds: entry.headStartSeconds,
                     previousBest: bestHold,
                     recordedSeconds: bindingHoldSeconds(key),
+                    weightMode: weightMode(for: entry, exercise: exercise),
+                    weightOptions: weightOptions,
+                    weightUnit: activeWeightUnit(for: entry, exercise: exercise),
+                    weight: bindingWeight(key, entry: entry, exercise: exercise),
+                    isBodyweight: bindingBodyweight(key, entry: entry, exercise: exercise),
+                    allowsBodyweight: allowsBodyweightSource(for: entry, exercise: exercise),
                     isLogged: false,
                     isProminent: true,
                     isSaving: isSaving,
@@ -615,7 +735,7 @@ struct RepSessionRunnerView: View {
                     Spacer(minLength: 8)
                     skipButton(entry: entry, width: quarterWidth * 0.5, isEnabled: isSkipEnabled)
                     Spacer(minLength: 8)
-                    navButton(.next, entry: entry, width: quarterWidth)
+                    nextButton(entry: entry, width: quarterWidth)
                 } else {
                     // No Spacers — Previous/Next/Skip widths are sized to exactly fill
                     // the row themselves, Skip always half a side button's width.
@@ -623,10 +743,15 @@ struct RepSessionRunnerView: View {
                     let sideWidth = remaining / 2.5
                     navButton(.previous, entry: entry, width: sideWidth)
                     skipButton(entry: entry, width: sideWidth * 0.5, isEnabled: isSkipEnabled)
-                    navButton(.next, entry: entry, width: sideWidth)
+                    nextButton(entry: entry, width: sideWidth)
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
+        }
+        // Only on the false→true edge: coming back to an exercise, or advancing away
+        // from a finished one, flips this the other way and shouldn't pulse.
+        .onChange(of: canAdvance(entry)) { _, isEnabled in
+            if isEnabled { nextPulseTrigger += 1 }
         }
         .frame(height: Self.navBarHeight)
         .padding(.horizontal)
@@ -635,6 +760,23 @@ struct RepSessionRunnerView: View {
         // screen edge, so anything here is pure added height.
         .padding(.bottom, 0)
         .background(Color.appSurface)
+    }
+
+    /// The forward button plus its unlock pulse. The animator lives out here rather than
+    /// inside `navButton` because `navButton` swaps between two style branches at the
+    /// exact moment the pulse should run — a keyframe animator attached inside would be
+    /// inserted fresh on that swap and start already at rest. Applied here its identity
+    /// is stable across the swap, so the trigger actually animates it.
+    private func nextButton(entry: RepSectionExercise, width: CGFloat) -> some View {
+        navButton(.next, entry: entry, width: width)
+            // Grows and settles the moment the last set lands, so the way forward
+            // opening is something you feel rather than have to notice.
+            .keyframeAnimator(initialValue: 1.0, trigger: nextPulseTrigger) { view, scale in
+                view.scaleEffect(scale)
+            } keyframes: { _ in
+                SpringKeyframe(1.10, duration: 0.18, spring: .snappy)
+                SpringKeyframe(1.00, duration: 0.30, spring: .bouncy)
+            }
     }
 
     private func skipButton(entry: RepSectionExercise, width: CGFloat, isEnabled: Bool) -> some View {
@@ -650,7 +792,10 @@ struct RepSessionRunnerView: View {
                 .minimumScaleFactor(0.7)
                 .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.borderedProminent)
+        // `.bordered`, not `.borderedProminent` — the same translucent weight Previous
+        // carries, just in red. A solid red fill made skipping look like the loudest
+        // thing on the bar; this leaves the prominent fill for the forward button.
+        .buttonStyle(.bordered)
         .buttonBorderShape(.roundedRectangle(radius: Self.navBarCornerRadius))
         .controlSize(.large)
         .tint(isEnabled ? Color.appDanger : Color.gray)
@@ -669,61 +814,81 @@ struct RepSessionRunnerView: View {
     /// when there's something to show, so a button without one (e.g. "Finish", or
     /// "Previous" on the very first exercise) centers its title in that height instead
     /// of sitting pinned above blank leftover space.
+    @ViewBuilder
     private func navButton(_ direction: NavDirection, entry: RepSectionExercise, width: CGFloat) -> some View {
         let isPrevious = direction == .previous
         let isDisabled = isPrevious ? currentIndex == 0 : !canAdvance(entry)
+        // Forward and unlocked — every set logged, so this is the one button on the bar
+        // worth pressing. It's the only one that earns a prominent fill.
+        let isForwardActive = !isPrevious && !isDisabled
 
-        let title: String
-        let subtitle: String?
-        let icon: String?
-        if isPrevious {
-            title = "Previous"
-            subtitle = previousExerciseName
-            icon = "chevron.left"
-        } else if !isLastExerciseInSection {
-            title = "Next"
-            subtitle = nextExerciseName
-            icon = "chevron.right"
-        } else if !isLastSection {
-            title = "Next Section"
-            subtitle = nextSectionName
-            icon = "chevron.right"
+        let content = navButtonContent(isPrevious: isPrevious)
+        let action = { if isPrevious { goToPrevious() } else { goToNext(entry: entry) } }
+        let label = navButtonLabel(title: content.title, subtitle: content.subtitle,
+                                   icon: content.icon, isPrevious: isPrevious,
+                                   isProminent: isForwardActive)
+
+        // Two branches rather than one chain because `buttonStyle` can't be applied
+        // conditionally — everything after it is identical.
+        if isForwardActive {
+            Button(action: action) { label }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.appAccent)
+                .buttonBorderShape(.roundedRectangle(radius: Self.navBarCornerRadius))
+                .controlSize(.large)
+                .frame(width: width, height: Self.navBarHeight)
         } else {
-            title = "Finish"
-            subtitle = nil
-            icon = "checkmark"
+            Button(action: action) { label }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.roundedRectangle(radius: Self.navBarCornerRadius))
+                .controlSize(.large)
+                .frame(width: width, height: Self.navBarHeight)
+                .disabled(isDisabled)
         }
+    }
 
-        return Button {
-            if isPrevious { goToPrevious() } else { goToNext(entry: entry) }
-        } label: {
-            VStack(spacing: 2) {
-                HStack(spacing: 4) {
-                    if isPrevious { Image(systemName: icon!) }
-                    Text(title)
-                    if !isPrevious { Image(systemName: icon!) }
-                }
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            // maxHeight: .infinity (not just maxWidth) is what actually centers a
-            // single-line label within the button's full fixed height — without it the
-            // VStack only fills width, keeping its natural (short) height and just
-            // sitting near the top of the taller button instead of centering.
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    /// What the button says and points at. Lives outside `navButton` because that one is
+    /// a `@ViewBuilder`, which would read this if/else chain as a view branch rather than
+    /// as deferred assignment.
+    private func navButtonContent(isPrevious: Bool) -> (title: String, subtitle: String?, icon: String) {
+        if isPrevious {
+            return ("Previous", previousExerciseName, "chevron.left")
+        } else if !isLastExerciseInSection {
+            return ("Next", nextExerciseName, "chevron.right")
+        } else if !isLastSection {
+            return ("Next Section", nextSectionName, "chevron.right")
+        } else {
+            return ("Finish", nil, "checkmark")
         }
-        .buttonStyle(.bordered)
-        .buttonBorderShape(.roundedRectangle(radius: Self.navBarCornerRadius))
-        .controlSize(.large)
-        .frame(width: width, height: Self.navBarHeight)
-        .disabled(isDisabled)
+    }
+
+    /// The shared label for every nav button. `isProminent` is what the forward button
+    /// passes once it's filled with accent green: `.secondary` renders as dark gray,
+    /// which all but disappears against that fill, so the subtitle switches to white.
+    private func navButtonLabel(title: String, subtitle: String?, icon: String,
+                                isPrevious: Bool, isProminent: Bool) -> some View {
+        VStack(spacing: 2) {
+            HStack(spacing: 4) {
+                if isPrevious { Image(systemName: icon) }
+                Text(title)
+                if !isPrevious { Image(systemName: icon) }
+            }
+            .font(.subheadline.weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(isProminent ? AnyShapeStyle(Color.white.opacity(0.85))
+                                                 : AnyShapeStyle(HierarchicalShapeStyle.secondary))
+                    .lineLimit(1)
+            }
+        }
+        // maxHeight: .infinity (not just maxWidth) is what actually centers a
+        // single-line label within the button's full fixed height — without it the
+        // VStack only fills width, keeping its natural (short) height and just
+        // sitting near the top of the taller button instead of centering.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var previousExerciseName: String? {
@@ -786,8 +951,11 @@ struct RepSessionRunnerView: View {
     /// exercise's own weighted equipment, and finally bodyweight when there is none.
     private func weightSource(for entry: RepSectionExercise, exercise: Exercise) -> WeightSource {
         if let chosen = weightSourceByEntry[entry.id] { return chosen }
+        if entry.prefersBodyweight { return .bodyweight }
         if let preferred = entry.preferredEquipment { return .equipment(preferred.id) }
-        if let first = weightedOptions(for: exercise).first { return .equipment(first.id) }
+        // The catalog's own resolution, not the alphabetically first item — otherwise
+        // the runner silently disagrees with the default shown in the builder.
+        if let resolved = exercise.weightedEquipment { return .equipment(resolved.id) }
         return .bodyweight
     }
 
@@ -805,10 +973,11 @@ struct RepSessionRunnerView: View {
         weightSource(for: entry, exercise: exercise) == .bodyweight
     }
 
-    /// Whether bodyweight is a legitimate choice for this exercise: flagged for it in
-    /// the catalog, or simply having no weighted equipment to load.
+    /// Whether bodyweight is a legitimate choice for this exercise. Defers to the
+    /// catalog predicate so the menu, the builder's picker and the set row's Body
+    /// position can't disagree about it.
     private func allowsBodyweightSource(for entry: RepSectionExercise, exercise: Exercise) -> Bool {
-        weightedOptions(for: exercise).isEmpty || exercise.allowsBodyweight
+        exercise.allowsBodyweightSource
     }
 
     /// How each set's weight control should render, given the exercise's source.
@@ -989,7 +1158,14 @@ struct RepSessionRunnerView: View {
         // Seeded from the same equipment the set will be logged on, so switching
         // equipment re-seeds from that equipment's own history.
         let equipment = entry.flatMap { chosenEquipment(for: $0, exercise: exercise) }
-        let record = PersonalRecordQueries.current(for: exercise, equipment: equipment, context: context)
+        // Reps and weight, so only the weight/reps record has anything to seed from.
+        let record = PersonalRecordQueries.current(
+            for: exercise,
+            equipment: equipment,
+            trackingMode: .repsWeight,
+            isBodyweight: entry.map { isBodyweightSource(for: $0, exercise: exercise) } ?? false,
+            context: context
+        )
         let best = SetLogQueries.lastBestSet(exercise: exercise, equipment: equipment, excluding: session, context: context)
         let weightOptions = (equipment ?? exercise.weightedEquipment)?.sortedWeightCombos.map(\.value) ?? []
         return (
@@ -1092,6 +1268,16 @@ struct RepSessionRunnerView: View {
         context.insert(log)
         session.markDirty()
         try? context.save()
+
+        recordIfBest(
+            entry: entry,
+            trackingMode: .repsWeight,
+            reps: reps,
+            weight: weight,
+            holdSeconds: nil,
+            isBodyweight: isBodyweight,
+            isManual: isManual
+        )
     }
 
     /// Commits both sides of one set together. Any side already logged for this index
@@ -1119,6 +1305,17 @@ struct RepSessionRunnerView: View {
         restStartSignal += 1
         beginSaveLockout()
         let holdSeconds = draftHoldSeconds[key] ?? 0
+
+        // A hold can be loaded (a weighted plank, a weighted dead hang), so the load is
+        // resolved and stored exactly as it is for a reps/weight set. `reps` stays the
+        // `0` sentinel — `holdSeconds` is what makes this a hold — but weight,
+        // equipment and the bodyweight flag are all real values now rather than being
+        // dropped while a derived `weightUnit` was stored anyway.
+        let resolved = entry.exercise.map { resolvedWeight(entry: entry, exercise: $0, key: key) }
+        let isManual = entry.exercise.map { isManualEntry(for: entry, exercise: $0) } ?? false
+        let weight = resolved?.weight ?? 0
+        let isBodyweight = resolved?.isBodyweight ?? false
+
         let log = SetLog(
             session: session,
             repSectionExercise: entry,
@@ -1126,15 +1323,77 @@ struct RepSessionRunnerView: View {
             exerciseNameSnapshot: entry.exercise?.displayName,
             setIndex: key.index,
             reps: 0,
-            weight: 0,
+            weight: weight,
             weightUnit: entry.exercise.map { activeWeightUnit(for: entry, exercise: $0) } ?? AppSettings.weightUnit,
             holdSeconds: holdSeconds,
+            isBodyweight: isBodyweight ? true : nil,
             side: key.side,
-            repeatIndex: currentRepeat
+            repeatIndex: currentRepeat,
+            equipment: isManual ? nil : entry.exercise.flatMap { chosenEquipment(for: entry, exercise: $0) },
+            isManualWeight: isManual ? true : nil
         )
         context.insert(log)
         session.markDirty()
         try? context.save()
+
+        recordIfBest(
+            entry: entry,
+            trackingMode: .maxHoldTime,
+            reps: nil,
+            weight: weight,
+            holdSeconds: holdSeconds,
+            isBodyweight: isBodyweight,
+            isManual: isManual
+        )
+    }
+
+    /// Promotes a just-logged result to the personal record when it beats the standing
+    /// one, filing the old value into history. Silent by design — a record is worth
+    /// seeing afterwards, not worth interrupting a set for.
+    ///
+    /// Manual-weight entries are skipped: they carry no equipment, so a record written
+    /// from one would file under a null equipment the Records screen keys separately from
+    /// the real one.
+    private func recordIfBest(
+        entry: RepSectionExercise,
+        trackingMode: RepExerciseTrackingMode,
+        reps: Int?,
+        weight: Double?,
+        holdSeconds: Int?,
+        isBodyweight: Bool,
+        isManual: Bool
+    ) {
+        guard !isManual, let exercise = entry.exercise else { return }
+        let equipment = isBodyweight ? nil : chosenEquipment(for: entry, exercise: exercise)
+        let existing = PersonalRecordQueries.current(
+            for: exercise,
+            equipment: equipment,
+            trackingMode: trackingMode,
+            isBodyweight: isBodyweight,
+            context: context
+        )
+
+        guard PersonalRecordQueries.beats(
+            record: existing,
+            trackingMode: trackingMode,
+            reps: reps,
+            weight: weight,
+            holdSeconds: holdSeconds,
+            isBodyweight: isBodyweight
+        ) else { return }
+
+        PersonalRecordQueries.setRecord(
+            for: exercise,
+            equipment: equipment,
+            existing: existing,
+            trackingMode: trackingMode,
+            reps: reps,
+            weight: weight,
+            holdSeconds: holdSeconds,
+            isBodyweight: isBodyweight,
+            weightUnit: activeWeightUnit(for: entry, exercise: exercise),
+            context: context
+        )
     }
 
     /// Holds Save disabled for a second while the new set number is highlighted — long

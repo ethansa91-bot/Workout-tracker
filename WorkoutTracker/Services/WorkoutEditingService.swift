@@ -17,8 +17,8 @@ enum WorkoutEditingError: LocalizedError {
 /// SwiftData — the one thing every entry point has in common is checking
 /// `workout.isLocked` first. SwiftData itself has no way to enforce that.
 enum WorkoutEditingService {
-    static func createWorkout(name: String, kind: WorkoutKind = .personalized, context: ModelContext) -> Workout {
-        let workout = Workout(name: name, kind: kind)
+    static func createWorkout(name: String, context: ModelContext) -> Workout {
+        let workout = Workout(name: name)
         context.insert(workout)
         try? context.save()
         return workout
@@ -160,10 +160,10 @@ enum WorkoutEditingService {
     // MARK: - Rep exercises
 
     @discardableResult
-    static func addRepExercise(to section: WorkoutSection, exercise: Exercise, targetSets: Int, customRestSeconds: Int?, trackingMode: RepExerciseTrackingMode = .repsWeight, headStartSeconds: Int = 3, allowsBodyweight: Bool = false, tracksSides: Bool = false, context: ModelContext) throws -> RepSectionExercise {
+    static func addRepExercise(to section: WorkoutSection, exercise: Exercise, targetSets: Int, customRestSeconds: Int?, trackingMode: RepExerciseTrackingMode = .repsWeight, headStartSeconds: Int = 3, allowsBodyweight: Bool = false, tracksSides: Bool = false, preferredEquipment: Equipment? = nil, prefersBodyweight: Bool = false, context: ModelContext) throws -> RepSectionExercise {
         let workout = try requireUnlockedParent(of: section)
         let nextOrder = (section.repExercises.map(\.sortOrder).max() ?? -1) + 1
-        let entry = RepSectionExercise(section: section, sortOrder: nextOrder, exercise: exercise, targetSets: targetSets, customRestSeconds: customRestSeconds, trackingMode: trackingMode, headStartSeconds: headStartSeconds, allowsBodyweight: allowsBodyweight, tracksSides: tracksSides)
+        let entry = RepSectionExercise(section: section, sortOrder: nextOrder, exercise: exercise, targetSets: targetSets, customRestSeconds: customRestSeconds, trackingMode: trackingMode, headStartSeconds: headStartSeconds, allowsBodyweight: allowsBodyweight, tracksSides: tracksSides, preferredEquipment: preferredEquipment, prefersBodyweight: prefersBodyweight)
         context.insert(entry)
         section.markDirty()
         workout?.markDirty()

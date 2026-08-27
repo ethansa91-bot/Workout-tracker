@@ -28,14 +28,6 @@ enum WorkoutDisplayType: String {
     }
 }
 
-/// The kind chosen at creation time, which governs how many/which sections the workout
-/// is allowed to hold. Distinct from `displayType` below, which is purely derived
-/// from the sections that happen to exist (for icons/labels) and never restricts
-/// anything.
-enum WorkoutKind: String, Codable {
-    case personalized, byTime, byRep
-}
-
 @Model
 final class Workout: SyncableModel {
     var id: UUID = UUID()
@@ -43,7 +35,12 @@ final class Workout: SyncableModel {
     var notes: String?
     var createdAt: Date = Date.now
     var clonedFromWorkoutId: UUID?
-    var kindRaw: String = WorkoutKind.personalized.rawValue
+    /// Dead column. Workouts no longer have a type — a workout is just its sections,
+    /// and the only meaningful distinction is each section's own type. Kept (rather
+    /// than dropped) because the store syncs through CloudKit, where removing a field
+    /// is a schema change; nothing reads or writes it. `displayType` below is what
+    /// labels and icons derive from now.
+    var kindRaw: String = "personalized"
     var isArchived: Bool = false
     var updatedAt: Date = Date.now
     var deletedAt: Date?
@@ -55,12 +52,12 @@ final class Workout: SyncableModel {
         set { sectionsStorage = newValue }
     }
 
-    /// Nullify, not deny: CloudKit doesn't support `.deny` delete rules at all. The
-    /// only place that deletes a `Workout` directly is `TestDataService`'s dev/QA
-    /// cleanup, which relied on `.deny` to silently skip test workouts already used in
-    /// a session — with `.nullify` that delete now succeeds instead, leaving the
-    /// session's `workout` nil (already an Optional, handled via optional chaining
-    /// everywhere it's read). No user-facing delete-workout path exists today.
+    /// Nullify, not deny: CloudKit doesn't support `.deny` delete rules at all. A
+    /// deleted workout therefore leaves any session's `workout` nil (already an
+    /// Optional, handled via optional chaining everywhere it's read) rather than
+    /// blocking the delete. The user-facing delete paths in `WorkoutListView` and
+    /// `ArchivedWorkoutsView` guard on `isLocked` so this only happens for workouts no
+    /// live session references; `TestDataService`'s dev/QA cleanup deletes outright.
     @Relationship(deleteRule: .nullify, inverse: \WorkoutSession.workout)
     var sessionsStorage: [WorkoutSession]?
     var sessions: [WorkoutSession] {
@@ -76,28 +73,23 @@ final class Workout: SyncableModel {
     @Relationship(inverse: \ScheduledWorkout.workout)
     var scheduledWorkouts: [ScheduledWorkout]?
 
-    init(id: UUID = UUID(), name: String, notes: String? = nil, clonedFromWorkoutId: UUID? = nil, kind: WorkoutKind = .personalized) {
+    init(id: UUID = UUID(), name: String, notes: String? = nil, clonedFromWorkoutId: UUID? = nil) {
         self.id = id
         self.name = name
         self.notes = notes
         self.createdAt = .now
         self.clonedFromWorkoutId = clonedFromWorkoutId
-        self.kindRaw = kind.rawValue
         self.updatedAt = .now
         self.deletedAt = nil
     }
 
-    var kind: WorkoutKind {
-        get { WorkoutKind(rawValue: kindRaw) ?? .personalized }
-        set { kindRaw = newValue.rawValue }
-    }
-
-    /// Locked the instant any session — in-progress, paused, finished, or abandoned —
-    /// has ever referenced this workout, since editing afterward would corrupt that
-    /// history's meaning. Computed, not stored, so it can never go stale. Use
-    /// `WorkoutCloningService` to get an editable copy once locked.
+    /// Locked while any live session — in-progress, paused, finished, or abandoned —
+    /// references this workout, since editing afterward would corrupt that history's
+    /// meaning. Deleted sessions don't count, so clearing a workout's history from the
+    /// History tab makes it editable again. Computed, not stored, so it can never go
+    /// stale. Use `WorkoutCloningService` to get an editable copy once locked.
     var isLocked: Bool {
-        !sessions.isEmpty
+        sessions.contains { $0.deletedAt == nil }
     }
 
     var sortedSections: [WorkoutSection] {
@@ -119,24 +111,16 @@ final class Workout: SyncableModel {
         return .mixed
     }
 
-    /// Short label for list rows. By Time/By Reps show their kind's own label
-    /// ("Follow Along"/"Rep"), with ": Empty" appended before their one section exists.
-    /// Personalized appends its section composition — "Personalized: Follow Along" for
-    /// one made entirely of Follow Along sections, "Personalized: Mixed" once it has
-    /// several kinds, "Personalized: Empty" before it has any.
+    /// Short label for list rows, read straight off the section composition. Every
+    /// workout is the same kind of thing now, so there is no prefix left to add.
     var listTypeLabel: String {
-        switch kind {
-        case .byTime: return displayType == .empty ? "Follow Along: Empty" : "Follow Along"
-        case .byRep: return displayType == .empty ? "Rep: Empty" : "Rep"
-        case .personalized:
-            switch displayType {
-            case .time: return "Personalized: Follow Along"
-            case .rep: return "Personalized: Rep"
-            case .emom: return "Personalized: EMOM"
-            case .amrap: return "Personalized: AMRAP"
-            case .empty: return "Personalized: Empty"
-            case .mixed: return "Personalized: Mixed"
-            }
+        switch displayType {
+        case .time: return "Follow Along"
+        case .rep: return "Rep"
+        case .emom: return "EMOM"
+        case .amrap: return "AMRAP"
+        case .empty: return "Empty"
+        case .mixed: return "Mixed"
         }
     }
 }

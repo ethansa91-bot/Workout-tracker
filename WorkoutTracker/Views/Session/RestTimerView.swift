@@ -15,6 +15,10 @@ struct RestTimerView: View {
     let isSessionActive: Bool
     @Binding var startSignal: Int
     @Binding var stopSignal: Int
+    /// Drawn on the accent-filled header band rather than on the page background, so the
+    /// panel drops its own surface and switches to white-on-green. Off keeps the
+    /// original white card, for any caller placing the timer on the cream ground.
+    var onAccent: Bool = false
 
     @State private var remainingSeconds: Int
     @State private var isRunning = false
@@ -22,14 +26,22 @@ struct RestTimerView: View {
     // Must be @State, not `let` — see TimeSessionRunnerView for why.
     @State private var ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    init(totalSeconds: Int, soundProfile: TimerSoundProfile, isSessionActive: Bool, startSignal: Binding<Int>, stopSignal: Binding<Int>) {
+    init(totalSeconds: Int, soundProfile: TimerSoundProfile, isSessionActive: Bool, startSignal: Binding<Int>, stopSignal: Binding<Int>, onAccent: Bool = false) {
         self.totalSeconds = totalSeconds
         self.soundProfile = soundProfile
         self.isSessionActive = isSessionActive
         _startSignal = startSignal
         _stopSignal = stopSignal
+        self.onAccent = onAccent
         _remainingSeconds = State(initialValue: totalSeconds)
     }
+
+    /// The ring's depleting arc and the numerals: white on the accent band, where the
+    /// green fill is itself the accent and an accent-colored ring would vanish into it.
+    private var foreground: Color { onAccent ? .white : .primary }
+    private var ringTint: Color { onAccent ? .white : Color.accentColor }
+    private var trackTint: Color { onAccent ? .white.opacity(0.3) : Color.secondary.opacity(0.2) }
+    private var captionTint: Color { onAccent ? .white.opacity(0.85) : .secondary }
 
     private static let cornerRadius: CGFloat = 16
     private static let height: CGFloat = 132
@@ -48,13 +60,13 @@ struct RestTimerView: View {
     private var ring: some View {
         ZStack {
             Circle()
-                .stroke(Color.secondary.opacity(0.2), lineWidth: Self.ringWidth)
+                .stroke(trackTint, lineWidth: Self.ringWidth)
             // A Circle trims cleanly along its own outline — a RoundedRectangle
             // doesn't, which is why an earlier version's arc spilled outside.
             Circle()
                 .trim(from: 0, to: progress)
                 .stroke(
-                    Color.accentColor,
+                    ringTint,
                     style: StrokeStyle(lineWidth: Self.ringWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
@@ -65,6 +77,7 @@ struct RestTimerView: View {
                 .minimumScaleFactor(0.4)
                 .lineLimit(1)
                 .padding(.horizontal, Self.ringWidth + 4)
+                .foregroundStyle(foreground)
         }
         .aspectRatio(1, contentMode: .fit)
     }
@@ -76,13 +89,13 @@ struct RestTimerView: View {
         return VStack(alignment: .center, spacing: 2) {
             Text(isRunning ? "Tap to pause" : "Tap to start")
                 .font(isRegular ? .title3 : .subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(captionTint)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             if !isRunning {
                 Text("Hold to reset")
                     .font(isRegular ? .subheadline : .caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(captionTint)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
@@ -118,8 +131,14 @@ struct RestTimerView: View {
         .frame(maxWidth: .infinity)
         .frame(height: Self.height)
         // Same surface as the set block beside it, so the header reads as two panels of
-        // one screen rather than two different materials.
-        .background(Color.appSurface, in: RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
+        // one screen rather than two different materials. On the accent band there is no
+        // surface at all — the green is the surface, and a card here would break it up.
+        .background {
+            if !onAccent {
+                RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
+                    .fill(Color.appSurface)
+            }
+        }
         .contentShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
         .onTapGesture {
             toggle()

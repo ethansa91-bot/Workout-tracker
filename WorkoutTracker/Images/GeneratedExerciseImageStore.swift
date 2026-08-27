@@ -23,11 +23,31 @@ enum GeneratedExerciseImageStore {
     }
 
     static func load(fileName: String) -> UIImage? {
-        guard let url = directory?.appendingPathComponent(fileName),
-              let data = try? Data(contentsOf: url) else {
-            return nil
-        }
+        guard let data = data(fileName: fileName) else { return nil }
         return UIImage(data: data)
+    }
+
+    /// The stored bytes as-is. Archiving uses this rather than `load` so the JPEG is
+    /// copied verbatim instead of being decoded and re-encoded a second time.
+    static func data(fileName: String) -> Data? {
+        guard let url = directory?.appendingPathComponent(fileName) else { return nil }
+        return try? Data(contentsOf: url)
+    }
+
+    /// Writes bytes already known to be a valid image, keeping the archive's original
+    /// filename. Distinct from `save`, which re-encodes and derives the name from the
+    /// exercise id — on restore the name must survive, because `Exercise` rows in the
+    /// same archive already point at it.
+    static func restore(_ data: Data, fileName: String) throws {
+        guard let directory else { throw StoreError.noStorageDirectory }
+        try data.write(to: directory.appendingPathComponent(fileName), options: .atomic)
+    }
+
+    /// Every generated-image file currently on disk, by filename.
+    static func allFileNames() -> [String] {
+        guard let directory else { return [] }
+        let contents = try? fileManager.contentsOfDirectory(atPath: directory.path)
+        return contents ?? []
     }
 
     static func delete(fileName: String) {

@@ -37,12 +37,13 @@ struct MissedWorkoutsView: View {
                         }
                     }
                     .environment(\.editMode, $editMode)
-                    .themedListBackground()
+                    .fullBleedList()
                 }
             }
         }
         .background(Color.appBackground)
-        .navigationTitle("Missed Workouts")
+        .safeAreaInset(edge: .top, spacing: 0) { PushedTitleBand(title: "Missed Workouts") }
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if !missed.isEmpty {

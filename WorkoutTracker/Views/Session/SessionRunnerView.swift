@@ -9,6 +9,8 @@ struct SessionRunnerView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showingPauseSheet = false
+    @State private var showingDeleteConfirm = false
+    @State private var showingExerciseList = false
     @State private var showingSummary = false
     @State private var elapsedDisplay = "0:00:00"
 
@@ -61,11 +63,22 @@ struct SessionRunnerView: View {
         .keepScreenAwake(session.status == .inProgress)
         .toolbar {
             if !showingPauseSheet {
-                ToolbarItem(placement: .topBarTrailing) {
+                // Pause on the left, the exercise list on the right — the panel's own
+                // close button then sits on the same side as this one.
+                ToolbarItem(placement: .topBarLeading) {
                     Button {
                         pauseSession()
                     } label: {
-                        Label("Pause", systemImage: "pause.circle")
+                        Label("Close", systemImage: "xmark.circle")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            showingExerciseList.toggle()
+                        }
+                    } label: {
+                        Label("All Exercises", systemImage: "line.3.horizontal")
                     }
                 }
             }
@@ -75,6 +88,22 @@ struct SessionRunnerView: View {
         .overlay {
             if showingPauseSheet {
                 pauseOverlay
+            }
+        }
+        // An overlay rather than a sheet, for the same reason `pauseOverlay` is one:
+        // the workout stays on screen beside it instead of being covered.
+        .overlay {
+            if showingExerciseList, let workout {
+                SessionExerciseListView(
+                    session: session,
+                    sections: workout.sortedSections,
+                    onClose: {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            showingExerciseList = false
+                        }
+                    }
+                )
+                .transition(.move(edge: .trailing))
             }
         }
         .fullScreenCover(isPresented: $showingSummary) {
@@ -119,6 +148,9 @@ struct SessionRunnerView: View {
         .background(Color.appSurface)
     }
 
+    private static let pauseButtonHeight: CGFloat = 28
+    private static let pauseButtonCornerRadius: CGFloat = 12
+
     // A translucent overlay, not a sheet — the paused session stays visible
     // (dimmed) behind it instead of being fully covered. No dismiss path except
     // its own three buttons; tapping the dimmed background does nothing, same
@@ -141,22 +173,47 @@ struct SessionRunnerView: View {
                 }
                 .tint(.white)
 
+                // Solid fills, not `.bordered` glass: over the 75% black scrim a
+                // translucent button reads as washed out rather than as a real choice.
+                // Both labels take the full width and a fixed height rather than sizing
+                // to their own (very different length) text, so the two choices read as
+                // an evenly weighted pair instead of one wide button above a narrow one.
                 VStack(spacing: 12) {
-                    Button("Exit — Resume Later") {
+                    Button {
                         showingPauseSheet = false
                         dismiss()
+                    } label: {
+                        Text("Exit — Resume Later")
+                            .frame(maxWidth: .infinity, minHeight: Self.pauseButtonHeight)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.white)
+                    .tint(Color.appAccent)
 
-                    Button("End as Unfinished", role: .destructive) {
-                        stopSession()
+                    Button(role: .destructive) {
+                        showingDeleteConfirm = true
+                    } label: {
+                        Text("Exit and Delete Session")
+                            .frame(maxWidth: .infinity, minHeight: Self.pauseButtonHeight)
                     }
-                    .buttonStyle(.bordered)
                     .tint(Color.appDanger)
                 }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.roundedRectangle(radius: Self.pauseButtonCornerRadius))
+                .controlSize(.large)
+                .foregroundStyle(.white)
+                // Capped so the pair stays a readable block on iPad instead of
+                // stretching the full width of the scrim.
+                .frame(maxWidth: 340)
             }
             .padding(32)
+        }
+        // A hard delete takes the session's set and step logs with it, so it can't sit
+        // one stray tap away.
+        .confirmationDialog(
+            "Delete this session? Everything logged in it will be lost.",
+            isPresented: $showingDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Session", role: .destructive) { deleteSession() }
         }
     }
 
@@ -231,9 +288,9 @@ struct SessionRunnerView: View {
         showingPauseSheet = false
     }
 
-    private func stopSession() {
-        WorkoutSessionService.abandon(session, context: context)
+    private func deleteSession() {
         showingPauseSheet = false
+        WorkoutSessionService.delete(session, context: context)
         dismiss()
     }
 }

@@ -21,21 +21,35 @@ struct ExerciseListView: View {
 
     var body: some View {
         List {
-            ExerciseQuickFilterView(filter: $filter)
-                .listRowInsets(EdgeInsets())
-                .listRowSeparator(.hidden)
-
             ForEach(filtered) { exercise in
                 NavigationLink {
                     ExerciseDetailView(exercise: exercise)
                 } label: {
                     exerciseRow(exercise)
                 }
+                .fullBleedRow(isLast: exercise.id == filtered.last?.id)
             }
         }
-        .themedListBackground()
-        .searchable(text: $searchText, prompt: "Search exercises")
-        .navigationTitle("Exercises")
+        .fullBleedList()
+        // Band, search and filters ride together above the list rather than scrolling
+        // with it — the filters are how you narrow a 180-row catalogue, so losing them
+        // on the first swipe made them nearly useless.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            VStack(spacing: 0) {
+                PushedTitleBand(title: "Exercises")
+                InlineSearchField(prompt: "Search exercises", text: $searchText)
+                ExerciseQuickFilterView(filter: $filter)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.appSurface)
+                    .overlay(alignment: .bottom) {
+                        Rectangle()
+                            .fill(Color.appHairline)
+                            .frame(height: 0.5)
+                    }
+            }
+        }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -77,6 +91,7 @@ struct ExerciseListView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 }

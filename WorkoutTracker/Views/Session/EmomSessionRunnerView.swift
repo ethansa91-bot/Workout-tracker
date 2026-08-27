@@ -98,11 +98,10 @@ struct EmomSessionRunnerView: View {
                     } else {
                         Image(systemName: "play.circle.fill")
                             .font(.system(size: glyphSize))
-                            .foregroundStyle(Color.appAccent)
                     }
                     Text(isRunning ? "Tap to pause" : "Paused — tap to resume")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.85))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }
@@ -113,7 +112,10 @@ struct EmomSessionRunnerView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { isRunning.toggle() }
 
-                Divider()
+                // A plain Divider is invisible against the solid fill.
+                Rectangle()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(width: 1)
                     .frame(maxHeight: .infinity)
 
                 Text("Round \(currentRound + 1) of \(totalRounds)")
@@ -124,8 +126,11 @@ struct EmomSessionRunnerView: View {
                     .frame(maxWidth: .infinity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // White throughout — the solid accent fill matches Follow Along's timer
+            // band, where dark text would be unreadable.
+            .foregroundStyle(.white)
         }
-        .background(Color.appAccent.opacity(0.12))
+        .background(Color.appAccent)
     }
 
     /// Width drives height here, not the other way around — 2 columns on iPhone, 3 on
@@ -137,16 +142,26 @@ struct EmomSessionRunnerView: View {
             let availableWidth = geometry.size.width - Self.gridPadding * 2 - Self.columnSpacing * CGFloat(columnCount - 1)
             let cellWidth = availableWidth / CGFloat(columnCount)
             let mediaHeight = cellWidth * 9 / 16
-            ScrollView {
-                SectionHeaderLabel(section: section, repeatIndex: session.currentSectionRepeat ?? 0)
-                    .padding(.horizontal, Self.gridPadding)
-                    .padding(.top, 8)
-                LazyVGrid(columns: gridColumns, alignment: .leading, spacing: Self.rowSpacing) {
-                    ForEach(exercises) { entry in
-                        exerciseCell(entry, mediaHeight: mediaHeight)
+            VStack(spacing: 0) {
+                // Outside the ScrollView so it stays put while the grid scrolls under
+                // it, matching Follow Along. The tint also supplies the "Section: "
+                // prefix, so all three runners read identically.
+                SectionHeaderLabel(
+                    section: section,
+                    repeatIndex: session.currentSectionRepeat ?? 0,
+                    tint: Color.appAccent
+                )
+                .padding(.horizontal, Self.gridPadding)
+                .padding(.top, 8)
+
+                ScrollView {
+                    LazyVGrid(columns: gridColumns, alignment: .leading, spacing: Self.rowSpacing) {
+                        ForEach(exercises) { entry in
+                            exerciseCell(entry, mediaHeight: mediaHeight)
+                        }
                     }
+                    .padding(Self.gridPadding)
                 }
-                .padding(Self.gridPadding)
             }
         }
     }

@@ -24,9 +24,9 @@ func exerciseSettingsSummary(_ target: ExerciseSettingsTarget) -> String? {
     case .timeStep(let step):
         parts.append("\(step.durationSeconds)s")
         if step.stepType == .exercise {
-            // Raw `color`, not `effectiveColor` — the latter substitutes green for
-            // "unset", which would name a color the user never chose.
-            parts.append("Color: \(step.color?.label ?? "default")")
+            // "default" is no longer a distinct state — an unset color resolves to a
+            // real green selection, so name the color it actually shows as.
+            parts.append("Color: \(step.resolvedColor.label)")
         }
 
     case .repEntry(let entry):
@@ -162,13 +162,13 @@ private struct TimeStepSettingsRows: View {
         // Rest and Get Ready stay plain gray in the lists — no color to pick.
         if step.stepType == .exercise {
             VStack(alignment: .leading, spacing: 8) {
-                SettingRowLabel(title: "Color", value: step.color?.label ?? "default")
+                SettingRowLabel(title: "Color", value: step.resolvedColor.label)
                 // 8 swatches at the default 28pt overflow the popover's width, so this
                 // uses the picker's existing size knob rather than widening the panel.
                 PaletteColorPicker(selection: Binding(
                     get: { step.color },
                     set: { step.color = $0; save() }
-                ), swatchSize: 22)
+                ), swatchSize: 22, defaultSelection: step.resolvedColor)
             }
         }
     }
@@ -184,10 +184,6 @@ private struct TimeStepSettingsRows: View {
 private struct RepEntrySettingsRows: View {
     @Bindable var entry: RepSectionExercise
     let context: ModelContext
-
-    private var weightedOptions: [Equipment] {
-        (entry.exercise?.equipmentItems ?? []).filter(\.isWeighted).sorted { $0.name < $1.name }
-    }
 
     /// Storing `nil` when the value matches the device default keeps the entry
     /// following that default if it later changes, rather than freezing today's value.
@@ -261,28 +257,9 @@ private struct RepEntrySettingsRows: View {
             .tint(Color.appAccent)
         }
 
-        // Only worth asking when there's an actual choice to make. The menu carries the
-        // current value itself, so this row needs no separate SettingRowLabel.
-        if weightedOptions.count > 1, entry.trackingMode == .repsWeight {
-            HStack {
-                Text("Equipment:")
-                    .font(.subheadline)
-                Spacer()
-                Picker("Equipment", selection: Binding(
-                    get: { entry.preferredEquipment?.id ?? weightedOptions.first?.id },
-                    set: { newID in
-                        entry.preferredEquipment = weightedOptions.first { $0.id == newID }
-                        save()
-                    }
-                )) {
-                    ForEach(weightedOptions) { item in
-                        Text(item.name).tag(Optional(item.id))
-                    }
-                }
-                .labelsHidden()
-                .tint(Color.appRust)
-            }
-        }
+        // Offered in both tracking modes: a max-time hold can be loaded too (a weighted
+        // plank), and bodyweight is one of the choices rather than a separate toggle.
+        EquipmentSourcePicker(entry: entry, context: context)
     }
 
     private func save() {

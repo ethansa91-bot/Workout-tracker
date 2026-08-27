@@ -7,7 +7,7 @@ import SwiftData
 /// workout's own structural entities (sections, steps, rep exercises) get fresh rows.
 enum WorkoutCloningService {
     static func clone(_ original: Workout, context: ModelContext) -> Workout {
-        let copy = Workout(name: "\(original.name) Copy", notes: original.notes, clonedFromWorkoutId: original.id, kind: original.kind)
+        let copy = Workout(name: "\(original.name) Copy", notes: original.notes, clonedFromWorkoutId: original.id)
         context.insert(copy)
         // Workouts list is sorted newest-first; backdating the copy just before the
         // original makes it sort directly underneath instead of at the very top.
@@ -48,7 +48,9 @@ enum WorkoutCloningService {
                     trackingMode: entry.trackingMode,
                     headStartSeconds: entry.headStartSeconds,
                     allowsBodyweight: entry.allowsBodyweight,
-                    tracksSides: entry.tracksSides
+                    tracksSides: entry.tracksSides,
+                    preferredEquipment: entry.preferredEquipment,
+                    prefersBodyweight: entry.prefersBodyweight
                 )
                 context.insert(entryCopy)
             }

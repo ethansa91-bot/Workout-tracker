@@ -18,26 +18,40 @@ struct MuscleListView: View {
 
     var body: some View {
         List {
-            Picker("Category", selection: $selectedCategory) {
-                Text("All").tag(String?.none)
-                ForEach(categories) { category in
-                    Text(category.name.capitalized).tag(Optional(category.name))
-                }
-            }
-            .pickerStyle(.segmented)
-            .listRowSeparator(.hidden)
-
             ForEach(filteredMuscles) { muscle in
                 NavigationLink {
                     MuscleEditView(muscle: muscle)
                 } label: {
                     muscleRow(muscle)
                 }
+                .fullBleedRow(isLast: muscle.id == filteredMuscles.last?.id)
             }
         }
-        .themedListBackground()
-        .searchable(text: $searchText, prompt: "Search muscles")
-        .navigationTitle("Muscles")
+        .fullBleedList()
+        .safeAreaInset(edge: .top, spacing: 0) {
+            VStack(spacing: 0) {
+                PushedTitleBand(title: "Muscles")
+                InlineSearchField(prompt: "Search muscles", text: $searchText)
+                Picker("Category", selection: $selectedCategory) {
+                    Text("All").tag(String?.none)
+                    ForEach(categories) { category in
+                        Text(category.name.capitalized).tag(Optional(category.name))
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(Color.appSurface)
+                .overlay(alignment: .bottom) {
+                    Rectangle()
+                        .fill(Color.appHairline)
+                        .frame(height: 0.5)
+                }
+            }
+        }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private func muscleRow(_ muscle: Muscle) -> some View {
@@ -50,7 +64,8 @@ struct MuscleListView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 }
 
@@ -79,13 +94,19 @@ struct MuscleEditView: View {
     }
 
     var body: some View {
-        Form {
-            Section("Name") {
+        List {
+            Section {
                 TextField("Muscle name", text: $name)
+                    .formRow()
+            } header: {
+                FormSectionHeader("Name")
             }
 
-            Section("Categories") {
-                ForEach(allCategories + createdCategories.filter { created in !allCategories.contains { $0.id == created.id } }) { category in
+            Section {
+                let categories = allCategories + createdCategories.filter { created in
+                    !allCategories.contains { $0.id == created.id }
+                }
+                ForEach(categories) { category in
                     Toggle(category.name.capitalized, isOn: Binding(
                         get: { selectedCategoryIDs.contains(category.id) },
                         set: { isOn in
@@ -93,16 +114,22 @@ struct MuscleEditView: View {
                             else { selectedCategoryIDs.remove(category.id) }
                         }
                     ))
+                    .tint(Color.appAccent)
+                    .formRow(isLast: false)
                 }
                 HStack {
                     TextField("New category", text: $newCategoryName)
                     Button("Add") { addNewCategory() }
                         .disabled(newCategoryName.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
+                .formRow()
+            } header: {
+                FormSectionHeader("Categories")
             }
         }
-        .themedListBackground()
-        .navigationTitle("Edit Muscle")
+        .fullBleedList()
+        .safeAreaInset(edge: .top, spacing: 0) { PushedTitleBand(title: "Edit Muscle") }
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {

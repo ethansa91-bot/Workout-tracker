@@ -21,29 +21,40 @@ struct EquipmentListView: View {
 
     var body: some View {
         List {
-            HStack(spacing: 12) {
-                filterChip(icon: "house", label: "At Home", isOn: homeOnly, tint: Color.accentColor) {
-                    homeOnly.toggle()
-                }
-                filterChip(icon: "building.2", label: "At the Gym", isOn: gymOnly, tint: .orange) {
-                    gymOnly.toggle()
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .listRowSeparator(.hidden)
-            .padding(.vertical, 4)
-
             ForEach(filtered) { equipment in
                 NavigationLink {
                     EquipmentDetailView(equipment: equipment)
                 } label: {
                     equipmentRow(equipment)
                 }
+                .fullBleedRow(isLast: equipment.id == filtered.last?.id)
             }
         }
-        .themedListBackground()
-        .searchable(text: $searchText, prompt: "Search equipment")
-        .navigationTitle("Equipment")
+        .fullBleedList()
+        .safeAreaInset(edge: .top, spacing: 0) {
+            VStack(spacing: 0) {
+                PushedTitleBand(title: "Equipment")
+                InlineSearchField(prompt: "Search equipment", text: $searchText)
+                HStack(spacing: 12) {
+                    filterChip(icon: "house", label: "At Home", isOn: homeOnly, tint: Color.accentColor) {
+                        homeOnly.toggle()
+                    }
+                    filterChip(icon: "building.2", label: "At the Gym", isOn: gymOnly, tint: .orange) {
+                        gymOnly.toggle()
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(Color.appSurface)
+                .overlay(alignment: .bottom) {
+                    Rectangle()
+                        .fill(Color.appHairline)
+                        .frame(height: 0.5)
+                }
+            }
+        }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -83,7 +94,8 @@ struct EquipmentListView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
     /// The list-level filter toggle — capsule chip style matching

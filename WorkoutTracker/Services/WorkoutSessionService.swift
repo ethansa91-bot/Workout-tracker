@@ -48,6 +48,15 @@ enum WorkoutSessionService {
         try? context.save()
     }
 
+    /// Discards a session outright. `stepLogsStorage`, `setLogsStorage` and
+    /// `exerciseNotesStorage` are all `.cascade`, so everything logged in it goes too;
+    /// `Workout.sessionsStorage` is `.nullify`, so the workout itself survives and
+    /// simply stops counting this session toward `isLocked`.
+    static func delete(_ session: WorkoutSession, context: ModelContext) {
+        context.delete(session)
+        try? context.save()
+    }
+
     static func finish(_ session: WorkoutSession, context: ModelContext) {
         session.freezeElapsedTime()
         session.status = .finished

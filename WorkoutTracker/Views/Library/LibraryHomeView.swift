@@ -14,19 +14,22 @@ struct LibraryHomeView: View {
                 } label: {
                     LibraryRow(title: "Exercises", count: exercises.count, systemImage: "figure.strengthtraining.traditional")
                 }
+                .fullBleedRow(isLast: false)
                 NavigationLink {
                     EquipmentListView()
                 } label: {
                     LibraryRow(title: "Equipment", count: equipment.count, systemImage: "dumbbell.fill")
                 }
+                .fullBleedRow(isLast: false)
                 NavigationLink {
                     MuscleListView()
                 } label: {
                     LibraryRow(title: "Muscles", count: muscles.count, systemImage: "figure.core.training")
                 }
+                .fullBleedRow()
             }
         }
-        .themedListBackground()
+        .fullBleedList()
     }
 }
 
@@ -45,6 +48,7 @@ private struct LibraryRow: View {
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(.secondary)
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 }

@@ -17,6 +17,9 @@ enum DataResetService {
         try deleteAll(StepLog.self, context: context)
         try deleteAll(ExerciseSessionNote.self, context: context)
         try deleteAll(WorkoutSession.self, context: context)
+        // Before its parent: entries cascade, but deleting them first keeps the
+        // reset order explicit rather than relying on cascade timing.
+        try deleteAll(PersonalRecordEntry.self, context: context)
         try deleteAll(PersonalRecord.self, context: context)
         try deleteAll(ScheduledWorkout.self, context: context)
         try deleteAll(RecurringWorkoutSchedule.self, context: context)

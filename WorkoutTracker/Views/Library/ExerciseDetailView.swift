@@ -5,7 +5,6 @@ struct ExerciseDetailView: View {
     @Bindable var exercise: Exercise
     @Environment(\.modelContext) private var context
     @State private var showingEdit = false
-    @State private var notesExpanded = false
     @State private var showingVideoPlayer = false
     @State private var showingPicturePreview = false
 
@@ -15,32 +14,9 @@ struct ExerciseDetailView: View {
 
     var body: some View {
         List {
+            // Name, notes and the edit button all live in the green band now, so the
+            // first thing under it is the exercise's own content.
             Section {
-                // One row (not two) for header + note — no row separator between them
-                // and tight spacing, so the note reads as another field belonging with
-                // the name rather than a visually distinct block.
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(alignment: .top) {
-                        DetailHeader(
-                            systemName: exercise.iconSymbolName,
-                            title: exercise.displayName,
-                            subtitle: exercise.showsSecondaryName ? exercise.name : (exercise.isCustom ? "Custom exercise" : nil)
-                        )
-                        Spacer()
-                        Button {
-                            showingEdit = true
-                        } label: {
-                            Image(systemName: "pencil")
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(Color.appInkMuted)
-                    }
-
-                    if let notes = exercise.notes, !notes.isEmpty {
-                        notesPreview(notes)
-                    }
-                }
-
                 if hasPicture {
                     pictureRow
                 }
@@ -69,8 +45,19 @@ struct ExerciseDetailView: View {
             }
 
         }
-        .themedListBackground()
-        .navigationTitle(exercise.displayName)
+        .fullBleedList()
+        .safeAreaInset(edge: .top, spacing: 0) {
+            PushedTitleBand(title: exercise.displayName, subtitle: exercise.notes) {
+                Button {
+                    showingEdit = true
+                } label: {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white.opacity(0.85))
+            }
+        }
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingEdit) {
             ExerciseIdentityEditView(exercise: exercise)
@@ -182,7 +169,11 @@ struct ExerciseDetailView: View {
                 toggleFlag { exercise.isOneSided.toggle() }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
+        // Same gutter as `chipGrid`, so the flag chips and the muscle/equipment chips
+        // start and end on one line rather than one being centred against the other.
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, HeaderMetrics.chipGutter)
+        .padding(.vertical, 10)
     }
 
     private func toggleFlag(_ change: () -> Void) {
@@ -192,27 +183,7 @@ struct ExerciseDetailView: View {
     }
 
     /// Truncated to one line, tap to expand in place — same accordion idea as
-    /// `TimeSectionEditorView`'s step rows (rotating chevron, no navigation away).
-    private func notesPreview(_ notes: String) -> some View {
-        Button {
-            withAnimation { notesExpanded.toggle() }
-        } label: {
-            HStack(alignment: .top, spacing: 6) {
-                Text(notes)
-                    .font(.footnote)
-                    .foregroundStyle(Color.appInkMuted)
-                    .lineLimit(notesExpanded ? nil : 1)
-                    .truncationMode(.tail)
-                    .multilineTextAlignment(.leading)
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .rotationEffect(.degrees(notesExpanded ? 90 : 0))
-            }
-        }
-        .buttonStyle(.plain)
-    }
+    /// the section card's step rows (rotating chevron, no navigation away).
 
     // MARK: - Chip sections
 
@@ -230,7 +201,11 @@ struct ExerciseDetailView: View {
                 }
             }
         }
-        .padding(.vertical, 4)
+        // Narrower than the 16pt other rows use, because a chip carries 10pt of its own
+        // horizontal padding — at a full 16 the chip's *text* started 10pt right of the
+        // section title above it. This lands the capsule's edge on the shared gutter.
+        .padding(.horizontal, HeaderMetrics.chipGutter)
+        .padding(.vertical, 10)
     }
 
     private func isMuscleSelected(_ muscle: Muscle) -> Bool {

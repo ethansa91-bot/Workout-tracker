@@ -9,14 +9,9 @@ import SwiftUI
 /// underneath, sized to be hit without looking.
 struct SetRowView: View {
     /// How the weight is entered for this set.
-    enum WeightMode {
-        /// +/- through the equipment's preset combos.
-        case stepper
-        /// A tappable value that opens the number pad — no presets to step through.
-        case manual
-        /// Nothing loaded: a fixed "Bodyweight" readout, weight logs as 0.
-        case bodyweight
-    }
+    /// Defined in `SetWeightStepping.swift` and shared with `HoldSetRowView`; kept
+    /// under the old name so existing call sites read unchanged.
+    typealias WeightMode = SetWeightMode
 
     let setNumber: Int
     /// "Left"/"Right" for one-sided exercises tracked per side; nil otherwise.
@@ -168,7 +163,7 @@ struct SetRowView: View {
                         Image(systemName: "minus.circle")
                     }
                     weightDisplay
-                        .frame(minWidth: weightFieldWidth, alignment: .center)
+                        .frame(minWidth: weightFieldWidth, maxWidth: .infinity, alignment: .center)
                     Button {
                         stepWeight(delta: 1)
                     } label: {
@@ -183,7 +178,7 @@ struct SetRowView: View {
                 .font(valueFont)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-                .frame(minWidth: weightFieldWidth)
+                .frame(minWidth: weightFieldWidth, maxWidth: .infinity)
         }
     }
 
@@ -243,14 +238,17 @@ struct SetRowView: View {
         .presentationDetents([.height(280)])
     }
 
-    /// "Bodyweight" needs far more room than a number, and a stepper whose width jumps
-    /// as you step onto it reads as a glitch — so the space is reserved up front. When a
-    /// side label shares the row there's less to go around, so the reservation shrinks
-    /// and the text scales instead.
+    /// A floor, not a reservation: enough for a numeric value like "12.5 kg" so the ±
+    /// buttons don't shift as digits change, and small enough that the row always fits.
+    ///
+    /// It used to reserve the full width of the word "Bodyweight" so the stepper
+    /// wouldn't change width when you stepped onto it. That reservation was a hard
+    /// minimum propagated up through the card, and `.padding` doesn't clamp — the whole
+    /// card, Save button included, was pushed off the right edge of the screen. The word
+    /// scales down to meet this floor instead.
     private var weightFieldWidth: CGFloat {
-        guard isProminent else { return allowsBodyweight ? 92 : 60 }
-        if sideLabel != nil { return allowsBodyweight ? 104 : 78 }
-        return allowsBodyweight ? 130 : 92
+        guard isProminent else { return 60 }
+        return sideLabel != nil ? 60 : 72
     }
 
     /// Level-based equipment shows the matching combo's color dot + label (falling
@@ -272,7 +270,10 @@ struct SetRowView: View {
                     .font(valueFont)
                     .lineLimit(1)
             }
+            .minimumScaleFactor(0.7)
         } else {
+            // Scales as a pair so the number and its unit shrink together and stay on
+            // one baseline — at large Dynamic Type the row has no width left to give.
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(weightNumberText(weight))
                     .font(valueFont)
@@ -280,6 +281,8 @@ struct SetRowView: View {
                     .font(unitFont)
                     .foregroundStyle(.secondary)
             }
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
         }
     }
 
@@ -328,7 +331,9 @@ struct SetRowView: View {
                 .font(unitFont)
                 .foregroundStyle(.secondary)
         }
-        .frame(minWidth: isProminent ? (sideLabel == nil ? 76 : 64) : 48, alignment: .center)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .frame(minWidth: isProminent ? (sideLabel == nil ? 64 : 56) : 48, alignment: .center)
     }
 
     private var valueFont: Font {
@@ -339,39 +344,18 @@ struct SetRowView: View {
     /// with the same two buttons: stepping down off the bottom enters it, stepping up
     /// leaves it for the lightest option.
     private func stepWeight(delta: Int) {
-        if isBodyweight {
-            guard delta > 0 else { return }
-            isBodyweight = false
-            weight = weightOptions.first?.value ?? 0
-            return
-        }
-
-        guard !weightOptions.isEmpty else {
-            let stepped = weight + Double(delta) * 5
-            if allowsBodyweight && stepped < 0 {
-                isBodyweight = true
-                weight = 0
-            } else {
-                weight = max(0, stepped)
-            }
-            return
-        }
-
-        guard let currentIndex = weightOptions.firstIndex(where: { $0.value == weight }) else {
-            weight = weightOptions[delta > 0 ? 0 : weightOptions.count - 1].value
-            return
-        }
-
-        let newIndex = currentIndex + delta
-        if allowsBodyweight && newIndex < 0 {
-            isBodyweight = true
-            weight = 0
-            return
-        }
-        weight = weightOptions[min(max(newIndex, 0), weightOptions.count - 1)].value
+        let stepped = steppedSetWeight(
+            delta: delta,
+            weight: weight,
+            isBodyweight: isBodyweight,
+            options: weightOptions,
+            allowsBodyweight: allowsBodyweight
+        )
+        weight = stepped.weight
+        isBodyweight = stepped.isBodyweight
     }
 
     private func formattedWeight(_ value: Double) -> String {
-        value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value)) \(weightUnit)" : "\(value) \(weightUnit)"
+        formattedSetWeight(value, unit: weightUnit)
     }
 }

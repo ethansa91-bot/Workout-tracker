@@ -38,14 +38,79 @@ func sectionExerciseCount(_ section: WorkoutSection) -> Int {
     }
 }
 
-/// What the section is and everything it's set to, shown under its name. Every setting
-/// stays listed whatever its value — an "off" that vanishes is indistinguishable from
-/// a setting that doesn't apply, so `Autostart: off` and `Repeat: no` are spelled out.
-func sectionSettingsSummary(_ section: WorkoutSection) -> String {
-    var parts: [String] = [section.sectionType.pillLabel]
+/// What one set of a rep exercise is assumed to take. Rep sections are the only kind
+/// with no stored duration — a set is however long you take over it — so an estimate
+/// has to assume a figure, and this is it.
+let estimatedRepSetSeconds = 45
 
+/// Rough padding on the workout total for everything the section math can't see:
+/// setup, plate changes, walking between stations, the pause between sections.
+/// Applied once at the workout level so per-section estimates stay unpadded.
+private let estimateOverheadFactor = 1.10
+
+/// Roughly how long a section takes, including its repeats.
+///
+/// Exact for time/EMOM/AMRAP, which are driven end to end by stored durations. For a
+/// rep section each set slot is assumed to take `estimatedRepSetSeconds` and rest is
+/// added once per *set* rather than per slot: a two-sided exercise works both sides
+/// between the same two rests, so its slots double but its rests do not.
+func estimatedSectionSeconds(_ section: WorkoutSection) -> Int {
+    let perPass: Int
+    switch section.sectionType {
+    case .time:
+        // Every step carries a duration, Rest and Get Ready included, and the runner
+        // plays them back to back with no gap — so the sum is the real elapsed time.
+        perPass = section.sortedTimeSteps.reduce(0) { $0 + $1.durationSeconds }
+    case .emom:
+        // A round is always one minute; the count is the only variable.
+        perPass = section.emomRoundCount * 60
+    case .amrap:
+        perPass = section.amrapDurationSeconds
+    case .rep:
+        perPass = section.sortedRepExercises.reduce(0) { total, entry in
+            let rest = entry.customRestSeconds ?? AppSettings.defaultRestSeconds
+            let work = estimatedRepSetSeconds * entry.totalSetSlots
+            // The head start runs before each hold, so it scales with slots, not sets.
+            let headStart = entry.trackingMode == .maxHoldTime
+                ? entry.headStartSeconds * entry.totalSetSlots
+                : 0
+            return total + work + headStart + rest * entry.targetSets
+        }
+    }
+    return perPass * section.effectiveRepeatCount
+}
+
+/// The whole workout's estimate — every section, repeats included, plus
+/// `estimateOverheadFactor` for the between-section overhead the per-section math
+/// can't account for.
+func estimatedWorkoutSeconds(_ workout: Workout) -> Int {
+    let base = workout.sortedSections.reduce(0) { $0 + estimatedSectionSeconds($1) }
+    return Int((Double(base) * estimateOverheadFactor).rounded())
+}
+
+/// An estimate rendered for display: "~25 min", or "~1 h 05 min" once it passes an
+/// hour. Always approximate, so it always carries the tilde.
+func formattedEstimate(_ seconds: Int) -> String {
+    let totalMinutes = max(1, Int((Double(seconds) / 60).rounded()))
+    guard totalMinutes >= 60 else { return "~\(totalMinutes) min" }
+    let hours = totalMinutes / 60
+    let minutes = totalMinutes % 60
+    return String(format: "~%d h %02d min", hours, minutes)
+}
+
+/// What kind of section it is and how much is in it — the two facts that identify it at
+/// a glance, so they sit beside the name rather than in the settings line below.
+func sectionKindSummary(_ section: WorkoutSection) -> String {
     let count = sectionExerciseCount(section)
-    parts.append("\(count) Exercise\(count == 1 ? "" : "s")")
+    return "\(section.sectionType.pillLabel) · \(count) Exercise\(count == 1 ? "" : "s")"
+}
+
+/// Everything the section is *set to*, minus the kind and count `sectionKindSummary`
+/// already carries. Every setting stays listed whatever its value — an "off" that
+/// vanishes is indistinguishable from a setting that doesn't apply, so `Autostart: off`
+/// and `Repeat: no` are spelled out.
+func sectionSettingsSummary(_ section: WorkoutSection) -> String {
+    var parts: [String] = []
 
     switch section.sectionType {
     case .emom:
@@ -78,8 +143,10 @@ struct SectionSettingsPopover: View {
     @Bindable var section: WorkoutSection
     let context: ModelContext
     var onError: (String) -> Void
-    var onClone: () -> Void
-    var onDelete: () -> Void
+    /// nil hides the action. A standalone template section has no siblings to be
+    /// cloned or deleted among, so it passes nil for both and the row disappears.
+    var onClone: (() -> Void)?
+    var onDelete: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -111,12 +178,19 @@ struct SectionSettingsPopover: View {
 
     /// Same shape as the exercise popover's actions, so clone and delete live in the
     /// same place whichever level you're editing.
+    @ViewBuilder
     private var actionsRow: some View {
-        HStack(spacing: 28) {
-            actionButton("doc.on.doc", "Clone", tint: Color.appAccent, action: onClone)
-            actionButton("trash", "Delete", tint: Color.appDanger, action: onDelete)
+        if onClone != nil || onDelete != nil {
+            HStack(spacing: 28) {
+                if let onClone {
+                    actionButton("doc.on.doc", "Clone", tint: Color.appAccent, action: onClone)
+                }
+                if let onDelete {
+                    actionButton("trash", "Delete", tint: Color.appDanger, action: onDelete)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
         }
-        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private func actionButton(_ symbol: String, _ label: String, tint: Color, action: @escaping () -> Void) -> some View {

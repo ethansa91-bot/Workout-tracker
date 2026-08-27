@@ -28,8 +28,10 @@ struct WorkoutTrackerApp: App {
             SetLog.self,
             ExerciseSessionNote.self,
             PersonalRecord.self,
+            PersonalRecordEntry.self,
             RecurringWorkoutSchedule.self,
             ScheduledWorkout.self,
+            FollowedUser.self,
         ])
         // Syncs every model in the schema across the user's own devices via iCloud.
         // Requires the WorkoutTracker.entitlements iCloud/CloudKit capability and a
@@ -125,6 +127,18 @@ struct WorkoutTrackerApp: App {
                 CatalogReconciliation.runAfterNextImport(container: sharedModelContainer)
             }
         }
+
+        // Opt-in CloudKit schema check: set CK_VALIDATE=1 in the scheme's environment
+        // and run on a device signed into iCloud. Reports exactly which entity or
+        // property CloudKit can't mirror — the detail an export `partialFailure`
+        // withholds. Debug-only; `initializeCloudKitSchema` must never ship.
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["CK_VALIDATE"] == "1" {
+            // Off the main thread: the dry run does real network work and takes tens of
+            // seconds, which would trip the launch watchdog if run inline here.
+            Thread.detachNewThread { CloudKitSchemaValidator.run() }
+        }
+        #endif
     }
 
     /// Flags for every legacy migration superseded by `CatalogSeedLoader` on a fresh

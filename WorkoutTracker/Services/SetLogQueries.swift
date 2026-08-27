@@ -44,6 +44,49 @@ enum SetLogQueries {
         return BestSet(weight: best.weight, reps: best.reps)
     }
 
+    // MARK: - Bodyweight
+    //
+    // Separate from the weighted lookups rather than relaxing their `isBodyweight ==
+    // nil` filters: a bodyweight set logs no load, so letting one through as a
+    // "best set" would surface a meaningless 0 kg hint mid-workout. Equipment is
+    // ignored here — bodyweight is the load, whatever bar it was done on.
+
+    /// Most reps at body load in the most recent session that has any, excluding the
+    /// one in progress.
+    static func lastBodyweightReps(exercise: Exercise, excluding session: WorkoutSession, context: ModelContext) -> Int? {
+        let exerciseID = exercise.id
+        let sessionID = session.id
+        // The bodyweight/hold conditions are applied in Swift rather than in the
+        // predicate — folding all five into one `#Predicate` pushes the type-checker
+        // past its limit and fails to compile.
+        var descriptor = FetchDescriptor<SetLog>(
+            predicate: #Predicate { log in
+                log.exercise?.id == exerciseID && log.isCancelled == false && log.session?.id != sessionID
+            },
+            sortBy: [SortDescriptor(\SetLog.loggedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 400
+        guard let fetched = try? context.fetch(descriptor) else { return nil }
+        let logs = fetched.filter { $0.holdSeconds == nil && $0.isBodyweight == true }
+        guard !logs.isEmpty, let mostRecentSessionID = logs.first?.session?.id else { return nil }
+        return logs.filter { $0.session?.id == mostRecentSessionID }.map(\.reps).max()
+    }
+
+    /// Most reps at body load across all history.
+    static func bestBodyweightRepsEver(exercise: Exercise, context: ModelContext) -> Int? {
+        let exerciseID = exercise.id
+        let descriptor = FetchDescriptor<SetLog>(
+            predicate: #Predicate { log in
+                log.exercise?.id == exerciseID && log.isCancelled == false
+            }
+        )
+        guard let fetched = try? context.fetch(descriptor) else { return nil }
+        return fetched
+            .filter { $0.holdSeconds == nil && $0.isBodyweight == true }
+            .map(\.reps)
+            .max()
+    }
+
     /// The best set (highest weight, ties broken by most reps) across *all* history,
     /// not scoped to the most recent session — used for an all-time personal record,
     /// where `lastBestSet`'s "most recent session only" scoping would be wrong.
@@ -76,18 +119,22 @@ enum SetLogQueries {
     }
 
     /// The longest hold ever recorded for this exercise, across all sessions.
-    static func bestHoldEver(exercise: Exercise, context: ModelContext) -> Int? {
+    ///
+    /// Scoped by equipment the same way `bestSetEver` is: a hold can be loaded, and a
+    /// 90s unweighted plank isn't the same achievement as a 90s plank under a 20 lb
+    /// plate. `nil` equipment means unloaded holds only.
+    static func bestHoldEver(exercise: Exercise, equipment: Equipment? = nil, context: ModelContext) -> Int? {
         let exerciseID = exercise.id
         let descriptor = FetchDescriptor<SetLog>(
             predicate: #Predicate { log in log.exercise?.id == exerciseID && log.isCancelled == false && log.holdSeconds != nil }
         )
         guard let logs = try? context.fetch(descriptor) else { return nil }
-        return logs.compactMap(\.holdSeconds).max()
+        return logs.filter { $0.equipment?.id == equipment?.id }.compactMap(\.holdSeconds).max()
     }
 
     /// The best hold from the most recent *prior* session that logged this exercise —
     /// same "most recent session, best value within it" shape as `lastBestSet`.
-    static func lastHoldSeconds(exercise: Exercise, excluding session: WorkoutSession, context: ModelContext) -> Int? {
+    static func lastHoldSeconds(exercise: Exercise, equipment: Equipment? = nil, excluding session: WorkoutSession, context: ModelContext) -> Int? {
         let exerciseID = exercise.id
         let sessionID = session.id
         var descriptor = FetchDescriptor<SetLog>(
@@ -97,7 +144,9 @@ enum SetLogQueries {
             sortBy: [SortDescriptor(\.loggedAt, order: .reverse)]
         )
         descriptor.fetchLimit = 200
-        guard let logs = try? context.fetch(descriptor), !logs.isEmpty else { return nil }
+        guard let fetched = try? context.fetch(descriptor) else { return nil }
+        let logs = fetched.filter { $0.equipment?.id == equipment?.id }
+        guard !logs.isEmpty else { return nil }
         guard let mostRecentSessionID = logs.first?.session?.id else { return nil }
         let mostRecentSessionLogs = logs.filter { $0.session?.id == mostRecentSessionID }
         return mostRecentSessionLogs.compactMap(\.holdSeconds).max()

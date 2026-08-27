@@ -140,7 +140,7 @@ struct WorkoutExportPickerSheet: View {
 
     private func subtitle(for workout: Workout) -> String {
         let sections = workout.sortedSections.count
-        return "\(sections) Section\(sections == 1 ? "" : "s") · \(workout.kind.rawValue)"
+        return "\(sections) Section\(sections == 1 ? "" : "s") · \(workout.listTypeLabel)"
     }
 
     private func toggle(_ workout: Workout) {

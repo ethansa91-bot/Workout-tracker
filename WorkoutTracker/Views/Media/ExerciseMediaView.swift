@@ -42,6 +42,19 @@ struct ExerciseMediaView: View {
         exercise.videoURL.flatMap(YouTubeURL.videoID(from:))
     }
 
+    /// Whether this exercise has anything to show at all, so a caller can drop the box
+    /// entirely rather than reserving space for the "No photo/video available"
+    /// placeholder. Deliberately mirrors the three sources `photoOrFallback` and the
+    /// video branches check, so the two can't disagree about what "has media" means.
+    @MainActor
+    static func hasMedia(_ exercise: Exercise) -> Bool {
+        if exercise.videoURL.flatMap(YouTubeURL.videoID(from:)) != nil { return true }
+        if exercise.imageAssetName != nil { return true }
+        if let fileName = exercise.generatedImageFileName,
+           GeneratedExerciseImageStore.load(fileName: fileName) != nil { return true }
+        return false
+    }
+
     private var localImage: UIImage? {
         guard let fileName = exercise.generatedImageFileName else { return nil }
         return GeneratedExerciseImageStore.load(fileName: fileName)

@@ -19,11 +19,24 @@ final class CloudKitSyncMonitor {
         let date: Date
         let succeeded: Bool
         let error: Error?
+        /// Rendered at receipt time, not at display time. `CKError.partialFailure`
+        /// carries its real cause in `partialErrorsByItemID`, which lives in the bridged
+        /// `NSError`'s `userInfo` — read minutes later from a retained `Error`
+        /// existential, the code survives but that payload can come back empty, which
+        /// is exactly how a failure reduces to an unactionable "partialFailure (2)".
+        let detail: String?
     }
 
     private(set) var lastImport: Event?
     private(set) var lastExport: Event?
     private(set) var lastSetup: Event?
+
+    /// Every failure seen this launch, newest first. A single `lastExport` is not enough
+    /// to debug with: CloudKit retries, and a later generic failure overwrites the
+    /// specific one that named the cause. Capped so a retry loop can't grow it without
+    /// bound.
+    private(set) var failures: [(type: String, event: Event)] = []
+    private static let maxFailures = 20
 
     /// Fires once per successful import. `CatalogReconciliation` uses this rather than
     /// polling, so dedupe runs exactly when there is something new to reconcile.
@@ -50,7 +63,18 @@ final class CloudKitSyncMonitor {
         // Events are posted twice — once at start, once at completion. Only the
         // completed ones carry a meaningful success/failure result.
         guard let endDate = event.endDate else { return }
-        let record = Event(date: endDate, succeeded: event.succeeded, error: event.error)
+        // Format here, while still inside the notification callback and the error's
+        // userInfo is intact — see `Event.detail`.
+        let detail = event.error.map(CloudKitErrorFormatter.describe)
+        if let detail {
+            print("CloudKit \(event.type) failed:\n\(detail)")
+        }
+        let record = Event(date: endDate, succeeded: event.succeeded, error: event.error, detail: detail)
+
+        if !event.succeeded {
+            failures.insert((type: String(describing: event.type), event: record), at: 0)
+            if failures.count > Self.maxFailures { failures.removeLast() }
+        }
 
         switch event.type {
         case .setup:

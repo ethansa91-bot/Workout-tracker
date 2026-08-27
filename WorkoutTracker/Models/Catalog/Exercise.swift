@@ -72,6 +72,8 @@ final class Exercise: SyncableModel {
     // have no non-optional wrapper.
     @Relationship(inverse: \PersonalRecord.exercise)
     var personalRecords: [PersonalRecord]?
+    @Relationship(inverse: \PersonalRecordEntry.exercise)
+    var personalRecordEntries: [PersonalRecordEntry]?
     @Relationship(inverse: \RepSectionExercise.exercise)
     var repSectionExercises: [RepSectionExercise]?
     @Relationship(inverse: \SectionExerciseEntry.exercise)
@@ -106,6 +108,21 @@ final class Exercise: SyncableModel {
     /// options/unit. When several are attached, `defaultEquipmentName` picks which;
     /// without a usable choice the first is used, as it always was. Logging weight
     /// against multiple simultaneous equipment per set isn't supported.
+    /// The weighted items among `equipmentItems`, in a stable display order — the
+    /// choices an entry's equipment picker offers.
+    var weightedEquipmentOptions: [Equipment] {
+        equipmentItems.filter(\.isWeighted).sorted { $0.name < $1.name }
+    }
+
+    /// Whether bodyweight is a legitimate load for this exercise: flagged for it in the
+    /// catalog, or simply having no weighted equipment to load. One definition shared by
+    /// the builder's picker, the runner's menu, and import, which previously disagreed —
+    /// the menu offered Bodyweight off the catalog flag while the set row's Body position
+    /// came from the per-entry toggle.
+    var allowsBodyweightSource: Bool {
+        weightedEquipmentOptions.isEmpty || allowsBodyweight
+    }
+
     var weightedEquipment: Equipment? {
         let weighted = equipmentItems.filter(\.isWeighted)
         if let name = defaultEquipmentName,

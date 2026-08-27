@@ -9,14 +9,8 @@ struct EquipmentDetailView: View {
 
     var body: some View {
         List {
+            // The green band carries the name, so the flags are the first thing under it.
             Section {
-                DetailHeader(
-                    systemName: equipment.iconSymbolName,
-                    title: equipment.name,
-                    subtitle: equipment.isCustom ? "Custom equipment" : nil
-                )
-                .listRowSeparator(.hidden)
-
                 HStack(spacing: 8) {
                     SelectableChip(icon: "house", title: "At Home", isSelected: equipment.isAtHome, tint: Color.accentColor) {
                         toggleHome()
@@ -28,9 +22,12 @@ struct EquipmentDetailView: View {
                         toggleWeighted()
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .center)
-                .listRowSeparator(.hidden)
-                .padding(.vertical, 4)
+                // Same gutter the sections below use, rather than centred against them —
+                // narrower than a text row's because each chip carries its own padding.
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, HeaderMetrics.chipGutter)
+                .padding(.vertical, 10)
+                .fullBleedRow()
             }
 
             if equipment.isWeighted {
@@ -48,16 +45,25 @@ struct EquipmentDetailView: View {
                         Text("Level").tag(Equipment.levelUnit)
                     }
                     .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .fullBleedRow()
                 }
 
                 if equipment.isLevelBased {
                     Section {
                         ForEach(equipment.sortedWeightCombos) { combo in
                             levelRow(combo)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .fullBleedRow(isLast: false)
                         }
                         .onDelete(perform: deleteWeightCombos)
 
                         Button("Add Level") { addLevel() }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .fullBleedRow()
                     } header: {
                         Text("Levels")
                     } footer: {
@@ -67,6 +73,10 @@ struct EquipmentDetailView: View {
                     Section("Available weights") {
                         ForEach(equipment.sortedWeightCombos) { combo in
                             Text(formatted(combo.value))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .fullBleedRow(isLast: false)
                         }
                         .onDelete(perform: deleteWeightCombos)
 
@@ -76,6 +86,9 @@ struct EquipmentDetailView: View {
                             Button("Add") { addWeightCombo() }
                                 .disabled(Double(newWeightText) == nil)
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .fullBleedRow()
                     }
                 }
             } else {
@@ -86,8 +99,9 @@ struct EquipmentDetailView: View {
                 }
             }
         }
-        .themedListBackground()
-        .navigationTitle(equipment.name)
+        .fullBleedList()
+        .safeAreaInset(edge: .top, spacing: 0) { PushedTitleBand(title: equipment.name) }
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
     }
 

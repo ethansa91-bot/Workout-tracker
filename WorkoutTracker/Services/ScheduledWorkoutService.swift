@@ -67,4 +67,21 @@ enum ScheduledWorkoutService {
     static func startOfDay(_ date: Date) -> Date {
         Calendar.current.startOfDay(for: date)
     }
+
+    /// Whether a scheduled workout was actually done: its workout has a finished
+    /// session on the same day.
+    ///
+    /// Inferred, not stored — the schedule was built around dates alone, with no link
+    /// from an occurrence to the session that fulfilled it. So a spontaneous session on
+    /// a day the same workout happened to be scheduled counts as completing it, and one
+    /// done a day late doesn't count at all. Accurate enough for a 7-day tally, and it
+    /// works on history recorded before this existed.
+    static func isCompleted(_ occurrence: ScheduledWorkout) -> Bool {
+        guard let workout = occurrence.workout else { return false }
+        return workout.sessions.contains { session in
+            session.deletedAt == nil
+                && session.status == .finished
+                && Calendar.current.isDate(session.startedAt, inSameDayAs: occurrence.date)
+        }
+    }
 }
