@@ -1,5 +1,4 @@
 import SwiftUI
-import Combine
 
 /// Rest countdown — a normal tap starts/pauses/resumes it; it also auto-starts
 /// (only if not already running) whenever the caller bumps `startSignal`, which
@@ -19,21 +18,41 @@ struct RestTimerView: View {
     /// panel drops its own surface and switches to white-on-green. Off keeps the
     /// original white card, for any caller placing the timer on the cream ground.
     var onAccent: Bool = false
+    /// The band this sits in owns the height — it grows on iPad so the exercise name
+    /// beside the timer can. Was a private constant the caller had to match by value.
+    var height: CGFloat = RestTimerView.defaultHeight
 
+    /// The displayed countdown. Authoritative while stopped; refreshed from `endsAt`
+    /// on each tick while running.
     @State private var remainingSeconds: Int
-    @State private var isRunning = false
+    /// When the countdown reaches zero, or nil when it isn't running — which also makes
+    /// this the single source of truth for "is it running".
+    ///
+    /// A wall-clock deadline rather than a per-tick decrement: the ticker stops while the
+    /// app is backgrounded, so counting ticks meant locking the phone froze the rest timer
+    /// and it picked up where it left off instead of catching up.
+    @State private var endsAt: Date?
+    /// Set when the overall workout pauses out from under a running countdown, so
+    /// resuming the workout resumes the rest too rather than leaving it stopped.
+    @State private var resumeWithSession = false
 
-    // Must be @State, not `let` — see TimeSessionRunnerView for why.
-    @State private var ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-
-    init(totalSeconds: Int, soundProfile: TimerSoundProfile, isSessionActive: Bool, startSignal: Binding<Int>, stopSignal: Binding<Int>, onAccent: Bool = false) {
+    init(totalSeconds: Int, soundProfile: TimerSoundProfile, isSessionActive: Bool, startSignal: Binding<Int>, stopSignal: Binding<Int>, onAccent: Bool = false, height: CGFloat = RestTimerView.defaultHeight) {
         self.totalSeconds = totalSeconds
         self.soundProfile = soundProfile
         self.isSessionActive = isSessionActive
         _startSignal = startSignal
         _stopSignal = stopSignal
         self.onAccent = onAccent
+        self.height = height
         _remainingSeconds = State(initialValue: totalSeconds)
+    }
+
+    private var isRunning: Bool { endsAt != nil }
+
+    /// Seconds left according to the clock, or the frozen display value when stopped.
+    private func liveRemaining() -> Int {
+        guard let endsAt else { return remainingSeconds }
+        return max(0, Int(endsAt.timeIntervalSinceNow.rounded(.up)))
     }
 
     /// The ring's depleting arc and the numerals: white on the accent band, where the
@@ -44,7 +63,9 @@ struct RestTimerView: View {
     private var captionTint: Color { onAccent ? .white.opacity(0.85) : .secondary }
 
     private static let cornerRadius: CGFloat = 16
-    private static let height: CGFloat = 132
+    /// The compact header band's height, and the fallback for any caller that doesn't
+    /// size the band itself.
+    static let defaultHeight: CGFloat = 132
     private static let ringWidth: CGFloat = 6
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -129,7 +150,7 @@ struct RestTimerView: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity)
-        .frame(height: Self.height)
+        .frame(height: height)
         // Same surface as the set block beside it, so the header reads as two panels of
         // one screen rather than two different materials. On the accent band there is no
         // surface at all — the green is the surface, and a card here would break it up.
@@ -147,28 +168,77 @@ struct RestTimerView: View {
             guard !isRunning else { return }
             remainingSeconds = totalSeconds
         }
-        .onReceive(ticker) { _ in
-            guard isRunning && isSessionActive else { return }
-            if remainingSeconds > 0 {
-                remainingSeconds -= 1
-                SoundPlayer.playWarningIfNeeded(remainingSeconds: remainingSeconds, profile: soundProfile)
-            } else {
-                isRunning = false
-                SoundPlayer.playTimerComplete()
-            }
+        // Only while actually counting down — the ticker used to run for the whole
+        // session and discard the tick inside the handler, which is most of a workout
+        // spent waking the run loop for nothing.
+        .secondTicker(isActive: isRunning && isSessionActive) { tick() }
+        .onChange(of: isSessionActive) { _, active in
+            syncWithSession(isActive: active)
         }
         .onChange(of: totalSeconds) { _, newValue in
             remainingSeconds = newValue
-            isRunning = false
+            stop()
         }
         .onChange(of: startSignal) { _, _ in
             guard !isRunning else { return }
             remainingSeconds = totalSeconds
-            isRunning = true
+            start()
         }
         .onChange(of: stopSignal) { _, _ in
             remainingSeconds = totalSeconds
-            isRunning = false
+            stop()
+        }
+    }
+
+    private func tick() {
+        guard endsAt != nil else { return }
+        let previous = remainingSeconds
+        let current = liveRemaining()
+
+        if current <= 0 {
+            remainingSeconds = 0
+            stop()
+            SoundPlayer.playTimerComplete()
+            return
+        }
+
+        guard current != previous else { return }
+        remainingSeconds = current
+        // Only on a normal one-second step. Coming back from a suspended app the
+        // countdown jumps, and a warning beep for a threshold that passed while the
+        // screen was off would land late and mean nothing.
+        guard previous - current == 1 else { return }
+        SoundPlayer.playWarningIfNeeded(remainingSeconds: current, profile: soundProfile)
+    }
+
+    private func start() {
+        // A start signal that lands while the workout is paused is held until it
+        // resumes — setting a deadline now would let the pause eat into the rest.
+        guard isSessionActive else {
+            resumeWithSession = true
+            return
+        }
+        endsAt = Date.now.addingTimeInterval(Double(remainingSeconds))
+    }
+
+    private func stop() {
+        endsAt = nil
+        resumeWithSession = false
+    }
+
+    /// Pausing the workout freezes the rest countdown, and resuming it starts the
+    /// countdown again from where it stopped — the deadline has to be rebased, or the
+    /// time spent paused would be counted as rest.
+    private func syncWithSession(isActive: Bool) {
+        if isActive {
+            guard resumeWithSession else { return }
+            resumeWithSession = false
+            start()
+        } else {
+            guard isRunning else { return }
+            remainingSeconds = liveRemaining()
+            endsAt = nil
+            resumeWithSession = true
         }
     }
 
@@ -178,10 +248,11 @@ struct RestTimerView: View {
 
     private func toggle() {
         if isRunning {
-            isRunning = false
+            remainingSeconds = liveRemaining()
+            stop()
         } else {
             if remainingSeconds == 0 { remainingSeconds = totalSeconds }
-            isRunning = true
+            start()
         }
     }
 }

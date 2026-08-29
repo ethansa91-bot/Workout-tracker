@@ -4,26 +4,51 @@ import CoreData
 import Foundation
 import SwiftData
 
-/// Development-only schema check.
+/// Development-only schema tooling, in two modes.
 ///
-/// `initializeCloudKitSchema(options: .dryRun)` walks the entire model graph and reports
-/// anything CloudKit can't mirror, naming the offending entity and property. That is the
-/// detail an export `partialFailure` refuses to give — it reports that records failed,
-/// not why — so this is the fastest route from "sync is broken" to a specific field.
+/// **Check** (`CK_VALIDATE=1`) — `initializeCloudKitSchema(options: .dryRun)` walks the
+/// entire model graph and reports anything CloudKit can't mirror, naming the offending
+/// entity and property. That is the detail an export `partialFailure` refuses to give —
+/// it reports that records failed, not why — so this is the fastest route from "sync is
+/// broken" to a specific field.
 ///
-/// Requires a signed-in iCloud account and blocks while it runs, so it is opt-in via the
-/// `CK_VALIDATE=1` environment variable and never runs in a normal launch. Debug-only:
+/// **Create** (`CK_INIT_SCHEMA=1`) — the same call *without* `.dryRun`, which creates
+/// every record type and field of the model graph in the Development environment.
+///
+/// ## Before every TestFlight build that added a model
+///
+/// Run `CK_INIT_SCHEMA=1`, then deploy to Production from the CloudKit Console. Any commit
+/// adding a `@Model` type or a stored property needs this.
+///
+/// CloudKit only auto-creates a record type in Development, and only when a build actually
+/// *writes a record of that type*; Production never auto-creates anything. So a type whose
+/// write path isn't part of ordinary debug use never reaches Development either — and with
+/// both environments then agreeing, "Deploy Schema Changes" greys out and reads as
+/// "already deployed" when neither has ever heard of the type. That is exactly how
+/// `FollowedUser` (written only by following someone via a share code) shipped to
+/// TestFlight undeployed and blocked every export. Creating the schema from the model
+/// rather than from data is what closes that hole.
+///
+/// Requires a signed-in iCloud account and a development-signed build, and blocks while it
+/// runs, so both modes are opt-in and never run in a normal launch. Debug-only:
 /// `initializeCloudKitSchema` must never be called in a shipping build.
 enum CloudKitSchemaValidator {
 
-    static func run() {
+    /// - Parameter createsSchema: `false` only reports; `true` writes the model graph to
+    ///   the Development environment.
+    static func run(createsSchema: Bool = false) {
         var log: [String] = []
         func say(_ line: String) {
             log.append(line)
             print("CKSCHEMA \(line)")
         }
 
-        say("=== CloudKit schema dry run ===")
+        // Named in the log because the two modes are one flag apart and their outcomes
+        // look alike — a dry run mistaken for a deploy is the failure this whole file
+        // exists to prevent.
+        say(createsSchema
+            ? "=== CloudKit schema CREATE (Development) ==="
+            : "=== CloudKit schema dry run (reports only, creates nothing) ===")
         say("container: \(CloudKitContainer.identifier)")
 
         let types: [any PersistentModel.Type] = [
@@ -63,14 +88,27 @@ enum CloudKitSchemaValidator {
             write(log)
             return
         }
-        say("store loaded — running dry run (needs a signed-in iCloud account)…")
+        say(createsSchema
+            ? "store loaded — creating schema in Development (needs a signed-in iCloud account)…"
+            : "store loaded — running dry run (needs a signed-in iCloud account)…")
 
         do {
-            try container.initializeCloudKitSchema(options: [.dryRun])
-            say("✅ DRY RUN PASSED — every entity is CloudKit-mappable.")
-            say("The failure is in the data or the account, not the model graph.")
+            // The empty option set is the whole difference: `.dryRun` reports and creates
+            // nothing, no options creates every record type and field on the server.
+            try container.initializeCloudKitSchema(options: createsSchema ? [] : [.dryRun])
+            if createsSchema {
+                say("✅ SCHEMA CREATED in Development — every entity and property is now on the server.")
+                say("NEXT: CloudKit Console → Schema → Deploy Schema Changes → Production.")
+                say("Nothing has reached Production yet; this only touched Development.")
+            } else {
+                say("✅ DRY RUN PASSED — every entity is CloudKit-mappable. Nothing was created.")
+                say("The failure is in the data, the account, or an undeployed schema — not the model graph.")
+                say("If Production exports are failing, re-run with CK_INIT_SCHEMA=1 and then deploy.")
+            }
         } catch {
-            say("❌ DRY RUN FAILED — this names the cause:")
+            say(createsSchema
+                ? "❌ SCHEMA CREATION FAILED — this names the cause:"
+                : "❌ DRY RUN FAILED — this names the cause:")
             describe(error as NSError, indent: "  ", say: say)
         }
 

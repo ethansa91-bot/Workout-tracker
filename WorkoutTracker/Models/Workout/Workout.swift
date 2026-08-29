@@ -84,9 +84,10 @@ final class Workout: SyncableModel {
     }
 
     /// Locked while any live session — in-progress, paused, finished, or abandoned —
-    /// references this workout, since editing afterward would corrupt that history's
-    /// meaning. Deleted sessions don't count, so clearing a workout's history from the
-    /// History tab makes it editable again. Computed, not stored, so it can never go
+    /// references this workout, since restructuring it afterward would corrupt that
+    /// history's meaning. Only the structure: the name and description stay editable,
+    /// because neither changes what a past session did. Deleted sessions don't count, so
+    /// clearing a workout's history from the History tab unlocks it again. Computed, not stored, so it can never go
     /// stale. Use `WorkoutCloningService` to get an editable copy once locked.
     var isLocked: Bool {
         sessions.contains { $0.deletedAt == nil }

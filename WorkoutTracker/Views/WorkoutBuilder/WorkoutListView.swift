@@ -8,8 +8,16 @@ import SwiftData
 /// for Archives could never enter it and its links would silently do nothing. A single
 /// type keeps both screens pushing onto the one path, and a single
 /// `navigationDestination` on the stack root handles them.
-struct WorkoutRoute: Hashable {
-    let workout: Workout
+///
+/// Archives is a case here rather than a plain `NavigationLink { ArchivedWorkoutsView() }`
+/// for the same reason: **every push in a path-driven stack has to go through the path.**
+/// A destination-based link doesn't, so the path stayed empty while Archives was on
+/// screen; the workout Archives then pushed took path slot 0 — the slot Archives was
+/// already occupying out of band — and SwiftUI built the workout *underneath* it. The tap
+/// looked dead and Back revealed the workout.
+enum WorkoutRoute: Hashable {
+    case workout(Workout)
+    case archives
 }
 
 private enum WorkoutsPane: String, CaseIterable, Identifiable {
@@ -36,6 +44,8 @@ struct WorkoutListView: View {
     @State private var showingNewTemplateSheet = false
     @State private var newTemplateDestination: WorkoutSection?
     @State private var pendingDelete: Workout?
+    /// The workout the schedule sheet is open for, if any.
+    @State private var schedulingWorkout: Workout?
     /// Held here rather than left to the stack, so cloning a locked workout can pop the
     /// original and push the copy in its place.
     @State private var path: [WorkoutRoute] = []
@@ -68,9 +78,7 @@ struct WorkoutListView: View {
             .toolbar {
                 if selectedPane == .workouts {
                     ToolbarItem(placement: .topBarLeading) {
-                        NavigationLink {
-                            ArchivedWorkoutsView()
-                        } label: {
+                        NavigationLink(value: WorkoutRoute.archives) {
                             Label("Archives", systemImage: "archivebox")
                         }
                     }
@@ -103,11 +111,17 @@ struct WorkoutListView: View {
                 NewSectionTemplateSheet(onCreate: createTemplate)
             }
             .navigationDestination(for: WorkoutRoute.self) { route in
-                SessionRecapView(workout: route.workout) { clone in
-                    // Replace, not stack: backing out of the copy should reach the list,
-                    // not the locked workout the user was just told they can't edit.
-                    path.removeLast()
-                    path.append(WorkoutRoute(workout: clone))
+                switch route {
+                case .workout(let workout):
+                    SessionRecapView(workout: workout) { clone in
+                        // Replace, not stack: backing out of the copy should reach the
+                        // list, not the locked workout the user was just told they can't
+                        // edit. The workout is always the last element, Archives or not.
+                        path.removeLast()
+                        path.append(.workout(clone))
+                    }
+                case .archives:
+                    ArchivedWorkoutsView()
                 }
             }
             .navigationDestination(item: $newTemplateDestination) { section in
@@ -154,6 +168,11 @@ struct WorkoutListView: View {
 
     @ViewBuilder
     private var workoutsContent: some View {
+        // Read once, not once per row — `workouts.last?.id` inside the `ForEach` re-ran
+        // the filter for every row.
+        let workouts = self.workouts
+        let lastID = workouts.last?.id
+
         if workouts.isEmpty {
             ContentUnavailableView(
                 "No Workouts Yet",
@@ -164,7 +183,7 @@ struct WorkoutListView: View {
             List {
                 Section {
                     ForEach(workouts) { workout in
-                        NavigationLink(value: WorkoutRoute(workout: workout)) {
+                        NavigationLink(value: WorkoutRoute.workout(workout)) {
                             workoutRow(workout)
                         }
                         .swipeActions(edge: .leading) {
@@ -174,16 +193,28 @@ struct WorkoutListView: View {
                                 Label("Clone", systemImage: "doc.on.doc")
                             }
                             .tint(.blue)
+                            Button {
+                                schedulingWorkout = workout
+                            } label: {
+                                Label("Schedule", systemImage: "calendar.badge.plus")
+                            }
+                            .tint(Color.appAccent)
                         }
                         .swipeActions(edge: .trailing) {
                             // Deleting a workout with history behind it would strand
                             // that history, so it's archive-only once locked.
                             if !workout.isLocked {
-                                Button(role: .destructive) {
+                            // Not `role: .destructive`: a destructive swipe button
+                            // plays the row-removal animation the moment it's tapped,
+                            // before any data changes — so the row vanished, the
+                            // confirmation appeared, and the row came back. Tinted
+                            // instead; the role belongs on the alert's confirm button.
+                                Button {
                                     pendingDelete = workout
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
+                                .tint(Color.appDanger)
                             }
                             Button {
                                 archiveWorkout(workout)
@@ -199,6 +230,11 @@ struct WorkoutListView: View {
                                 Label("Clone", systemImage: "doc.on.doc")
                             }
                             Button {
+                                schedulingWorkout = workout
+                            } label: {
+                                Label("Schedule", systemImage: "calendar.badge.plus")
+                            }
+                            Button {
                                 archiveWorkout(workout)
                             } label: {
                                 Label("Archive", systemImage: "archivebox")
@@ -211,10 +247,10 @@ struct WorkoutListView: View {
                                 }
                             }
                         }
-                        .fullBleedRow(isLast: workout.id == workouts.last?.id)
+                        .fullBleedRow(isLast: workout.id == lastID)
                     }
                 } footer: {
-                    Text("A lock means that workout has already been used, so it can't be edited or deleted. Swipe right on a workout to clone it, or left to archive or delete it.")
+                    Text("A lock means that workout has already been used, so its sections can't be changed and it can't be deleted. Swipe right on a workout to clone or schedule it, or left to archive or delete it.")
                         .font(.footnote)
                         .foregroundStyle(Color.appInkMuted)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -225,6 +261,9 @@ struct WorkoutListView: View {
                 }
             }
             .fullBleedList()
+            .sheet(item: $schedulingWorkout) { workout in
+                AddScheduledWorkoutView(preselectedWorkout: workout)
+            }
             .alert("Delete \"\(pendingDelete?.name ?? "")\"?", isPresented: deleteAlertBinding) {
                 Button("Delete", role: .destructive) { deleteWorkout() }
                 Button("Cancel", role: .cancel) { pendingDelete = nil }
@@ -296,7 +335,7 @@ struct WorkoutListView: View {
         let workout = WorkoutEditingService.createWorkout(name: name, context: context)
         // Onto the same path the list pushes with, so a workout opens the same way
         // however it was reached — and a clone can replace it later.
-        path.append(WorkoutRoute(workout: workout))
+        path.append(.workout(workout))
     }
 
     private func createTemplate(name: String, description: String?, type: WorkoutSectionType) {

@@ -33,7 +33,7 @@
             {
               "stepType": "rest",
               "durationSeconds": 30
-            },
+            },  
             {
               "stepType": "exercise",
               "durationSeconds": 30,

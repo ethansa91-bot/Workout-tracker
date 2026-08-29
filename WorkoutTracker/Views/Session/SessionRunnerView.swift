@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import Combine
 
 struct SessionRunnerView: View {
     @Bindable var session: WorkoutSession
@@ -12,10 +11,6 @@ struct SessionRunnerView: View {
     @State private var showingDeleteConfirm = false
     @State private var showingExerciseList = false
     @State private var showingSummary = false
-    @State private var elapsedDisplay = "0:00:00"
-
-    // Must be @State, not `let` — see TimeSessionRunnerView for why.
-    @State private var ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var workout: Workout? { session.workout }
     private var sections: [WorkoutSection] { workout?.sortedSections ?? [] }
@@ -83,8 +78,11 @@ struct SessionRunnerView: View {
                 }
             }
         }
-        .onReceive(ticker) { _ in updateElapsedDisplay() }
-        .onAppear { updateElapsedDisplay() }
+        // The one place speech is released: `TimeSessionRunnerView` can come and go
+        // between sections within a single workout, so tearing the synthesizer down there
+        // would rebuild it on every Follow Along section. Leaving the runner ends the
+        // workout's claim on it, and on the audio session with it.
+        .onDisappear { SpeechAnnouncer.teardown() }
         .overlay {
             if showingPauseSheet {
                 pauseOverlay
@@ -128,7 +126,7 @@ struct SessionRunnerView: View {
             // sits truly centered in the bar regardless of how wide the elapsed-time
             // and percent text on either side are.
             HStack {
-                Text(elapsedDisplay)
+                ElapsedTimeLabel(session: session)
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -266,11 +264,6 @@ struct SessionRunnerView: View {
     /// than "21 of 20".
     private var currentItemNumber: Int {
         min(completedItems + 1, max(totalItems, 1))
-    }
-
-    private func updateElapsedDisplay() {
-        let total = Int(session.elapsedSeconds)
-        elapsedDisplay = String(format: "%d:%02d:%02d", total / 3600, (total % 3600) / 60, total % 60)
     }
 
     private func advanceSection() {

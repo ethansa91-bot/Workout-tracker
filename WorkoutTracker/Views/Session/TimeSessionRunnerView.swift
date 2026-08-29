@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import Combine
 
 struct TimeSessionRunnerView: View {
     @Bindable var session: WorkoutSession
@@ -20,10 +19,12 @@ struct TimeSessionRunnerView: View {
     /// the section for the first time is gated, not every step within it.
     @State private var isRunning: Bool
 
-    // Must be @State, not `let` — a plain `let` gets recomputed (a brand new Timer)
-    // every time this View struct is reinitialized, which happens on every re-render
-    // (i.e. every tick), so the timer rarely survives long enough to actually fire.
-    @State private var ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    /// When the current step ends, or nil when the countdown is stopped.
+    ///
+    /// A wall-clock deadline rather than a per-tick decrement: the ticker doesn't run
+    /// while the app is backgrounded, so counting ticks meant a step froze when the user
+    /// switched apps and resumed from where it stopped instead of catching up.
+    @State private var stepEndsAt: Date?
 
     init(session: WorkoutSession, section: WorkoutSection, soundProfile: TimerSoundProfile, onSectionComplete: @escaping () -> Void) {
         self.session = session
@@ -39,6 +40,10 @@ struct TimeSessionRunnerView: View {
         guard currentIndex >= 0, currentIndex < steps.count else { return nil }
         return steps[currentIndex]
     }
+
+    /// The step clock runs only when the section is playing *and* the workout as a whole
+    /// is running — pausing either freezes it.
+    private var isCountingDown: Bool { isRunning && session.status == .inProgress }
 
     private var timerHeightFraction: CGFloat { horizontalSizeClass == .regular ? 0.45 : 0.3 }
 
@@ -65,15 +70,21 @@ struct TimeSessionRunnerView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.appBackground)
             .onAppear {
-                remainingSeconds = currentStep.durationSeconds
-                announceCurrentStep()
+                // The only place speech is set up. Creating the synthesizer and warming
+                // the audio session here rather than on the first cue is what keeps the
+                // opening word of a step name from being clipped; `SessionRunnerView`
+                // tears it back down on the way out of the workout.
+                SpeechAnnouncer.prepare()
+                beginStep(seconds: currentStep.durationSeconds)
             }
             .onChange(of: currentIndex) { _, _ in
-                remainingSeconds = self.currentStep?.durationSeconds ?? 0
-                announceCurrentStep()
+                beginStep(seconds: self.currentStep?.durationSeconds ?? 0)
             }
+            .onChange(of: isCountingDown) { _, _ in syncCountdown() }
             .onDisappear { SpeechAnnouncer.stop() }
-            .onReceive(ticker) { _ in tick() }
+            // Stops outright while the section or the workout is paused, instead of
+            // ticking and discarding the tick inside the handler.
+            .secondTicker(isActive: isCountingDown) { tick() }
             .confirmationDialog(
                 jumpConfirmMessage,
                 isPresented: $showingJumpConfirm,
@@ -267,6 +278,9 @@ struct TimeSessionRunnerView: View {
                             .multilineTextAlignment(.center)
                             .padding(.vertical, 24)
                     }
+                    ExerciseVideoButton(exercise: exercise)
+                        .id(exercise.id)
+                        .padding(.horizontal)
                     ExerciseDescriptionView(exercise: exercise)
                         .id(exercise.id)
                     // Read-only here — notes are entered from the end-of-workout
@@ -370,15 +384,55 @@ struct TimeSessionRunnerView: View {
         SpeechAnnouncer.speak(spokenName(for: currentStep))
     }
 
-    private func tick() {
-        guard isRunning, session.status == .inProgress else { return }
-        if remainingSeconds > 0 {
-            remainingSeconds -= 1
-            SoundPlayer.playWarningIfNeeded(remainingSeconds: remainingSeconds, profile: soundProfile)
-            announceWarningIfNeeded()
+    // MARK: - Step clock
+
+    /// Resets the countdown for a step and starts it if the section is playing.
+    private func beginStep(seconds: Int) {
+        remainingSeconds = seconds
+        stepEndsAt = nil
+        syncCountdown()
+        announceCurrentStep()
+    }
+
+    /// Rebases the deadline when the section or the workout starts or stops. Pausing
+    /// freezes what's left; resuming counts from there, so paused time isn't spent.
+    private func syncCountdown() {
+        if isCountingDown {
+            guard stepEndsAt == nil else { return }
+            stepEndsAt = Date.now.addingTimeInterval(Double(remainingSeconds))
         } else {
-            completeCurrentStep()
+            guard stepEndsAt != nil else { return }
+            remainingSeconds = liveRemaining()
+            stepEndsAt = nil
         }
+    }
+
+    /// Seconds left according to the clock, or the frozen display value when stopped.
+    private func liveRemaining() -> Int {
+        guard let stepEndsAt else { return remainingSeconds }
+        return max(0, Int(stepEndsAt.timeIntervalSinceNow.rounded(.up)))
+    }
+
+    private func tick() {
+        guard stepEndsAt != nil else { return }
+        let previous = remainingSeconds
+        let current = liveRemaining()
+
+        if current <= 0 {
+            remainingSeconds = 0
+            stepEndsAt = nil
+            completeCurrentStep()
+            return
+        }
+
+        guard current != previous else { return }
+        remainingSeconds = current
+        // Cues only on a normal one-second step. Returning from a suspended app the
+        // countdown jumps, and a beep or a "ten seconds left" for a threshold that passed
+        // while the app was in the background would land late and mean nothing.
+        guard previous - current == 1 else { return }
+        SoundPlayer.playWarningIfNeeded(remainingSeconds: current, profile: soundProfile)
+        announceWarningIfNeeded()
     }
 
     private func completeCurrentStep() {

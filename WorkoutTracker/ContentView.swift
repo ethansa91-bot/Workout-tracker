@@ -10,7 +10,13 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: Tab = .schedule
+
+    /// Sharing events arrive from outside the view tree — an opened link, or the
+    /// reciprocal-follow sweep. Both are presented here rather than inside Settings →
+    /// Sharing so they work whichever tab the user is on.
+    @State private var router = SharingRouter.shared
 
     private enum Tab {
         case schedule, overview, records, history, settings
@@ -29,11 +35,11 @@ struct ContentView: View {
                 .tabItem { Label("Overview", systemImage: "list.bullet.rectangle") }
                 .tag(Tab.overview)
 
-            RecordsListView()
+            RecordsListView(isSelected: selectedTab == .records)
                 .tabItem { Label("Records", systemImage: "trophy.fill") }
                 .tag(Tab.records)
 
-            SessionHistoryListView()
+            SessionHistoryListView(isSelected: selectedTab == .history)
                 .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
                 .tag(Tab.history)
 
@@ -49,6 +55,59 @@ struct ContentView: View {
                 selectedTab = .overview
             }
         }
+        .sheet(item: $router.pendingFollow) { pending in
+            FollowByLinkSheet(code: pending.code)
+        }
+        .overlay(alignment: .top) {
+            if !router.newMutualFollows.isEmpty {
+                MutualFollowBanner(
+                    users: router.newMutualFollows,
+                    onUndo: undoMutualFollow,
+                    onDismiss: dismissMutualFollowNotice
+                )
+            }
+        }
+        .animation(.snappy, value: router.newMutualFollows.map(\.id))
+        .task { await syncMutualFollows() }
+        .onChange(of: scenePhase) { _, phase in
+            // Polling on foreground rather than a CKQuerySubscription: the app has no
+            // notification registration and no app delegate, so push would be new
+            // plumbing for a latency win nobody would notice on a follower list.
+            guard phase == .active else { return }
+            Task { await syncMutualFollows() }
+        }
+    }
+
+    // MARK: - Mutual follows
+
+    private func syncMutualFollows() async {
+        let result = await FollowService.syncMutualFollows(context: context)
+        // Parked on the router rather than shown here: this runs unprompted, so the
+        // right place for a failure is the Sharing screen's setup check, not an alert
+        // over whatever the user actually opened the app to do.
+        router.lastSweepFailure = result.failure
+        guard !result.added.isEmpty else { return }
+        router.newMutualFollows = result.added
+    }
+
+    /// Marks the notice seen so it doesn't reappear on the next foreground, and clears
+    /// the banner.
+    private func dismissMutualFollowNotice() {
+        for user in router.newMutualFollows where !user.noticeAcknowledged {
+            user.noticeAcknowledged = true
+            user.markDirty()
+        }
+        try? context.save()
+        router.newMutualFollows = []
+    }
+
+    /// Only offered for a single follower — see `MutualFollowBanner`. The soft delete
+    /// this leaves behind is what stops the sweep re-adding them.
+    private func undoMutualFollow() {
+        for user in router.newMutualFollows {
+            FollowService.unfollow(user, context: context)
+        }
+        router.newMutualFollows = []
     }
 
     private func hasWorkoutScheduledToday() -> Bool {

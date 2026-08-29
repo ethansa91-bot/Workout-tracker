@@ -1,5 +1,4 @@
 import SwiftUI
-import Combine
 
 /// Full-screen replacement for the old small inline "Stop" button in `HoldSetRowView`
 /// — same dimmed-scrim visual language as `SessionRunnerView`'s pause overlay, sized
@@ -21,9 +20,6 @@ struct HoldTimerOverlayView: View {
     @State private var phase: Phase
     @State private var headStartRemaining: Int
     @State private var elapsedSeconds = 0
-
-    // Must be @State, not `let` — see TimeSessionRunnerView for why.
-    @State private var ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     init(exerciseName: String, headStartSeconds: Int, previousBest: Int?, onStop: @escaping (Int) -> Void) {
         self.exerciseName = exerciseName
@@ -66,7 +62,10 @@ struct HoldTimerOverlayView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture { stop() }
-        .onReceive(ticker) { _ in tick() }
+        // Always running while the overlay is up — the head start and the stopwatch that
+        // follows it are the whole point of the screen — but torn down on dismissal
+        // rather than left connected.
+        .secondTicker(isActive: true) { tick() }
     }
 
     private func stop() {

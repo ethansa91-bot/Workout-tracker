@@ -20,14 +20,21 @@ struct ExerciseListView: View {
     }
 
     var body: some View {
+        // Read once, not once per row. `filtered.last?.id` inside the `ForEach` re-ran the
+        // whole filter for every row — and `ExerciseFilter.matches` walks each exercise's
+        // muscle, equipment and category relationships, so a 180-row catalogue cost ~33k
+        // relationship traversals per render.
+        let exercises = filtered
+        let lastID = exercises.last?.id
+
         List {
-            ForEach(filtered) { exercise in
+            ForEach(exercises) { exercise in
                 NavigationLink {
                     ExerciseDetailView(exercise: exercise)
                 } label: {
                     exerciseRow(exercise)
                 }
-                .fullBleedRow(isLast: exercise.id == filtered.last?.id)
+                .fullBleedRow(isLast: exercise.id == lastID)
             }
         }
         .fullBleedList()
@@ -66,7 +73,20 @@ struct ExerciseListView: View {
 
     private func exerciseRow(_ exercise: Exercise) -> some View {
         HStack(spacing: 12) {
-            IconBadge(systemName: exercise.iconSymbolName)
+            // Leading, where the icon badge used to be: the exercise's own symbol was
+            // close to arbitrary, and whether it's a favourite is the one per-exercise
+            // signal worth seeing first. Fixed width so the filled and hollow glyphs
+            // take the same space and every name starts on the same line.
+            Button {
+                exercise.isFavorited.toggle()
+                exercise.markDirty()
+                try? context.save()
+            } label: {
+                Image(systemName: exercise.isFavorited ? "star.fill" : "star")
+                    .foregroundStyle(exercise.isFavorited ? .yellow : .secondary)
+            }
+            .buttonStyle(.plain)
+            .frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(exercise.displayName)
                 if exercise.showsSecondaryName {
@@ -81,15 +101,6 @@ struct ExerciseListView: View {
                 }
             }
             Spacer()
-            Button {
-                exercise.isFavorited.toggle()
-                exercise.markDirty()
-                try? context.save()
-            } label: {
-                Image(systemName: exercise.isFavorited ? "star.fill" : "star")
-                    .foregroundStyle(exercise.isFavorited ? .yellow : .secondary)
-            }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

@@ -17,23 +17,6 @@ struct SessionOverviewItem: Identifiable {
     var color: Color?
 }
 
-/// `IconBadge`'s twin for a position number — same square, same tint treatment, so a
-/// numbered row sits in the layout exactly where an icon badge did and a colored
-/// follow-along step keeps showing its color.
-struct NumberBadge: View {
-    let number: Int
-    var tint: Color = .accentColor
-    var size: CGFloat = 28
-
-    var body: some View {
-        Text("\(number)")
-            .font(.system(size: size * 0.5, weight: .semibold, design: .rounded))
-            .foregroundStyle(tint)
-            .frame(width: size, height: size)
-            .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: size * 0.3, style: .continuous))
-    }
-}
-
 /// What a section card needs to know about its neighbours: where it sits among them and
 /// how to act on it as one of several. A template has no neighbours — it is the only
 /// section there is — so it passes `nil` and the card drops the position badge, Delete

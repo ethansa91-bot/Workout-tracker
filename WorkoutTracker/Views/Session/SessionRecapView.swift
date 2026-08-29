@@ -17,6 +17,7 @@ struct SessionRecapView: View {
     var onReplaceWithClone: ((Workout) -> Void)?
 
     @State private var showingLockedNotice = false
+    @State private var showingScheduleSheet = false
     @State private var showingClonePrompt = false
     @State private var cloneWorkoutNameText = ""
     @State private var showingRenamePrompt = false
@@ -102,6 +103,9 @@ struct SessionRecapView: View {
         .navigationDestination(item: $activeSession) { session in
             SessionRunnerView(session: session, soundProfile: activeSoundProfile)
         }
+        .sheet(isPresented: $showingScheduleSheet) {
+            AddScheduledWorkoutView(preselectedWorkout: workout)
+        }
         .alert(
             "Delete \(selectedSectionIDs.count) section\(selectedSectionIDs.count == 1 ? "" : "s")?",
             isPresented: $showingSectionBatchDeleteConfirm
@@ -137,7 +141,7 @@ struct SessionRecapView: View {
             }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("This workout has already been used in a session, so editing it would change what that history means. Clone it to get an editable copy.")
+            Text("This workout has already been used in a session, so its sections can't be changed — that would alter what the history means. Its name and description can still be edited. Clone it to get a fully editable copy.")
         }
         .alert("Clone & Edit", isPresented: $showingClonePrompt) {
             TextField("Name", text: $cloneWorkoutNameText)
@@ -314,22 +318,35 @@ struct SessionRecapView: View {
                 Text(workout.name)
                     .font(.appSerif(.title2))
                     .foregroundStyle(.white)
-                if !isLocked {
-                    Button {
-                        renameText = workout.name
-                        showingRenamePrompt = true
-                    } label: {
-                        Image(systemName: "pencil")
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.white.opacity(0.85))
-                } else {
-                    // Says why the editing affordances are missing, rather than leaving
-                    // their absence to be puzzled over.
+                // Always: the lock protects the structure a past session ran, not what
+                // the workout is called.
+                Button {
+                    renameText = workout.name
+                    showingRenamePrompt = true
+                } label: {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white.opacity(0.85))
+                if isLocked {
+                    // Beside the pencil rather than instead of it — it's the only way to
+                    // reach the notice explaining what *is* still locked, and Clone & Edit.
                     Button {
                         showingLockedNotice = true
                     } label: {
                         Image(systemName: "lock.fill")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white.opacity(0.85))
+                }
+                // Shown in both states: scheduling is lock-agnostic, the same reason
+                // `WorkoutPickerView` lists locked workouts. An archived one is put away
+                // though, and the picker won't list it either.
+                if !workout.isArchived {
+                    Button {
+                        showingScheduleSheet = true
+                    } label: {
+                        Image(systemName: "calendar.badge.plus")
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.white.opacity(0.85))
@@ -351,19 +368,19 @@ struct SessionRecapView: View {
                 Text(notes)
                     .font(.footnote)
                     .foregroundStyle(.white.opacity(0.85))
-                if !isLocked {
-                    Button {
-                        descriptionText = notes
-                        showingDescriptionEditor = true
-                    } label: {
-                        Image(systemName: "pencil")
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.white.opacity(0.85))
+                // Lock-agnostic, like the name: a description is commentary on the
+                // workout, not part of what a past session ran.
+                Button {
+                    descriptionText = notes
+                    showingDescriptionEditor = true
+                } label: {
+                    Image(systemName: "pencil")
                 }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white.opacity(0.85))
             }
             .padding(.top, 2)
-        } else if !isLocked {
+        } else {
             Button("Add Description") {
                 descriptionText = ""
                 showingDescriptionEditor = true

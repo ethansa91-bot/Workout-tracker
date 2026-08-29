@@ -94,6 +94,12 @@ extension Font {
     static func appSerif(_ style: Font.TextStyle, weight: Font.Weight = .semibold) -> Font {
         .system(style, design: .serif).weight(weight)
     }
+
+    /// Point-size variant, for type sized off its container rather than off a text
+    /// style — a runner header whose name scales with the band it sits in.
+    static func appSerif(size: CGFloat, weight: Font.Weight = .semibold) -> Font {
+        .system(size: size, weight: weight, design: .serif)
+    }
 }
 
 /// White rounded card with a soft shadow instead of a hard border — the mockup's
@@ -259,6 +265,39 @@ extension PageTitleBand where Accessory == EmptyView {
 /// A pushed screen's green header — the same band the tab roots get, sized to match,
 /// for screens that keep their back button. Pair with `.navigationTitle("")` and
 /// `.navigationBarTitleDisplayMode(.inline)` so the title doesn't render twice.
+/// A full-bleed gray band titling a section of a `.plain` list — the Schedule's day
+/// bands and the History detail's per-section bands, so the two read as the same kind
+/// of divider.
+///
+/// Reaches both screen edges, which only works under `.listStyle(.plain)`: an
+/// inset-grouped section keeps its own side margins whatever the row insets say.
+struct ListBandHeader: View {
+    let title: String
+    /// A second, lighter line — what kind of section it is, how long it ran. Omitted
+    /// where the title says everything (the Schedule's day bands).
+    var subtitle: String? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+        .background(Color.appHeaderGray)
+        .listRowInsets(EdgeInsets())
+        // Stock headers uppercase their text, which mangles a date.
+        .textCase(nil)
+    }
+}
+
 /// A muted section label on the cream ground, standing in for a grouped list's header
 /// now that `.plain` renders headers unstyled and flush-left.
 struct FormSectionHeader: View {

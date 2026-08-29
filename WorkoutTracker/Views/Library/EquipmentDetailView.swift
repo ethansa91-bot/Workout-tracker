@@ -6,6 +6,9 @@ struct EquipmentDetailView: View {
     @Environment(\.modelContext) private var context
     @State private var newWeightText = ""
     @State private var expandedLevelID: UUID?
+    @State private var showingDeleteConfirm = false
+    @State private var deleteErrorMessage: String?
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         List {
@@ -98,11 +101,63 @@ struct EquipmentDetailView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Section {
+                Button {
+                    showingDeleteConfirm = true
+                } label: {
+                    Label("Delete Equipment", systemImage: "trash")
+                        .foregroundStyle(deleteBlockReason == nil ? Color.appDanger : Color.appInkMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        // The tint is what keeps it reading as set apart now that every
+                        // row is one continuous white band — same treatment as Settings'
+                        // Danger Zone.
+                        .background((deleteBlockReason == nil ? Color.appDanger : Color.clear).opacity(0.06))
+                }
+                .buttonStyle(.plain)
+                .disabled(deleteBlockReason != nil)
+                .fullBleedRow()
+            } header: {
+                FormSectionHeader("Danger Zone")
+            } footer: {
+                // Says which reference is holding it, rather than leaving a dead button
+                // to be puzzled over.
+                FormSectionFooter(deleteBlockReason ?? "Nothing references this equipment, so it can be removed from your library.")
+            }
         }
         .fullBleedList()
         .safeAreaInset(edge: .top, spacing: 0) { PushedTitleBand(title: equipment.name) }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Delete \"\(equipment.name)\"?", isPresented: $showingDeleteConfirm) {
+            Button("Delete", role: .destructive) { deleteThis() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This removes it from your library. Anything that already referenced it would have blocked this.")
+        }
+        .alert("Can't Delete", isPresented: Binding(
+            get: { deleteErrorMessage != nil },
+            set: { if !$0 { deleteErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { deleteErrorMessage = nil }
+        } message: {
+            Text(deleteErrorMessage ?? "")
+        }
+    }
+
+    private var deleteBlockReason: String? {
+        CatalogDeletionService.deletionBlockReason(for: equipment)
+    }
+
+    private func deleteThis() {
+        do {
+            try CatalogDeletionService.delete(equipment, context: context)
+            dismiss()
+        } catch {
+            deleteErrorMessage = error.localizedDescription
+        }
     }
 
     private func toggleHome() {

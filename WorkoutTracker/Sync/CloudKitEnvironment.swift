@@ -14,12 +14,17 @@ import Foundation
 /// 2. Otherwise the provisioning profile decides: a development profile (the one Xcode
 ///    signs with, marked by `get-task-allow`) means Development; a distribution profile
 ///    (TestFlight, App Store) means Production.
+/// 3. With no embedded profile to read, the platform decides: the simulator is
+///    Development, and a device build that reached the user without a profile came
+///    through the store, which is Production.
 enum CloudKitEnvironment {
 
+    /// No `unknown` case on purpose. Every branch of `current` resolves to one of these
+    /// two, and an "Unknown" reading was actively harmful — it appeared only in store
+    /// builds, which are exactly the ones where the environment has to be known.
     enum Kind: String {
         case development = "Development"
         case production = "Production"
-        case unknown = "Unknown"
     }
 
     /// Read from the embedded provisioning profile rather than guessed from `#if DEBUG`,
@@ -38,8 +43,21 @@ enum CloudKitEnvironment {
             return allowsDebugging ? .development : .production
         }
 
-        guard profile != nil else { return .unknown }
+        if profile != nil { return .production }
+
+        // No embedded profile at all. This used to report `.unknown`, which was worse
+        // than useless: App Store processing *strips* `embedded.mobileprovision`, so the
+        // one screen meant to answer "which environment am I on?" gave up in precisely
+        // the TestFlight build where the answer decides whether a schema needs deploying.
+        //
+        // A device build with no profile can only have come from the store, and store
+        // builds are always Production. The simulator is the one other profile-less case,
+        // and it is never Production.
+        #if targetEnvironment(simulator)
+        return .development
+        #else
         return .production
+        #endif
     }
 
     /// True only when the entitlement pins one specific environment for every build —

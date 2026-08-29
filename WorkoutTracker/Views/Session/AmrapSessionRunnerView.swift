@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import Combine
 
 /// AMRAP ("As Many Rounds As Possible"): a single countdown for the whole section.
 /// The header is one tappable strip — remaining time on the left, rounds completed on
@@ -26,9 +25,6 @@ struct AmrapSessionRunnerView: View {
     /// "Tap to start" across the whole strip) from "started but paused" (show the
     /// two-column layout with a resume affordance on the timer half).
     @State private var hasStarted: Bool
-
-    // Must be @State, not `let` — see TimeSessionRunnerView for why.
-    @State private var ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     init(session: WorkoutSession, section: WorkoutSection, soundProfile: TimerSoundProfile, onSectionComplete: @escaping () -> Void) {
         self.session = session
@@ -74,7 +70,9 @@ struct AmrapSessionRunnerView: View {
         }
         .background(Color.appBackground)
         .onAppear { remainingSeconds = section.amrapDurationSeconds }
-        .onReceive(ticker) { _ in tick() }
+        // Stops outright while the section or the workout is paused, and once the
+        // countdown is spent, rather than ticking and discarding it inside the handler.
+        .secondTicker(isActive: isRunning && session.status == .inProgress && remainingSeconds > 0) { tick() }
     }
 
     /// Time remaining and rounds completed side by side, not stacked, so the header
@@ -219,7 +217,7 @@ struct AmrapSessionRunnerView: View {
     }
 
     private func tick() {
-        guard isRunning, session.status == .inProgress, remainingSeconds > 0 else { return }
+        guard remainingSeconds > 0 else { return }
         remainingSeconds -= 1
         SoundPlayer.playWarningIfNeeded(remainingSeconds: remainingSeconds, profile: soundProfile)
         if remainingSeconds == 0 {

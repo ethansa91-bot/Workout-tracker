@@ -36,6 +36,10 @@ struct ExerciseMediaView: View {
     /// `.id(exercise.id)`, so this resets naturally when the exercise changes.
     @State private var videoFailed = false
 
+    /// Read through `@AppStorage` rather than `AppSettings` so toggling the setting
+    /// redraws whatever is on screen instead of waiting for the next step.
+    @AppStorage("settings.workoutVideoAutoplay") private var autoplayVideo = true
+
     private var isOnline: Bool { NetworkReachability.shared.isOnline }
 
     private var videoID: String? {
@@ -50,10 +54,30 @@ struct ExerciseMediaView: View {
     static func hasMedia(_ exercise: Exercise) -> Bool {
         if exercise.videoURL.flatMap(YouTubeURL.videoID(from:)) != nil { return true }
         if exercise.imageAssetName != nil { return true }
+        // `exists` rather than `load`: this is a yes/no question, and callers ask it from
+        // inside a body that re-renders once a second during a Follow Along step —
+        // decoding the JPEG to answer it made that a per-second disk read and decode.
         if let fileName = exercise.generatedImageFileName,
-           GeneratedExerciseImageStore.load(fileName: fileName) != nil { return true }
+           GeneratedExerciseImageStore.exists(fileName: fileName) { return true }
         return false
     }
+
+    /// Whether there's a picture on the device, so the video branches know whether
+    /// falling back would land on something worth showing.
+    ///
+    /// Static as well as instance: `ExerciseVideoButton` has to answer the same
+    /// question from outside — a picture is exactly what makes the video branches fall
+    /// through and leaves the video with no way in.
+    @MainActor
+    static func hasPicture(_ exercise: Exercise) -> Bool {
+        if exercise.imageAssetName != nil { return true }
+        if let fileName = exercise.generatedImageFileName {
+            return GeneratedExerciseImageStore.exists(fileName: fileName)
+        }
+        return false
+    }
+
+    private var hasLocalPicture: Bool { Self.hasPicture(exercise) }
 
     private var localImage: UIImage? {
         guard let fileName = exercise.generatedImageFileName else { return nil }
@@ -94,10 +118,15 @@ struct ExerciseMediaView: View {
     private var content: some View {
         switch mode {
         case .autoplayWorkout(let maxSeconds):
-            if isOnline, let videoID, !videoFailed {
+            if isOnline, autoplayVideo, let videoID, !videoFailed {
                 YouTubePlayerView(videoID: videoID, maxSeconds: maxSeconds, muted: true, showsControls: false) {
                     videoFailed = true
                 }
+            } else if isOnline, !videoFailed, !hasLocalPicture, videoID != nil, let urlString = exercise.videoURL {
+                // Autoplay off and no picture to fall back on: show the edit form's
+                // static thumbnail, still tappable, rather than telling someone their
+                // video-only exercise has no media. Costs one image, not a web view.
+                YouTubeThumbnailButton(urlString: urlString, title: exercise.displayName)
             } else {
                 photoOrFallback
             }

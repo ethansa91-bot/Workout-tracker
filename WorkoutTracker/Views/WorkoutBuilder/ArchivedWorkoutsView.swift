@@ -12,6 +12,10 @@ struct ArchivedWorkoutsView: View {
     }
 
     var body: some View {
+        // Read once, not once per row — see the same fix in `WorkoutListView`.
+        let archivedWorkouts = self.archivedWorkouts
+        let lastID = archivedWorkouts.last?.id
+
         Group {
             if archivedWorkouts.isEmpty {
                 ContentUnavailableView(
@@ -22,10 +26,10 @@ struct ArchivedWorkoutsView: View {
             } else {
                 List {
                     ForEach(archivedWorkouts) { workout in
-                        NavigationLink(value: WorkoutRoute(workout: workout)) {
+                        NavigationLink(value: WorkoutRoute.workout(workout)) {
                             workoutRow(workout)
                         }
-                        .fullBleedRow(isLast: workout.id == archivedWorkouts.last?.id)
+                        .fullBleedRow(isLast: workout.id == lastID)
                         .swipeActions(edge: .leading) {
                             Button {
                                 unarchiveWorkout(workout)
@@ -38,11 +42,17 @@ struct ArchivedWorkoutsView: View {
                             // Same rule as the Workouts list: history behind a workout
                             // means archive-only.
                             if !workout.isLocked {
-                                Button(role: .destructive) {
+                            // Not `role: .destructive`: a destructive swipe button
+                            // plays the row-removal animation the moment it's tapped,
+                            // before any data changes — so the row vanished, the
+                            // confirmation appeared, and the row came back. Tinted
+                            // instead; the role belongs on the alert's confirm button.
+                                Button {
                                     pendingDelete = workout
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
+                                .tint(Color.appDanger)
                             }
                         }
                         .contextMenu {

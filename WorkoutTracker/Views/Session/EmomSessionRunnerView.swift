@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import Combine
 
 /// EMOM ("Every Minute On the Minute"): every exercise in the section is shown at
 /// once — usually just a couple, meant to be done fast — behind a simple countdown
@@ -20,9 +19,6 @@ struct EmomSessionRunnerView: View {
     /// Seeded from `section.autostart` — see `TimeSessionRunnerView` for why this is
     /// only gated once, at section entry, not every round.
     @State private var isRunning: Bool
-
-    // Must be @State, not `let` — see TimeSessionRunnerView for why.
-    @State private var ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     init(session: WorkoutSession, section: WorkoutSection, soundProfile: TimerSoundProfile, onSectionComplete: @escaping () -> Void) {
         self.session = session
@@ -69,7 +65,9 @@ struct EmomSessionRunnerView: View {
             .background(Color.appBackground)
             .onAppear { remainingSeconds = 60 }
             .onChange(of: currentRound) { _, _ in remainingSeconds = 60 }
-            .onReceive(ticker) { _ in tick() }
+            // Stops outright while the round or the workout is paused, rather than
+            // ticking and discarding it inside the handler.
+            .secondTicker(isActive: isRunning && session.status == .inProgress) { tick() }
         } else {
             Color.clear.onAppear { onSectionComplete() }
         }
@@ -186,7 +184,6 @@ struct EmomSessionRunnerView: View {
     }
 
     private func tick() {
-        guard isRunning, session.status == .inProgress else { return }
         if remainingSeconds > 0 {
             remainingSeconds -= 1
             SoundPlayer.playWarningIfNeeded(remainingSeconds: remainingSeconds, profile: soundProfile)

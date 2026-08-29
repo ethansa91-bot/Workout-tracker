@@ -7,6 +7,7 @@ struct MuscleListView: View {
 
     @State private var searchText = ""
     @State private var selectedCategory: String?
+    @State private var showingCreateSheet = false
 
     private var filteredMuscles: [Muscle] {
         allMuscles.filter { muscle in
@@ -17,14 +18,19 @@ struct MuscleListView: View {
     }
 
     var body: some View {
+        // Read once, not once per row — the filter walks each muscle's `categories`
+        // relationship, and reading `.last?.id` inside the `ForEach` re-ran it per row.
+        let muscles = filteredMuscles
+        let lastID = muscles.last?.id
+
         List {
-            ForEach(filteredMuscles) { muscle in
+            ForEach(muscles) { muscle in
                 NavigationLink {
                     MuscleEditView(muscle: muscle)
                 } label: {
                     muscleRow(muscle)
                 }
-                .fullBleedRow(isLast: muscle.id == filteredMuscles.last?.id)
+                .fullBleedRow(isLast: muscle.id == lastID)
             }
         }
         .fullBleedList()
@@ -52,6 +58,18 @@ struct MuscleListView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingCreateSheet = true
+                } label: {
+                    Label("Add", systemImage: "plus")
+                }
+            }
+        }
+        .sheet(isPresented: $showingCreateSheet) {
+            NavigationStack { MuscleEditView(muscle: nil) }
+        }
     }
 
     private func muscleRow(_ muscle: Muscle) -> some View {
@@ -72,8 +90,11 @@ struct MuscleListView: View {
 /// Edit a muscle's name and category tags — reached directly by tapping it in the list,
 /// no read-only detail screen in between. Deliberately doesn't show the exercises that
 /// target this muscle; that list isn't useful here and was removed.
+/// Edits an existing muscle, or creates one when `muscle` is nil — the name field and
+/// the category picker (with its inline "add category") are the same either way, so this
+/// takes an optional rather than there being a second, near-identical form.
 struct MuscleEditView: View {
-    @Bindable var muscle: Muscle
+    let muscle: Muscle?
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -87,10 +108,10 @@ struct MuscleEditView: View {
     /// `save()` runs.
     @State private var createdCategories: [MuscleCategory] = []
 
-    init(muscle: Muscle) {
+    init(muscle: Muscle?) {
         self.muscle = muscle
-        _name = State(initialValue: muscle.name)
-        _selectedCategoryIDs = State(initialValue: Set(muscle.categories.map(\.id)))
+        _name = State(initialValue: muscle?.name ?? "")
+        _selectedCategoryIDs = State(initialValue: Set(muscle?.categories.map(\.id) ?? []))
     }
 
     var body: some View {
@@ -128,10 +149,18 @@ struct MuscleEditView: View {
             }
         }
         .fullBleedList()
-        .safeAreaInset(edge: .top, spacing: 0) { PushedTitleBand(title: "Edit Muscle") }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            PushedTitleBand(title: muscle == nil ? "New Muscle" : "Edit Muscle")
+        }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            // Creating is presented as a sheet, which has no back button of its own.
+            if muscle == nil {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") { save() }
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -154,10 +183,17 @@ struct MuscleEditView: View {
     }
 
     private func save() {
-        muscle.name = name.trimmingCharacters(in: .whitespaces)
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        // Inserted only here, so backing out of the form leaves nothing behind.
+        let target = muscle ?? {
+            let created = Muscle(name: trimmed, iconSymbolName: IconSymbolMapping.defaultMuscleSymbol)
+            context.insert(created)
+            return created
+        }()
+        target.name = trimmed
         let available = allCategories + createdCategories.filter { created in !allCategories.contains { $0.id == created.id } }
-        muscle.categories = available.filter { selectedCategoryIDs.contains($0.id) }
-        muscle.markDirty()
+        target.categories = available.filter { selectedCategoryIDs.contains($0.id) }
+        target.markDirty()
         try? context.save()
         dismiss()
     }

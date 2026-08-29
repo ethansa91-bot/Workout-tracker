@@ -10,6 +10,8 @@ enum AppSettings {
     private static let speechEnabledKey = "settings.speechEnabled"
     private static let speechVoiceIdentifierKey = "settings.speechVoiceIdentifier"
     private static let shareCodeKey = "settings.shareCode"
+    private static let displayNameKey = "settings.displayName"
+    private static let workoutVideoAutoplayKey = "settings.workoutVideoAutoplay"
 
     static var defaultRestSeconds: Int {
         get {
@@ -32,6 +34,21 @@ enum AppSettings {
             UserDefaults.standard.string(forKey: timerSoundProfileKey).flatMap(TimerSoundProfile.init) ?? .endOnly
         }
         set { UserDefaults.standard.set(newValue.rawValue, forKey: timerSoundProfileKey) }
+    }
+
+    /// Whether a Follow Along step autoplays the exercise's video.
+    ///
+    /// On unless turned off — the video is the point of a Follow Along step. It is a real
+    /// battery cost though (a web view, video decode, and network per exercise, on a
+    /// screen held awake for the whole workout), so it's worth being able to drop back to
+    /// the still. Defaults to `true` via an explicit presence check, since
+    /// `UserDefaults.bool` reports `false` for a key that was never written.
+    static var workoutVideoAutoplayEnabled: Bool {
+        get {
+            guard UserDefaults.standard.object(forKey: workoutVideoAutoplayKey) != nil else { return true }
+            return UserDefaults.standard.bool(forKey: workoutVideoAutoplayKey)
+        }
+        set { UserDefaults.standard.set(newValue, forKey: workoutVideoAutoplayKey) }
     }
 
     // MARK: - Spoken announcements
@@ -60,5 +77,21 @@ enum AppSettings {
     static var shareCode: String? {
         get { UserDefaults.standard.string(forKey: shareCodeKey) }
         set { UserDefaults.standard.set(newValue, forKey: shareCodeKey) }
+    }
+
+    /// A **cache** of the name this user publishes to the people who follow them, for
+    /// the same reason and with the same caveat as `shareCode`: the public `Profile`
+    /// record is the source of truth, and this only exists so the UI can render a name
+    /// before the network answers. Empty (not nil) once the user has cleared it.
+    static var displayName: String? {
+        get { UserDefaults.standard.string(forKey: displayNameKey) }
+        set { UserDefaults.standard.set(newValue, forKey: displayNameKey) }
+    }
+
+    /// Whether this user has ever chosen a name. Drives the one-time prompt shown when
+    /// following someone — the point of the name is that the other side sees a person
+    /// rather than `ACDE-3F7K`, which only works if it's set before the follow lands.
+    static var hasDisplayName: Bool {
+        !(displayName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
     }
 }

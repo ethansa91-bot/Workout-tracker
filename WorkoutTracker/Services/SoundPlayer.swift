@@ -17,9 +17,9 @@ enum TimerSoundProfile: String, CaseIterable, Identifiable, Codable {
 /// Plays timer cues as an in-memory synthesized tone rather than a canned
 /// `AudioServices` system sound — a system sound's duration and volume are fixed and
 /// can't be adjusted, which isn't enough control for a single "done" tone that needs
-/// to be both louder and noticeably longer than the short warning beep. Uses the
-/// `.playback` session category so it's reliably audible mid-workout regardless of
-/// the silent switch.
+/// to be both louder and noticeably longer than the short warning beep. Plays through
+/// `AudioSessionController`, which owns the `.playback` category that makes cues
+/// reliably audible mid-workout regardless of the silent switch.
 enum SoundPlayer {
     private static let sampleRate: Double = 44100
     private static let toneFrequency: Double = 880
@@ -70,16 +70,17 @@ enum SoundPlayer {
     }
 
     private static func play(_ data: Data) {
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
-        try? session.setActive(true)
-
         guard let player = try? AVAudioPlayer(data: data) else { return }
+        // Claimed before playback and released once the player is done, so the shared
+        // session is only active while a cue is actually sounding — see
+        // `AudioSessionController` for why this used to leak.
+        AudioSessionController.beginActivity()
         player.volume = 1
         activePlayers.insert(player)
         player.play()
         DispatchQueue.main.asyncAfter(deadline: .now() + player.duration + 0.1) {
             activePlayers.remove(player)
+            AudioSessionController.endActivity()
         }
     }
 

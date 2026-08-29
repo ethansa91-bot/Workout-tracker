@@ -7,6 +7,9 @@ struct ExerciseDetailView: View {
     @State private var showingEdit = false
     @State private var showingVideoPlayer = false
     @State private var showingPicturePreview = false
+    @State private var showingDeleteConfirm = false
+    @State private var deleteErrorMessage: String?
+    @Environment(\.dismiss) private var dismiss
 
     @Query(sort: \Equipment.name) private var allEquipment: [Equipment]
     @Query(sort: \Muscle.name) private var allMuscles: [Muscle]
@@ -44,6 +47,31 @@ struct ExerciseDetailView: View {
                 chipGrid(allCategories, tint: .appRust, title: { $0.name.capitalized }, isSelected: isCategorySelected, toggle: toggleCategory)
             }
 
+            Section {
+                Button {
+                    showingDeleteConfirm = true
+                } label: {
+                    Label("Delete Exercise", systemImage: "trash")
+                        .foregroundStyle(deleteBlockReason == nil ? Color.appDanger : Color.appInkMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        // The tint is what keeps it reading as set apart now that every
+                        // row is one continuous white band — same treatment as Settings'
+                        // Danger Zone.
+                        .background((deleteBlockReason == nil ? Color.appDanger : Color.clear).opacity(0.06))
+                }
+                .buttonStyle(.plain)
+                .disabled(deleteBlockReason != nil)
+                .fullBleedRow()
+            } header: {
+                FormSectionHeader("Danger Zone")
+            } footer: {
+                // Says which reference is holding it, rather than leaving a dead button
+                // to be puzzled over.
+                FormSectionFooter(deleteBlockReason ?? "Nothing references this exercise, so it can be removed from your library.")
+            }
+
         }
         .fullBleedList()
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -59,6 +87,20 @@ struct ExerciseDetailView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Delete \"\(exercise.displayName)\"?", isPresented: $showingDeleteConfirm) {
+            Button("Delete", role: .destructive) { deleteThis() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This removes it from your library. Anything that already referenced it would have blocked this.")
+        }
+        .alert("Can't Delete", isPresented: Binding(
+            get: { deleteErrorMessage != nil },
+            set: { if !$0 { deleteErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { deleteErrorMessage = nil }
+        } message: {
+            Text(deleteErrorMessage ?? "")
+        }
         .sheet(isPresented: $showingEdit) {
             ExerciseIdentityEditView(exercise: exercise)
         }
@@ -174,6 +216,20 @@ struct ExerciseDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, HeaderMetrics.chipGutter)
         .padding(.vertical, 10)
+    }
+
+
+    private var deleteBlockReason: String? {
+        CatalogDeletionService.deletionBlockReason(for: exercise)
+    }
+
+    private func deleteThis() {
+        do {
+            try CatalogDeletionService.delete(exercise, context: context)
+            dismiss()
+        } catch {
+            deleteErrorMessage = error.localizedDescription
+        }
     }
 
     private func toggleFlag(_ change: () -> Void) {

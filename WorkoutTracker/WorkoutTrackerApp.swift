@@ -128,15 +128,26 @@ struct WorkoutTrackerApp: App {
             }
         }
 
-        // Opt-in CloudKit schema check: set CK_VALIDATE=1 in the scheme's environment
-        // and run on a device signed into iCloud. Reports exactly which entity or
-        // property CloudKit can't mirror — the detail an export `partialFailure`
-        // withholds. Debug-only; `initializeCloudKitSchema` must never ship.
+        // Opt-in CloudKit schema tooling, both on a device signed into iCloud.
+        //
+        // CK_VALIDATE=1 reports exactly which entity or property CloudKit can't mirror —
+        // the detail an export `partialFailure` withholds, and it creates nothing.
+        //
+        // CK_INIT_SCHEMA=1 creates every record type and field in the Development
+        // environment. Run this before any TestFlight build that added a model, then
+        // deploy to Production; see CloudKitSchemaValidator for why auto-creation alone
+        // silently misses types you never happen to write.
+        //
+        // Debug-only; `initializeCloudKitSchema` must never ship.
         #if DEBUG
-        if ProcessInfo.processInfo.environment["CK_VALIDATE"] == "1" {
-            // Off the main thread: the dry run does real network work and takes tens of
-            // seconds, which would trip the launch watchdog if run inline here.
-            Thread.detachNewThread { CloudKitSchemaValidator.run() }
+        let environment = ProcessInfo.processInfo.environment
+        if environment["CK_INIT_SCHEMA"] == "1" || environment["CK_VALIDATE"] == "1" {
+            // Creating wins if both are set — it's the strictly larger operation, and it
+            // reports everything the dry run would have.
+            let createsSchema = environment["CK_INIT_SCHEMA"] == "1"
+            // Off the main thread: this does real network work and takes tens of seconds,
+            // which would trip the launch watchdog if run inline here.
+            Thread.detachNewThread { CloudKitSchemaValidator.run(createsSchema: createsSchema) }
         }
         #endif
     }
@@ -163,10 +174,21 @@ struct WorkoutTrackerApp: App {
         "migration.personalEquipmentUpdateV1",
     ]
 
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                // Share links land here. The router only stores the code; presenting it
+                // is `ContentView`'s job, so a link works from whichever tab is open.
+                .onOpenURL { SharingRouter.shared.handle($0) }
         }
         .modelContainer(sharedModelContainer)
+        // Backgrounding ends any claim on speech and the audio session. Without this a
+        // workout left running in the background kept the synthesizer alive and the
+        // session active — and with it, other apps' audio ducked.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { SpeechAnnouncer.teardown() }
+        }
     }
 }

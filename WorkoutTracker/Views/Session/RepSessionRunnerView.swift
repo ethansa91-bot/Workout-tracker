@@ -101,6 +101,8 @@ struct RepSessionRunnerView: View {
             VStack(alignment: .leading, spacing: 20) {
                 ExerciseMediaView(exercise: exercise, mode: .autoplayWorkout(maxSeconds: 30), fillsWidth: true)
                     .id(exercise.id)
+                ExerciseVideoButton(exercise: exercise)
+                    .id(exercise.id)
                 ExerciseDescriptionView(exercise: exercise, style: descriptionStyle)
                     .id(exercise.id)
                 logColumn(entry: entry, exercise: exercise)
@@ -120,6 +122,8 @@ struct RepSessionRunnerView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     ExerciseMediaView(exercise: exercise, mode: .autoplayWorkout(maxSeconds: 30), fillsWidth: true)
+                        .id(exercise.id)
+                    ExerciseVideoButton(exercise: exercise)
                         .id(exercise.id)
                     ExerciseDescriptionView(exercise: exercise, style: descriptionStyle)
                         .id(exercise.id)
@@ -149,7 +153,8 @@ struct RepSessionRunnerView: View {
                     isSessionActive: session.status == .inProgress,
                     startSignal: $restStartSignal,
                     stopSignal: $restStopSignal,
-                    onAccent: true
+                    onAccent: true,
+                    height: headerHeight
                 )
                 // A third of the row, so the timer keeps the same proportion on any
                 // width rather than a fixed square that crowds a small phone.
@@ -174,7 +179,12 @@ struct RepSessionRunnerView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(exercise.displayName)
-                            .font(.appSerif(.title3))
+                            .font(nameFont(bandHeight: geometry.size.height))
+                            // No guard at all before this: a long name simply spilled
+                            // out of the band. Two lines is what the taller iPad band
+                            // has room for, and the scale factor catches the rest.
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.5)
                             .foregroundStyle(.white)
                         if !exercise.equipmentItems.isEmpty {
                             Label(exercise.equipmentItems.map(\.name).joined(separator: ", "), systemImage: "dumbbell.fill")
@@ -195,8 +205,24 @@ struct RepSessionRunnerView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .frame(height: 132)
+        .frame(height: headerHeight)
         .background(Color.appAccent)
+    }
+
+    /// Taller on iPad, where the phone's 132pt band left the exercise name at phone size
+    /// on a screen with room to spare — but only halfway there: a 200pt band made the
+    /// name the loudest thing on the screen and ate into the columns below it. The rest
+    /// timer beside it is sized from this too, so the two panels stay the same height.
+    private var headerHeight: CGFloat {
+        horizontalSizeClass == .regular ? 166 : RestTimerView.defaultHeight
+    }
+
+    /// Scaled off the band it sits in on iPad — the same geometry-derived sizing the
+    /// other runners give their hero timers — and left at the phone's text style on
+    /// compact width, so that layout is untouched.
+    private func nameFont(bandHeight: CGFloat) -> Font {
+        guard horizontalSizeClass == .regular else { return .appSerif(.title3) }
+        return .appSerif(size: bandHeight * 0.22)
     }
 
     /// "Section: Abs 2 of 3" — the round is dropped when the section runs once.

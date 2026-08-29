@@ -57,6 +57,11 @@ struct PersonalRecordEditView: View {
         equipment: Equipment? = nil,
         isBodyweight: Bool = false,
         trackingMode: RepExerciseTrackingMode = .repsWeight,
+        /// The record being opened really is a legacy one saved with no equipment. Only
+        /// then does a nil `equipment` mean `.none` — otherwise it just means "not
+        /// resolved", and opening on "No equipment" offered a source the exercise
+        /// doesn't even have and that vanishes the moment you switch away from it.
+        hasNoEquipmentRecord: Bool = false,
         isPresentedAsSheet: Bool = false
     ) {
         self.isPresentedAsSheet = isPresentedAsSheet
@@ -68,6 +73,12 @@ struct PersonalRecordEditView: View {
             _source = State(initialValue: .bodyweight)
         } else if let equipment {
             _source = State(initialValue: .equipment(equipment.id))
+        } else if hasNoEquipmentRecord {
+            _source = State(initialValue: .none)
+        } else if let exercise, let resolved = exercise.weightedEquipment {
+            _source = State(initialValue: .equipment(resolved.id))
+        } else if exercise != nil {
+            _source = State(initialValue: .bodyweight)
         } else {
             _source = State(initialValue: .none)
         }
@@ -182,7 +193,10 @@ struct PersonalRecordEditView: View {
         ForEach(equipmentOptions) { item in
             Button(item.name) { source = .equipment(item.id) }
         }
-        if exercise?.allowsBodyweightSource == true {
+        // The `|| source ==` half matches what `.none` below already does: a record
+        // that opens on bodyweight has to be able to return to it, even on an exercise
+        // the catalog says can't be done unloaded.
+        if exercise?.allowsBodyweightSource == true || source == .bodyweight {
             Button("Bodyweight") { source = .bodyweight }
         }
         if source == RecordSource.none {

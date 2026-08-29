@@ -16,6 +16,10 @@ struct SectionTemplatesView: View {
     }
 
     var body: some View {
+        // Read once, not once per row — see the same fix in `WorkoutListView`.
+        let templates = self.templates
+        let lastID = templates.last?.id
+
         Group {
             if templates.isEmpty {
                 ContentUnavailableView(
@@ -32,14 +36,18 @@ struct SectionTemplatesView: View {
                             templateRow(section)
                         }
                         .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
+                            // Not `role: .destructive`: a destructive swipe button plays
+                            // the row-removal animation on tap, before any data changes —
+                            // so the row vanished, the confirmation appeared, and the row
+                            // came back. The role belongs on the alert's confirm button.
+                            Button {
                                 templatePendingDeletion = section
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
                             .tint(Color.appDanger)
                         }
-                        .fullBleedRow(isLast: section.id == templates.last?.id)
+                        .fullBleedRow(isLast: section.id == lastID)
                     }
                 }
                 .fullBleedList()

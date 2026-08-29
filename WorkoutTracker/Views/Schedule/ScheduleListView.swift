@@ -6,8 +6,23 @@ struct ScheduleListView: View {
     /// two long lists open at once buries the actual schedule below the fold.
     private enum SummaryKind { case missed, completed }
 
+    /// A workout finished inside the recap window, flattened to what a row needs.
+    ///
+    /// Session-driven rather than occurrence-driven: a workout done spontaneously is
+    /// just as done as a scheduled one, and only the session records that it happened
+    /// at all. Flattening here is what lets the completed and missed groups — which
+    /// have different sources — share one row view.
+    private struct CompletedWorkout: Identifiable {
+        /// The session's, so two runs of the same workout on one day stay distinct.
+        let id: UUID
+        let name: String
+        let date: Date
+        let icon: String
+    }
+
     @Environment(\.modelContext) private var context
     @Query private var allScheduled: [ScheduledWorkout]
+    @Query(sort: \WorkoutSession.startedAt, order: .reverse) private var allSessions: [WorkoutSession]
 
     @State private var showingAddSheet = false
     @State private var movingOccurrence: ScheduledWorkout?
@@ -40,8 +55,31 @@ struct ScheduleListView: View {
         recentPast.filter { !ScheduledWorkoutService.isCompleted($0) }
     }
 
-    private var completedRecent: [ScheduledWorkout] {
-        recentPast.filter { ScheduledWorkoutService.isCompleted($0) }
+    /// Everything actually finished in the window, scheduled or not — so a spontaneous
+    /// workout still counts toward the seven-day tally. Taken from sessions rather than
+    /// from `recentPast`, which by construction only knows about planned days.
+    ///
+    /// A scheduled workout that was done appears here and not in `missedRecent`, so it
+    /// still shows exactly once.
+    private var completedRecent: [CompletedWorkout] {
+        allSessions
+            .filter { session in
+                session.deletedAt == nil
+                    && session.status == .finished
+                    // `missedCutoff` is a start-of-day, so a session anywhere in that
+                    // day qualifies. Today is excluded for the same reason as above.
+                    && session.startedAt >= missedCutoff
+                    && session.startedAt < today
+            }
+            // The query is already newest-first, matching `recentPast`'s order.
+            .map { session in
+                CompletedWorkout(
+                    id: session.id,
+                    name: session.workout?.name ?? "Workout",
+                    date: session.startedAt,
+                    icon: session.workout.map(workoutTypeIcon) ?? "figure.strengthtraining.traditional"
+                )
+            }
     }
 
     /// Today onward. The past is represented entirely by the summary rows above, so
@@ -90,41 +128,38 @@ struct ScheduleListView: View {
                         )
                     } else {
                         List {
-                            if !missedRecent.isEmpty {
-                                summarySection(
-                                    kind: .missed,
-                                    title: "Missed workouts",
-                                    systemImage: "exclamationmark.circle.fill",
-                                    tint: Color.appDanger,
-                                    items: missedRecent
-                                )
-                            }
-
-                            if !completedRecent.isEmpty {
-                                summarySection(
-                                    kind: .completed,
-                                    title: "Completed workouts",
-                                    systemImage: "checkmark.circle.fill",
-                                    tint: .green,
-                                    items: completedRecent
-                                )
-                            }
-
-                            if olderMissedCount > 0 {
-                                NavigationLink {
-                                    MissedWorkoutsView(cutoff: missedCutoff)
-                                } label: {
-                                    HStack {
-                                        Label("Missed Workouts", systemImage: "calendar.badge.exclamationmark")
-                                            .foregroundStyle(Color.appDanger)
-                                        Spacer()
-                                        Text("\(olderMissedCount)")
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
+                            // Both recaps live under one band, so the window they cover
+                            // is named once instead of being left implicit.
+                            if !missedRecent.isEmpty || !completedRecent.isEmpty {
+                                Section {
+                                    missedGroup
+                                    completedGroup
+                                } header: {
+                                    bandHeader("Last 7 days")
                                 }
-                                .fullBleedRow()
+                            }
+
+                            // Banded like everything else, so whatever lands first under
+                            // the green title is always a header rather than a bare row.
+                            if olderMissedCount > 0 {
+                                Section {
+                                    NavigationLink {
+                                        MissedWorkoutsView(cutoff: missedCutoff)
+                                    } label: {
+                                        HStack {
+                                            Label("Missed Workouts", systemImage: "calendar.badge.exclamationmark")
+                                                .foregroundStyle(Color.appDanger)
+                                            Spacer()
+                                            Text("\(olderMissedCount)")
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 12)
+                                    }
+                                    .fullBleedRow()
+                                } header: {
+                                    bandHeader("Older than 7 days")
+                                }
                             }
 
                             ForEach(groupedByDay, id: \.day) { group in
@@ -153,16 +188,28 @@ struct ScheduleListView: View {
                         // which is the only way the day headers reach both screen edges;
                         // the rows go full-bleed to match, via `fullBleedRow`.
                         .fullBleedList()
+                        // The green title band sits directly above, and a plain list's
+                        // own top inset left a strip of ground between it and the first
+                        // gray band. Local to this screen: elsewhere a list opens with a
+                        // `FormSectionHeader`, which wants its top padding.
+                        .contentMargins(.top, 0, for: .scrollContent)
                     }
                 }
             }
             .background(Color.appBackground)
             .navigationDestination(for: WorkoutRoute.self) { route in
-                SessionRecapView(workout: route.workout) { clone in
-                    // Replace, not stack: backing out of the copy should reach the
-                    // schedule, not the locked workout it was cloned from.
-                    path.removeLast()
-                    path.append(WorkoutRoute(workout: clone))
+                switch route {
+                case .workout(let workout):
+                    SessionRecapView(workout: workout) { clone in
+                        // Replace, not stack: backing out of the copy should reach the
+                        // schedule, not the locked workout it was cloned from.
+                        path.removeLast()
+                        path.append(.workout(clone))
+                    }
+                // Nothing here pushes Archives, but the route type is shared with the
+                // Workouts stack and the destination has to be total.
+                case .archives:
+                    ArchivedWorkoutsView()
                 }
             }
             .navigationTitle("")
@@ -205,20 +252,12 @@ struct ScheduleListView: View {
 
     // MARK: - Headers
 
+    private func bandHeader(_ title: String) -> some View {
+        ListBandHeader(title: title)
+    }
+
     private func dayHeader(for day: Date) -> some View {
-        Text(dayHeaderTitle(for: day))
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
-            .background(Color.appHeaderGray)
-            // Zeroed so the band reaches both screen edges; only effective because the
-            // list is `.plain` — an inset-grouped section keeps its own side margins no
-            // matter what the row insets say.
-            .listRowInsets(EdgeInsets())
-            // Stock headers uppercase their text, which mangles the date.
-            .textCase(nil)
+        bandHeader(dayHeaderTitle(for: day))
     }
 
     private static let dayNameFormatter: DateFormatter = {
@@ -242,61 +281,110 @@ struct ScheduleListView: View {
 
     // MARK: - Summary rows
 
-    @ViewBuilder
-    private func summarySection(
-        kind: SummaryKind,
-        title: String,
-        systemImage: String,
-        tint: Color,
-        items: [ScheduledWorkout]
-    ) -> some View {
-        let isExpanded = expandedSummary == kind
+    // Both groups sit in one section now, so `isLast` — which hides the separator to
+    // close a group off — can only be true on the section's actual final row. The
+    // completed group renders second, so whenever it has items the missed group never
+    // closes the section.
 
-        Section {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    expandedSummary = isExpanded ? nil : kind
-                }
-            } label: {
-                HStack {
-                    Label(title, systemImage: systemImage)
-                        .foregroundStyle(tint)
-                    Spacer()
-                    Text("\(items.count)")
-                        .foregroundStyle(.secondary)
-                    Image(systemName: "chevron.down")
-                        .rotationEffect(.degrees(isExpanded ? 0 : -90))
-                        .foregroundStyle(Color.appInkMuted)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            }
-            .buttonStyle(.plain)
-            // Open, the header is the first of several rows and needs a line under it;
-            // closed, it stands alone.
-            .fullBleedRow(isLast: !isExpanded)
+    @ViewBuilder
+    private var missedGroup: some View {
+        if !missedRecent.isEmpty {
+            let isExpanded = expandedSummary == .missed
+            let closesSection = completedRecent.isEmpty
+
+            summaryToggleRow(
+                kind: .missed,
+                title: "Missed workouts",
+                systemImage: "exclamationmark.circle.fill",
+                tint: Color.appDanger,
+                count: missedRecent.count,
+                isLast: !isExpanded && closesSection
+            )
 
             if isExpanded {
-                ForEach(items) { occurrence in
-                    let isLast = occurrence.id == items.last?.id
-                    if kind == .missed {
-                        summaryRow(occurrence, isLast: isLast)
-                            .swipeActions(edge: .leading) { moveButton(occurrence) }
-                            .swipeActions(edge: .trailing) { cancelButton(occurrence) }
-                    } else {
-                        summaryRow(occurrence, isLast: isLast)
-                    }
+                ForEach(missedRecent) { occurrence in
+                    summaryRow(
+                        name: occurrence.workout?.name ?? "Workout",
+                        date: occurrence.date,
+                        icon: occurrence.workout.map(workoutTypeIcon) ?? "figure.strengthtraining.traditional",
+                        isLast: occurrence.id == missedRecent.last?.id && closesSection
+                    )
+                    .swipeActions(edge: .leading) { moveButton(occurrence) }
+                    .swipeActions(edge: .trailing) { cancelButton(occurrence, isSwipe: true) }
                 }
             }
         }
     }
 
-    private func summaryRow(_ occurrence: ScheduledWorkout, isLast: Bool) -> some View {
+    @ViewBuilder
+    private var completedGroup: some View {
+        if !completedRecent.isEmpty {
+            let isExpanded = expandedSummary == .completed
+
+            summaryToggleRow(
+                kind: .completed,
+                title: "Completed workouts",
+                systemImage: "checkmark.circle.fill",
+                tint: .green,
+                count: completedRecent.count,
+                isLast: !isExpanded
+            )
+
+            if isExpanded {
+                ForEach(completedRecent) { completed in
+                    summaryRow(
+                        name: completed.name,
+                        date: completed.date,
+                        icon: completed.icon,
+                        isLast: completed.id == completedRecent.last?.id
+                    )
+                }
+            }
+        }
+    }
+
+    private func summaryToggleRow(
+        kind: SummaryKind,
+        title: String,
+        systemImage: String,
+        tint: Color,
+        count: Int,
+        isLast: Bool
+    ) -> some View {
+        let isExpanded = expandedSummary == kind
+
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                expandedSummary = isExpanded ? nil : kind
+            }
+        } label: {
+            HStack {
+                Label(title, systemImage: systemImage)
+                    .foregroundStyle(tint)
+                Spacer()
+                Text("\(count)")
+                    .foregroundStyle(.secondary)
+                Image(systemName: "chevron.down")
+                    .rotationEffect(.degrees(isExpanded ? 0 : -90))
+                    .foregroundStyle(Color.appInkMuted)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
+        // Open, the header is the first of several rows and needs a line under it;
+        // closed, it stands alone — unless another group follows it in the section.
+        .fullBleedRow(isLast: isLast)
+    }
+
+    /// Takes values rather than a model, so a missed occurrence and a completed session
+    /// render as the same row despite coming from different types.
+    private func summaryRow(name: String, date: Date, icon: String, isLast: Bool) -> some View {
         HStack(spacing: 12) {
-            IconBadge(systemName: occurrence.workout.map(workoutTypeIcon) ?? "figure.strengthtraining.traditional")
+            IconBadge(systemName: icon)
             VStack(alignment: .leading, spacing: 3) {
-                Text(occurrence.workout?.name ?? "Workout")
-                Text(occurrence.date.formatted(date: .abbreviated, time: .omitted))
+                Text(name)
+                Text(date.formatted(date: .abbreviated, time: .omitted))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -315,7 +403,7 @@ struct ScheduleListView: View {
     private func row(_ occurrence: ScheduledWorkout, isLast: Bool) -> some View {
         Group {
             if let workout = occurrence.workout {
-                NavigationLink(value: WorkoutRoute(workout: workout)) {
+                NavigationLink(value: WorkoutRoute.workout(workout)) {
                     rowContent(occurrence, workout: workout)
                 }
             } else {
@@ -324,7 +412,7 @@ struct ScheduleListView: View {
         }
         .fullBleedRow(isLast: isLast)
         .swipeActions(edge: .leading) { moveButton(occurrence) }
-        .swipeActions(edge: .trailing) { cancelButton(occurrence) }
+        .swipeActions(edge: .trailing) { cancelButton(occurrence, isSwipe: true) }
         .contextMenu {
             moveButton(occurrence)
             cancelButton(occurrence)
@@ -358,12 +446,17 @@ struct ScheduleListView: View {
         .tint(.blue)
     }
 
-    private func cancelButton(_ occurrence: ScheduledWorkout) -> some View {
-        Button(role: .destructive) {
+    /// `isSwipe` drops the destructive role, which a swipe action interprets as "remove
+    /// this row now" and animates away before the confirmation has even been answered —
+    /// the row then reappeared behind the alert. A context menu has no such behavior, so
+    /// that copy keeps the role and its red styling.
+    private func cancelButton(_ occurrence: ScheduledWorkout, isSwipe: Bool = false) -> some View {
+        Button(role: isSwipe ? nil : .destructive) {
             occurrencePendingCancel = occurrence
         } label: {
             Label("Cancel", systemImage: "xmark.circle")
         }
+        .tint(Color.appDanger)
     }
 
     private func workoutTypeIcon(_ workout: Workout) -> String {

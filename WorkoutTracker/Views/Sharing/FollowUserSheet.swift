@@ -5,11 +5,19 @@ import SwiftData
 struct FollowUserSheet: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @Query private var existing: [FollowedUser]
 
     @State private var code = ""
+    @State private var name = AppSettings.displayName ?? ""
     @State private var isLooking = false
     @State private var errorMessage: String?
+    /// Set when the follow landed but the public announcement didn't. Deliberately not
+    /// an error: the follow happened, only reciprocation is pending.
+    @State private var noticeMessage: String?
+
+    /// Following is mutual, so the other side gets a row for this user the moment this
+    /// completes. Asking for a name first — once, only if there isn't one — is what stops
+    /// that row reading `ACDE-3F7K`.
+    private var needsName: Bool { !AppSettings.hasDisplayName }
 
     var body: some View {
         NavigationStack {
@@ -32,6 +40,18 @@ struct FollowUserSheet: View {
                     Text("Share Code")
                 } footer: {
                     Text("Ask the person for their code — they'll find it in Settings under Sharing. Codes are 8 characters and aren't case sensitive.")
+                }
+
+                if needsName {
+                    Section {
+                        TextField("Your name", text: $name)
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
+                    } header: {
+                        Text("Your Name")
+                    } footer: {
+                        Text("Following goes both ways, so they'll be following you too. Your name is what they'll see — without one they just see your code.")
+                    }
                 }
             }
             .themedListBackground()
@@ -58,9 +78,17 @@ struct FollowUserSheet: View {
                 .buttonStyle(.glassProminent)
                 .tint(Color.appAccent.opacity(0.25))
                 .foregroundStyle(Color.appAccent)
-                .disabled(isLooking || !ShareCode.isPlausible(code))
+                .disabled(isLooking || !ShareCode.isPlausible(code) || (needsName && name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
                 .padding()
                 .background(.thickMaterial)
+            }
+            .alert("Following", isPresented: Binding(
+                get: { noticeMessage != nil },
+                set: { if !$0 { noticeMessage = nil } }
+            )) {
+                Button("OK") { noticeMessage = nil; dismiss() }
+            } message: {
+                Text(noticeMessage ?? "")
             }
             .alert("Couldn't Follow", isPresented: Binding(
                 get: { errorMessage != nil },
@@ -80,24 +108,23 @@ struct FollowUserSheet: View {
         do {
             let profile = try await SharingService.lookup(code: code)
 
-            // Re-following someone already followed should revive the existing row
-            // rather than creating a second one — including one previously unfollowed,
-            // which is a tombstone rather than an absence.
-            if let match = existing.first(where: { $0.ownerRecordName == profile.recordName }) {
-                match.deletedAt = nil
-                match.shareCode = profile.shareCode
-                match.displayName = profile.displayName
-                match.markDirty()
-            } else {
-                let user = FollowedUser(
-                    ownerRecordName: profile.recordName,
-                    shareCode: profile.shareCode,
-                    displayName: profile.displayName
-                )
-                context.insert(user)
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty && trimmed != AppSettings.displayName {
+                // Best-effort: a name that fails to save is worth less than the follow
+                // the user actually asked for, and Sharing settings can set it later.
+                try? await SharingService.setDisplayName(trimmed)
             }
-            try context.save()
-            dismiss()
+
+            // Revive-or-insert, plus the public follow record that makes it mutual —
+            // both live in FollowService so the link sheet and the sweep can't drift.
+            let outcome = try await FollowService.follow(profile, context: context)
+            // The follow itself succeeded either way. Only reciprocation is in doubt, and
+            // reporting that as "couldn't follow" would be plainly false.
+            if outcome.isFullyMutual {
+                dismiss()
+            } else {
+                noticeMessage = FollowService.pendingReciprocationNotice
+            }
         } catch {
             errorMessage = (error as? SharingError)?.errorDescription
                 ?? CloudKitErrorFormatter.describe(error)

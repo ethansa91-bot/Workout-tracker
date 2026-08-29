@@ -101,9 +101,9 @@ struct PublishWorkoutSheet: View {
                 publishedIDs.remove(workout.id)
             } else {
                 // Built on the main actor from live model objects, then handed to the
-                // network call as a value — the payload must not hold model references.
-                let payload = SharedWorkoutBuilder.makePayload(for: workout)
-                try await SharingService.publish(payload)
+                // network call as a value — the bundle must not hold model references.
+                let bundle = SharedWorkoutBuilder.makeBundle(for: workout)
+                try await SharingService.publish(bundle)
                 publishedIDs.insert(workout.id)
             }
         } catch {

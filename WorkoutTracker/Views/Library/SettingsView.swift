@@ -9,6 +9,7 @@ struct SettingsView: View {
     @AppStorage("settings.timerSoundProfile") private var timerSoundProfile = TimerSoundProfile.endOnly
     @AppStorage("settings.speechEnabled") private var speechEnabled = false
     @AppStorage("settings.speechVoiceIdentifier") private var speechVoiceIdentifier = ""
+    @AppStorage("settings.workoutVideoAutoplay") private var workoutVideoAutoplay = true
 
     @Environment(\.modelContext) private var context
     @State private var showingResetConfirm = false
@@ -65,6 +66,16 @@ struct SettingsView: View {
                     .labelsHidden()
                 } header: {
                     sectionHeader("Timer sound")
+                }
+
+                Section {
+                    Toggle("Autoplay exercise video", isOn: $workoutVideoAutoplay)
+                        .tint(Color.appAccent)
+                        .settingsRow()
+                } header: {
+                    sectionHeader("Exercise video")
+                } footer: {
+                    sectionFooter("Plays the exercise's video automatically during a Follow Along step. Turning this off shows a tappable still instead, which uses noticeably less battery and data over a long workout.")
                 }
 
                 speechSection
@@ -176,6 +187,17 @@ struct SettingsView: View {
                 }
             }
             .fullBleedList()
+            }
+            // Speech exists only where it can be used: here, for the preview button, and
+            // in the Follow Along runner. Outside those two, `SpeechAnnouncer` has no
+            // synthesizer and no claim on the audio session.
+            .onAppear {
+                SpeechAnnouncer.prepare()
+                SpeechAnnouncer.beginVoiceObservation()
+            }
+            .onDisappear {
+                SpeechAnnouncer.teardown()
+                SpeechAnnouncer.endVoiceObservation()
             }
             .background(Color.appBackground)
             .navigationTitle("")

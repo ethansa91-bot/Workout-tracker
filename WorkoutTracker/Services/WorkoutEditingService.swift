@@ -8,14 +8,17 @@ enum WorkoutEditingError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .locked:
-            return "This workout has already been used in a session and can no longer be edited. Clone it to make changes."
+            return "This workout has already been used in a session, so its sections can no longer be changed. Clone it to restructure it."
         }
     }
 }
 
 /// Every mutation to a workout's structure goes through here, not directly through
-/// SwiftData — the one thing every entry point has in common is checking
+/// SwiftData — the one thing every structural entry point has in common is checking
 /// `workout.isLocked` first. SwiftData itself has no way to enforce that.
+///
+/// "Structure" is the operative word: `rename` and `updateNotes` are exempt, because
+/// what the lock protects is the meaning of past sessions, and neither changes it.
 enum WorkoutEditingService {
     static func createWorkout(name: String, context: ModelContext) -> Workout {
         let workout = Workout(name: name)
@@ -24,15 +27,18 @@ enum WorkoutEditingService {
         return workout
     }
 
+    /// Deliberately unguarded by `requireUnlocked`: the lock protects what a past
+    /// session *means*, and renaming doesn't change that — the session still points at
+    /// the same workout, doing the same thing. Only structure is locked.
     static func rename(_ workout: Workout, to name: String, context: ModelContext) throws {
-        try requireUnlocked(workout)
         workout.name = name
         workout.markDirty()
         try context.save()
     }
 
+    /// Unguarded for the same reason as `rename` — a description is commentary, not
+    /// structure.
     static func updateNotes(_ workout: Workout, to notes: String?, context: ModelContext) throws {
-        try requireUnlocked(workout)
         workout.notes = notes
         workout.markDirty()
         try context.save()
