@@ -44,6 +44,13 @@ struct ArchiveCatalog: Codable {
     var muscles: [ArchiveMuscle] = []
     var exerciseCategories: [ArchiveExerciseCategory] = []
     var equipment: [ArchiveEquipment] = []
+    /// Defaulted so archives written before execution types existed still decode.
+    var executionTypes: [ArchiveExecutionType] = []
+    var progressionGroups: [ArchiveProgressionGroup] = []
+    var progressionSteps: [ArchiveProgressionStep] = []
+    /// Workout-scoped rather than catalog-scoped, but this is where every by-id lookup
+    /// table lives and the importer resolves them all in one pass.
+    var workoutTags: [ArchiveWorkoutTag] = []
     var weightCombos: [ArchiveWeightCombo] = []
     var exercises: [ArchiveExercise] = []
     var personalRecords: [ArchivePersonalRecord] = []
@@ -89,6 +96,40 @@ struct ArchiveEquipment: Codable {
     var deletedAt: Date?
 }
 
+/// A progression ladder. `reachedLevel` is user progress, not catalog data — it travels
+/// here because a backup must be faithful, and is deliberately dropped on a shared import.
+struct ArchiveProgressionGroup: Codable {
+    var id: UUID
+    var reachedLevel: Int
+    var updatedAt: Date
+    var deletedAt: Date?
+}
+
+struct ArchiveProgressionStep: Codable {
+    var id: UUID
+    var groupID: UUID?
+    var exerciseID: UUID?
+    var level: Int
+    var updatedAt: Date
+    var deletedAt: Date?
+}
+
+struct ArchiveWorkoutTag: Codable {
+    var id: UUID
+    var name: String
+    var isCustom: Bool
+    var updatedAt: Date
+    var deletedAt: Date?
+}
+
+struct ArchiveExecutionType: Codable {
+    var id: UUID
+    var name: String
+    var isCustom: Bool
+    var updatedAt: Date
+    var deletedAt: Date?
+}
+
 /// Flat, not nested under equipment: `label` and `colorRaw` make these real rows with
 /// their own identity, which the seed format's bare `weights: [Double]` can't express.
 struct ArchiveWeightCombo: Codable {
@@ -122,7 +163,15 @@ struct ArchiveExercise: Codable {
     var allowsBodyweight: Bool
     var isOneSided: Bool
     var defaultEquipmentName: String?
+    /// Optional, not `Bool = false`: synthesized `Decodable` ignores a default value and
+    /// throws `keyNotFound` for a missing non-optional key, so an archive written before
+    /// this field existed would fail to open.
+    var defaultsToBodyweight: Bool? = nil
     var equipmentIDs: [UUID]
+    /// Defaulted, like every field added after format v1 — an older archive simply has no
+    /// execution types, which is a correct reading of it rather than a missing one.
+    var executionTypeIDs: [UUID] = []
+    var separateRecordsPerExecutionType: Bool = false
     var muscleIDs: [UUID]
     var categoryIDs: [UUID]
     var updatedAt: Date
@@ -133,12 +182,24 @@ struct ArchivePersonalRecord: Codable {
     var id: UUID
     var exerciseID: UUID?
     var equipmentID: UUID?
+    var executionTypeID: UUID? = nil
     var weightUnit: String?
     var isBodyweight: Bool
+    /// Optional, not `Bool = false`: synthesized `Decodable` ignores a default value and
+    /// throws `keyNotFound` for a missing non-optional key, so an archive written before
+    /// this field existed would fail to open.
+    var isFollowAlong: Bool? = nil
     var trackingModeRaw: String
     var weight: Double?
     var reps: Int?
     var holdSeconds: Int?
+    /// Optional, like every field added after v1: synthesized `Decodable` throws
+    /// `keyNotFound` for a missing non-optional key even when it has a default, so an
+    /// archive written before this existed would fail to open. `nil` means an ordinary
+    /// exercise record, which is every record written before section records existed.
+    var sectionRecordGroupID: UUID? = nil
+    var sectionRecordKindRaw: String? = nil
+    var sectionRecordName: String? = nil
     var updatedAt: Date
     var deletedAt: Date?
 }
@@ -148,12 +209,24 @@ struct ArchivePersonalRecordEntry: Codable {
     var recordID: UUID?
     var exerciseID: UUID?
     var equipmentID: UUID?
+    var executionTypeID: UUID? = nil
     var weightUnit: String?
     var isBodyweight: Bool
+    /// Optional, not `Bool = false`: synthesized `Decodable` ignores a default value and
+    /// throws `keyNotFound` for a missing non-optional key, so an archive written before
+    /// this field existed would fail to open.
+    var isFollowAlong: Bool? = nil
     var trackingModeRaw: String
     var weight: Double?
     var reps: Int?
     var holdSeconds: Int?
+    /// Optional, like every field added after v1: synthesized `Decodable` throws
+    /// `keyNotFound` for a missing non-optional key even when it has a default, so an
+    /// archive written before this existed would fail to open. `nil` means an ordinary
+    /// exercise record, which is every record written before section records existed.
+    var sectionRecordGroupID: UUID? = nil
+    var sectionRecordKindRaw: String? = nil
+    var sectionRecordName: String? = nil
     var achievedAt: Date
     var updatedAt: Date
     var deletedAt: Date?
@@ -178,6 +251,7 @@ struct ArchiveWorkout: Codable {
     var clonedFromWorkoutId: UUID?
     var kindRaw: String
     var isArchived: Bool
+    var tagIDs: [UUID] = []
     var sections: [ArchiveSection]
     var updatedAt: Date
     var deletedAt: Date?
@@ -193,6 +267,24 @@ struct ArchiveSection: Codable {
     var amrapDurationSeconds: Int
     var autostart: Bool
     var repeatCount: Int
+    /// Optional, not `Int = 0`: Swift's synthesized `Decodable` ignores a default value
+    /// and throws `keyNotFound` for a missing non-optional key, so an archive written
+    /// before this field existed would fail to open. `nil` reads as no get-ready.
+    var getReadySeconds: Int? = nil
+    /// Optional for the same reason `getReadySeconds` is. `nil` reads as `true`, which is
+    /// what every section written before this existed did.
+    var repeatsGetReadyEachPass: Bool? = nil
+    var sectionRestSeconds: Int? = nil
+    /// Optional for the same reason `getReadySeconds` is. `nil` reads as `false`/absent,
+    /// which is every section written before records and to-failure existed.
+    var emomToFailure: Bool? = nil
+    var tracksRecord: Bool? = nil
+    /// The record identity, carried so a restored section rejoins the record it was
+    /// already filing under rather than starting a second one.
+    var recordGroupID: UUID? = nil
+    var recordLockedAt: Date? = nil
+    /// Only ever set on a template — sections inside a workout are filed under it.
+    var tagIDs: [UUID] = []
     var timeSteps: [ArchiveTimeStep]
     var repExercises: [ArchiveRepExercise]
     var quickExercises: [ArchiveQuickExercise]
@@ -207,6 +299,13 @@ struct ArchiveTimeStep: Codable {
     var exerciseID: UUID?
     var durationSeconds: Int
     var colorRaw: String?
+    var executionTypeID: UUID? = nil
+    var sideRaw: String? = nil
+    var preferredEquipmentID: UUID? = nil
+    /// Optional, not `Bool = false`: synthesized `Decodable` ignores a default value and
+    /// throws `keyNotFound` for a missing non-optional key, so an archive written before
+    /// this field existed would fail to open.
+    var prefersBodyweight: Bool? = nil
     var updatedAt: Date
     var deletedAt: Date?
 }
@@ -223,6 +322,8 @@ struct ArchiveRepExercise: Codable {
     var tracksSides: Bool
     var preferredEquipmentID: UUID?
     var prefersBodyweight: Bool
+    var executionTypeID: UUID? = nil
+    var progressionEnabled: Bool = true
     var updatedAt: Date
     var deletedAt: Date?
 }
@@ -231,6 +332,9 @@ struct ArchiveQuickExercise: Codable {
     var id: UUID
     var sortOrder: Int
     var exerciseID: UUID?
+    var executionTypeID: UUID? = nil
+    var targetReps: Int = 0
+    var sideRaw: String? = nil
     var updatedAt: Date
     var deletedAt: Date?
 }
@@ -275,6 +379,10 @@ struct ArchiveSession: Codable {
     var supersededBySessionId: UUID?
     var setLogs: [ArchiveSetLog]
     var stepLogs: [ArchiveStepLog]
+    /// Defaulted rather than optional because it is a collection: an absent key decodes
+    /// as empty, which is exactly right for a session recorded before EMOM/AMRAP results
+    /// were kept at all.
+    var sectionResultLogs: [ArchiveSectionResultLog] = []
     var exerciseNotes: [ArchiveExerciseNote]
     var updatedAt: Date
     var deletedAt: Date?
@@ -295,6 +403,7 @@ struct ArchiveSetLog: Codable {
     var repeatIndex: Int
     var equipmentID: UUID?
     var isManualWeight: Bool?
+    var executionTypeID: UUID? = nil
     var loggedAt: Date
     var isCancelled: Bool
     var updatedAt: Date
@@ -305,12 +414,26 @@ struct ArchiveStepLog: Codable {
     var id: UUID
     var timeSectionStepID: UUID?
     var stepExerciseNameSnapshot: String?
+    var executionTypeID: UUID? = nil
     var plannedDurationSeconds: Int
     var actualDurationSeconds: Int
     var outcomeRaw: String
     var loggedAt: Date
     var sortOrder: Int
     var repeatIndex: Int
+    var updatedAt: Date
+    var deletedAt: Date?
+}
+
+struct ArchiveSectionResultLog: Codable {
+    var id: UUID
+    var sectionID: UUID?
+    var recordGroupID: UUID?
+    var sectionNameSnapshot: String
+    var sectionTypeRaw: String
+    var repeatIndex: Int
+    var value: Int
+    var loggedAt: Date
     var updatedAt: Date
     var deletedAt: Date?
 }

@@ -91,6 +91,10 @@ enum FollowService {
     /// it now reports the failure so the caller can show it somewhere calm.
     @discardableResult
     static func syncMutualFollows(context: ModelContext) async -> MutualFollowResult {
+        // Before anything reads the list: a duplicated row would make the same person look
+        // unknown to the matching below and get followed a third time.
+        removeDuplicates(context: context)
+
         // Repair first: a `Follow` record lost to an earlier failure is invisible to the
         // other side, and only this user's device can rewrite it.
         await reassertFollowRecordsOncePerLaunch(context: context)
@@ -116,6 +120,21 @@ enum FollowService {
             uniquingKeysWith: { first, _ in first }
         )
 
+        // Whether this device has heard anything back from CloudKit yet.
+        //
+        // On a fresh install the sweep runs long before the private database has delivered
+        // this user's own `FollowedUser` rows, so everyone they already follow looks like a
+        // stranger who has just followed them: a second row is inserted for each, all of
+        // them are announced as new followers, and the originals arrive minutes later
+        // beside the copies. That is the reinstall bug — the duplicates and the wall of
+        // false "followed you" notices are one cause.
+        //
+        // So new rows wait for an import. Known rows are still updated, because that costs
+        // nothing and is right either way. In the worst case a genuinely new follower is
+        // picked up one foreground later, which nobody will notice; `removeDuplicates`
+        // above is the net for anything that still slips through.
+        let hasImported = CloudKitSyncMonitor.shared.lastImport != nil
+
         var result = MutualFollowResult()
         for ownerRecordName in followers {
             if let known = byOwner[ownerRecordName] {
@@ -125,6 +144,8 @@ enum FollowService {
                 }
                 continue
             }
+
+            guard hasImported else { continue }
 
             // No row at all, so this is genuinely someone new. Their profile supplies the
             // name and code; without it there'd be nothing to show but a record name.
@@ -146,6 +167,122 @@ enum FollowService {
 
         try? context.save()
         return result
+    }
+
+    // MARK: - Followed workout updates
+
+    /// What one update-detection sweep found, and whether it could run at all — same
+    /// shape as `MutualFollowResult`, for the same reason.
+    struct WorkoutUpdateResult {
+        var updated: [Workout] = []
+        var failure: Error?
+    }
+
+    /// Finds every downloaded workout whose publisher has re-published since it was last
+    /// saved or merged.
+    ///
+    /// Grouped by publisher rather than queried per workout: two workouts from the same
+    /// person cost one `publishedWorkouts` call between them, not two. A workout counts as
+    /// updated when the summary's `updatedAt` is strictly newer than what this copy last
+    /// recorded — `Workout.sourceUpdatedAt`, stamped at download time and again whenever
+    /// an update is actually applied, so a workout that's already caught up (or was just
+    /// merged) doesn't keep re-appearing every foreground.
+    @discardableResult
+    static func syncWorkoutUpdates(context: ModelContext) async -> WorkoutUpdateResult {
+        let downloaded = ((try? context.fetch(FetchDescriptor<Workout>())) ?? [])
+            .filter { $0.deletedAt == nil && $0.sourceOwnerRecordName != nil && $0.clonedFromWorkoutId != nil }
+        guard !downloaded.isEmpty else { return WorkoutUpdateResult() }
+
+        var result = WorkoutUpdateResult()
+        var summariesByOwner: [String: [SharedWorkoutSummary]] = [:]
+        for ownerRecordName in Set(downloaded.compactMap(\.sourceOwnerRecordName)) {
+            do {
+                summariesByOwner[ownerRecordName] = try await SharingService.publishedWorkouts(ownerRecordName: ownerRecordName)
+            } catch {
+                result.failure = error
+            }
+        }
+
+        for workout in downloaded {
+            guard let ownerRecordName = workout.sourceOwnerRecordName,
+                  let publisherWorkoutID = workout.clonedFromWorkoutId,
+                  let summaries = summariesByOwner[ownerRecordName],
+                  let match = summaries.first(where: { $0.workoutID == publisherWorkoutID })
+            else { continue }
+            let lastSeen = workout.sourceUpdatedAt ?? .distantPast
+            guard match.updatedAt > lastSeen else { continue }
+            result.updated.append(workout)
+        }
+        return result
+    }
+
+    // MARK: - Duplicates
+
+    /// Collapses rows describing the same person into one.
+    ///
+    /// SwiftData's CloudKit mirroring can't enforce uniqueness, so two rows for one person
+    /// coexist happily — which is exactly what a reinstall produces when the sweep inserts
+    /// a follow before the synced-down original arrives. Both then show in the list, and
+    /// the copy carries `wasAutoFollowed`, so it also announces someone the user has
+    /// followed for months as a brand-new follower.
+    ///
+    /// Keyed on `ownerRecordName` — the CloudKit identity, and what "the same person"
+    /// actually means. A second pass catches rows sharing a `shareCode`, which is the same
+    /// person seen through a stale record name; empty codes are skipped, since matching on
+    /// those would merge everyone who has never set one into a single row.
+    ///
+    /// Hard-deletes the losers rather than tombstoning them, for the reason
+    /// `CatalogReconciliation.dedupe` gives: a tombstone would leave the redundant row
+    /// present-but-hidden and still syncing, which is the opposite of removing a duplicate.
+    @discardableResult
+    static func removeDuplicates(context: ModelContext) -> Int {
+        let all = (try? context.fetch(FetchDescriptor<FollowedUser>())) ?? []
+        guard all.count > 1 else { return 0 }
+
+        var removed = 0
+        removed += collapse(Dictionary(grouping: all.filter { !$0.ownerRecordName.isEmpty }, by: \.ownerRecordName), context: context)
+
+        let survivors = (try? context.fetch(FetchDescriptor<FollowedUser>())) ?? []
+        removed += collapse(Dictionary(grouping: survivors.filter { !$0.shareCode.isEmpty }, by: \.shareCode), context: context)
+
+        if removed > 0 { try? context.save() }
+        return removed
+    }
+
+    private static func collapse(_ groups: [String: [FollowedUser]], context: ModelContext) -> Int {
+        var removed = 0
+        for (_, group) in groups where group.count > 1 {
+            // The most recently touched row wins. Unfollowing stamps `updatedAt`, so this
+            // is what keeps a deliberate removal from being undone by an older live copy
+            // that happens to still be sitting in the store.
+            //
+            // The id breaks a tie. Both rows sync, so two devices deduping the same pair
+            // read the same `updatedAt` — but if those are equal and each device sorted
+            // differently, they would keep opposite rows and delete each other's survivor,
+            // leaving nothing. `CatalogReconciliation` avoids this by taking the oldest for
+            // the same reason: what matters is that every device picks alike.
+            guard let survivor = group.max(by: { lhs, rhs in
+                lhs.updatedAt == rhs.updatedAt
+                    ? lhs.id.uuidString < rhs.id.uuidString
+                    : lhs.updatedAt < rhs.updatedAt
+            }) else { continue }
+
+            for duplicate in group where duplicate !== survivor {
+                // The earliest of them is when this person was actually followed; the copy
+                // carries whenever the sweep happened to mint it.
+                survivor.followedAt = min(survivor.followedAt, duplicate.followedAt)
+                survivor.followsMe = survivor.followsMe || duplicate.followsMe
+                // Either row having seen the notice means it has been seen. Without this a
+                // reinstall re-announces people the user acknowledged long ago.
+                survivor.noticeAcknowledged = survivor.noticeAcknowledged || duplicate.noticeAcknowledged
+                if survivor.displayName.isEmpty { survivor.displayName = duplicate.displayName }
+                if survivor.shareCode.isEmpty { survivor.shareCode = duplicate.shareCode }
+                context.delete(duplicate)
+                removed += 1
+            }
+            survivor.markDirty()
+        }
+        return removed
     }
 
     // MARK: - Repair

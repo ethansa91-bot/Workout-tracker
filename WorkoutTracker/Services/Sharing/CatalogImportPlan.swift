@@ -73,8 +73,12 @@ struct CatalogImportPlan {
     var muscleCategories: [CatalogDecision<ArchiveMuscleCategory>] = []
     var muscles: [CatalogDecision<ArchiveMuscle>] = []
     var equipment: [CatalogDecision<ArchiveEquipment>] = []
+    var executionTypes: [CatalogDecision<ArchiveExecutionType>] = []
     var exerciseCategories: [CatalogDecision<ArchiveExerciseCategory>] = []
     var exercises: [CatalogDecision<ArchiveExercise>] = []
+    /// Kept apart from the six above because ladders are matched structurally, not by
+    /// name — see `ProgressionImportPlan`.
+    var progressions = ProgressionImportPlan()
 
     /// Counts across every type, for the review screen's summary and the post-import
     /// confirmation.
@@ -82,6 +86,7 @@ struct CatalogImportPlan {
         muscleCategories.count(where: \.isConflict)
             + muscles.count(where: \.isConflict)
             + equipment.count(where: \.isConflict)
+            + executionTypes.count(where: \.isConflict)
             + exerciseCategories.count(where: \.isConflict)
             + exercises.count(where: \.isConflict)
     }
@@ -90,6 +95,7 @@ struct CatalogImportPlan {
         muscleCategories.count(where: \.isNew)
             + muscles.count(where: \.isNew)
             + equipment.count(where: \.isNew)
+            + executionTypes.count(where: \.isNew)
             + exerciseCategories.count(where: \.isNew)
             + exercises.count(where: \.isNew)
     }
@@ -103,6 +109,7 @@ struct CatalogImportPlan {
         muscleCategories.count(where: { $0.resolution.addsARow })
             + muscles.count(where: { $0.resolution.addsARow })
             + equipment.count(where: { $0.resolution.addsARow })
+            + executionTypes.count(where: { $0.resolution.addsARow })
             + exerciseCategories.count(where: { $0.resolution.addsARow })
             + exercises.count(where: { $0.resolution.addsARow })
     }
@@ -116,17 +123,23 @@ struct CatalogImportPlan {
         return muscleCategories.count(where: isLinked)
             + muscles.count(where: isLinked)
             + equipment.count(where: isLinked)
+            + executionTypes.count(where: isLinked)
             + exerciseCategories.count(where: isLinked)
             + exercises.count(where: isLinked)
     }
 
     var totalCount: Int {
         muscleCategories.count + muscles.count + equipment.count
-            + exerciseCategories.count + exercises.count
+            + executionTypes.count + exerciseCategories.count + exercises.count
     }
 
     /// Everything matched something identical, so there is genuinely nothing to ask.
-    var needsReview: Bool { conflictCount > 0 || newCount > 0 }
+    ///
+    /// Progressions count: without them a download that silently created ladders would
+    /// take the no-review path, whose confirmation promises nothing was added or changed.
+    var needsReview: Bool {
+        conflictCount > 0 || newCount > 0 || !progressions.isEmpty
+    }
 
     /// Names of the exercises that will be added, for the confirmation wording — adding
     /// rows to someone's catalog is still not something to do silently.
@@ -156,6 +169,7 @@ struct CatalogImportPlan {
         }
         return (collect(exercises, "Exercise")
             + collect(equipment, "Equipment")
+            + collect(executionTypes, "Execution type")
             + collect(muscles, "Muscle")
             + collect(exerciseCategories, "Exercise category")
             + collect(muscleCategories, "Muscle category"))

@@ -42,8 +42,25 @@ final class Workout: SyncableModel {
     /// labels and icons derive from now.
     var kindRaw: String = "personalized"
     var isArchived: Bool = false
+    /// Whether this workout is currently published — flipped by `PublishWorkoutSheet`
+    /// alongside its CloudKit call, so anything else can check synchronously rather
+    /// than querying the server. What `markDirty()` below reads to decide whether an
+    /// edit needs to go back out to followers.
+    var isPublished: Bool = false
     var updatedAt: Date = Date.now
     var deletedAt: Date?
+    /// The publisher's `SharedWorkoutSummary.updatedAt` as of the last time this
+    /// specific copy was downloaded or merged, for a workout saved from someone this
+    /// user follows. Compared against the live value on every foreground sweep —
+    /// `FollowService.syncWorkoutUpdates` — to notice when the source has moved on
+    /// since. nil for a workout that was never downloaded, which is every workout
+    /// before this existed and everything the user builds themselves.
+    var sourceUpdatedAt: Date?
+    /// Who published the workout this was downloaded from — `clonedFromWorkoutId`
+    /// names *which* workout, this names *whose*, which is what the update sweep needs
+    /// to know who to ask. Set once at download/merge time; nil for anything not
+    /// downloaded, same as `sourceUpdatedAt`.
+    var sourceOwnerRecordName: String?
 
     @Relationship(deleteRule: .cascade, inverse: \WorkoutSection.workout)
     var sectionsStorage: [WorkoutSection]?
@@ -68,6 +85,20 @@ final class Workout: SyncableModel {
     // Exist only to satisfy CloudKit's "every relationship needs an inverse" rule for
     // the one-directional `RecurringWorkoutSchedule.workout`/`ScheduledWorkout.workout`
     // lookups — nothing in the app reads or writes these back-references.
+    /// Organisational labels. Editable even while `isLocked`, since they carry no
+    /// execution meaning — see `WorkoutEditingService.addTag`.
+    @Relationship(inverse: \WorkoutTag.workoutsStorage)
+    var tagsStorage: [WorkoutTag]?
+    var tags: [WorkoutTag] {
+        get { tagsStorage ?? [] }
+        set { tagsStorage = newValue }
+    }
+
+    /// Live tags in a stable display order.
+    var sortedTags: [WorkoutTag] {
+        tags.filter { $0.deletedAt == nil }.sorted { $0.name < $1.name }
+    }
+
     @Relationship(inverse: \RecurringWorkoutSchedule.workout)
     var recurringSchedules: [RecurringWorkoutSchedule]?
     @Relationship(inverse: \ScheduledWorkout.workout)
@@ -91,6 +122,16 @@ final class Workout: SyncableModel {
     /// stale. Use `WorkoutCloningService` to get an editable copy once locked.
     var isLocked: Bool {
         sessions.contains { $0.deletedAt == nil }
+    }
+
+    /// Overrides the `SyncableModel` default rather than adding a second call site
+    /// everywhere a workout changes — every edit already ends by calling this (directly,
+    /// or through `section.markDirty(); workout?.markDirty()`), so it's the one place
+    /// that can notice "this published workout just changed" without touching the other
+    /// 46-odd call sites in `WorkoutEditingService` alone. See `SharePublishScheduler`.
+    func markDirty() {
+        updatedAt = .now
+        SharePublishScheduler.shared.scheduleIfPublished(self)
     }
 
     var sortedSections: [WorkoutSection] {

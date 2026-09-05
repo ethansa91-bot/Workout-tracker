@@ -508,7 +508,12 @@ enum SharingService {
         // photos — neither is an error, so a failure to read them costs the pictures and
         // not the workout.
         let images = (record[WorkoutKey.images] as? CKAsset).map(unzipImages) ?? [:]
-        return SharedWorkoutBundle(payload: payload, images: images)
+        return SharedWorkoutBundle(
+            payload: payload,
+            images: images,
+            ownerRecordName: summary.ownerRecordName,
+            sourceUpdatedAt: summary.updatedAt
+        )
     }
 
     /// Reads the photo zip into memory, keyed by filename.

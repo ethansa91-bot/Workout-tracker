@@ -1,15 +1,39 @@
 import AVFoundation
 
-enum TimerSoundProfile: String, CaseIterable, Identifiable, Codable {
-    case endOnly, warn5, warn10
+/// Which timer cues a run should play, carried as a value rather than read globally.
+///
+/// Replaces the old three-case `TimerSoundProfile`. That enum could only express "end
+/// only" or "end plus a warning at 5 or 10 seconds"; the end tone itself was never
+/// optional, and the warning mark was one of two hardcoded numbers. Both are free now,
+/// which is what lets the beep and `TimeSessionRunnerView`'s spoken cue be timed against
+/// each other instead of the voice being pinned to a separate hardcoded 10.
+///
+/// Still threaded through the runners as a value so a session can override it — see
+/// `SessionRecapView`.
+struct TimerCueSettings: Hashable {
+    var endEnabled: Bool
+    var warningEnabled: Bool
+    var warningSeconds: Int
 
-    var id: String { rawValue }
+    static var fromSettings: TimerCueSettings {
+        TimerCueSettings(
+            endEnabled: AppSettings.soundEndEnabled,
+            warningEnabled: AppSettings.soundWarningEnabled,
+            warningSeconds: AppSettings.soundWarningSeconds
+        )
+    }
 
-    var label: String {
-        switch self {
-        case .endOnly: return "At the end"
-        case .warn5: return "5s warning + end"
-        case .warn10: return "10s warning + end"
+    /// Everything off, for a session the user has muted.
+    static let silent = TimerCueSettings(endEnabled: false, warningEnabled: false, warningSeconds: 0)
+
+    /// One line for the session menu: what these settings actually do, without reopening
+    /// Settings to find out.
+    var summary: String {
+        switch (endEnabled, warningEnabled) {
+        case (false, false): return "Off"
+        case (true, false): return "At the end"
+        case (false, true): return "\(warningSeconds)s warning only"
+        case (true, true): return "\(warningSeconds)s warning + end"
         }
     }
 }
@@ -36,35 +60,57 @@ enum SoundPlayer {
     // partway through — nothing else on the caller side holds one.
     private static var activePlayers: Set<AVAudioPlayer> = []
 
+    /// The three cues are fixed waveforms, so each is synthesized once and held for the
+    /// life of the process.
+    ///
+    /// Not just an optimization. `AVAudioPlayer(data:)` makes no documented promise to
+    /// copy the buffer it is handed, and the Swift `Data` → `NSData` bridge wraps rather
+    /// than copies — so building a tone into a temporary freed that buffer while the
+    /// player was still reading from it. The warning beep hit this on every fire: it
+    /// starts a second player 0.12s in, and the closure holding the data is released
+    /// the instant that player starts, leaving it reading ~7 KB of freed memory for the
+    /// rest of its 0.08s. Intermittent only because it depends on the allocator reusing
+    /// the region. Holding the tones here also keeps `tone`'s per-sample synthesis out
+    /// of the timer tick, where it ran once per cue on the main thread.
+    private static let warningToneData = SoundPlayer.tone(duration: warningBeepDuration, frequency: warningToneFrequency)
+    private static let completeToneData = SoundPlayer.tone(duration: completeBeepDuration)
+    private static let tickToneData = SoundPlayer.tone(duration: tickBeepDuration)
+
     /// The "timer's actually done" cue — a single tone, twice as long and played at
     /// full volume so it stands out from the shorter warning beep.
+    ///
+    /// Unconditional. Used where the tone isn't a *timer* ending: the head start's "go",
+    /// and a hold reaching its previous best. Turning timer sounds off shouldn't silence
+    /// the cue that tells you to start moving.
     static func playTimerComplete() {
-        play(tone(duration: completeBeepDuration))
+        play(completeToneData)
     }
 
-    /// A quick double beep, higher-pitched than the end tone, at the profile's warning
-    /// mark (5s or 10s remaining). `endOnly` never fires here — the "end" cue is always
-    /// played separately, by the caller, when the countdown actually reaches zero.
-    static func playWarningIfNeeded(remainingSeconds: Int, profile: TimerSoundProfile) {
-        switch profile {
-        case .endOnly: return
-        case .warn5: if remainingSeconds == 5 { playDoubleBeep() }
-        case .warn10: if remainingSeconds == 10 { playDoubleBeep() }
-        }
+    /// The same tone, but only when the user wants a sound at zero.
+    static func playTimerCompleteIfNeeded(cues: TimerCueSettings) {
+        guard cues.endEnabled else { return }
+        playTimerComplete()
+    }
+
+    /// A quick double beep, higher-pitched than the end tone, at the configured warning
+    /// mark. The end cue is always played separately, by the caller, when the countdown
+    /// actually reaches zero.
+    static func playWarningIfNeeded(remainingSeconds: Int, cues: TimerCueSettings) {
+        guard cues.warningEnabled, remainingSeconds == cues.warningSeconds else { return }
+        playDoubleBeep()
     }
 
     /// One short tick per head-start second, before a max-hold-time stopwatch
     /// starts counting up. `playTimerComplete()` doubles as the "go" cue once the
     /// head start reaches zero.
     static func playHeadStartTick() {
-        play(tone(duration: tickBeepDuration))
+        play(tickToneData)
     }
 
     private static func playDoubleBeep() {
-        let beep = tone(duration: warningBeepDuration, frequency: warningToneFrequency)
         for i in 0..<2 {
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * warningBeepSpacing) {
-                play(beep)
+                play(warningToneData)
             }
         }
     }
@@ -74,13 +120,13 @@ enum SoundPlayer {
         // Claimed before playback and released once the player is done, so the shared
         // session is only active while a cue is actually sounding — see
         // `AudioSessionController` for why this used to leak.
-        AudioSessionController.beginActivity()
+        let claim = AudioSessionController.beginActivity()
         player.volume = 1
         activePlayers.insert(player)
         player.play()
         DispatchQueue.main.asyncAfter(deadline: .now() + player.duration + 0.1) {
             activePlayers.remove(player)
-            AudioSessionController.endActivity()
+            AudioSessionController.endActivity(claim)
         }
     }
 

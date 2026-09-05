@@ -3,7 +3,9 @@ import SwiftData
 
 /// Reusable sections with no parent workout (`workout == nil`) — built here, then
 /// imported (deep-copied) into any workout via "Import Template" in SessionRecapView's
-/// "Add a Section" menu. Never locked, since there's no session history to protect.
+/// "Add a Section" menu. No session history of its own to protect — but a template copied
+/// out of a record-tracking EMOM or AMRAP carries that record's identity, and is locked by
+/// it the same way every other copy is.
 /// Shown as one pane of WorkoutListView's horizontal selector, so it owns no
 /// navigation title/toolbar of its own — creation is triggered from there.
 struct SectionTemplatesView: View {
@@ -11,8 +13,14 @@ struct SectionTemplatesView: View {
     @Query(sort: \WorkoutSection.name) private var allSections: [WorkoutSection]
     @State private var templatePendingDeletion: WorkoutSection?
 
+    /// Owned by `WorkoutListView`, which draws the filter bar above the pane selector so
+    /// one strip serves both panes rather than each growing its own.
+    var tagFilter = WorkoutTagFilter()
+
     private var templates: [WorkoutSection] {
-        allSections.filter { $0.workout == nil && $0.deletedAt == nil }
+        allSections.filter {
+            $0.workout == nil && $0.deletedAt == nil && tagFilter.matches($0.sortedTags)
+        }
     }
 
     var body: some View {
@@ -76,7 +84,16 @@ struct SectionTemplatesView: View {
             IconBadge(systemName: section.sectionType.iconSymbolName)
             VStack(alignment: .leading, spacing: 3) {
                 Text(section.name?.isEmpty == false ? section.name! : section.sectionType.fallbackSectionName)
-                StatusPill(text: section.sectionType.pillLabel, tint: .accentColor)
+                HStack(spacing: 6) {
+                    StatusPill(text: section.sectionType.pillLabel, tint: .accentColor)
+                    // Locked templates are the ones that can't be edited or re-saved, and
+                    // nothing else on this screen says so — the row opened to a page whose
+                    // controls simply refused.
+                    if section.isLocked {
+                        StatusPill(text: "Locked", icon: "lock.fill", tint: Color.appInkMuted)
+                    }
+                }
+                RowTagPills(tags: section.sortedTags)
                 if let description = section.sectionDescription, !description.isEmpty {
                     Text(description)
                         .font(.caption)

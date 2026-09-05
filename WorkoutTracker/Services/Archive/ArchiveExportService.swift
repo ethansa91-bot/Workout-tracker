@@ -42,6 +42,7 @@ enum ArchiveExportService {
         var counts: [String: Int] = [
             "exercises": catalog.exercises.count,
             "equipment": catalog.equipment.count,
+            "executionTypes": catalog.executionTypes.count,
             "muscles": catalog.muscles.count,
             "personalRecords": catalog.personalRecords.count,
             "workouts": workoutFile.workouts.count,
@@ -51,6 +52,7 @@ enum ArchiveExportService {
         ]
         if let sessionFile {
             counts["sessions"] = sessionFile.sessions.count
+            counts["sectionResults"] = sessionFile.sessions.reduce(0) { $0 + $1.sectionResultLogs.count }
         }
 
         let manifest = ArchiveManifest(
@@ -124,6 +126,42 @@ enum ArchiveExportService {
                 deletedAt: $0.deletedAt
             )
         }
+        catalog.executionTypes = try context.fetch(FetchDescriptor<ExecutionType>()).map {
+            ArchiveExecutionType(
+                id: $0.id,
+                name: $0.name,
+                isCustom: $0.isCustom,
+                updatedAt: $0.updatedAt,
+                deletedAt: $0.deletedAt
+            )
+        }
+        catalog.workoutTags = try context.fetch(FetchDescriptor<WorkoutTag>()).map {
+            ArchiveWorkoutTag(
+                id: $0.id,
+                name: $0.name,
+                isCustom: $0.isCustom,
+                updatedAt: $0.updatedAt,
+                deletedAt: $0.deletedAt
+            )
+        }
+        catalog.progressionGroups = try context.fetch(FetchDescriptor<ProgressionGroup>()).map {
+            ArchiveProgressionGroup(
+                id: $0.id,
+                reachedLevel: $0.reachedLevel,
+                updatedAt: $0.updatedAt,
+                deletedAt: $0.deletedAt
+            )
+        }
+        catalog.progressionSteps = try context.fetch(FetchDescriptor<ProgressionStep>()).map {
+            ArchiveProgressionStep(
+                id: $0.id,
+                groupID: $0.group?.id,
+                exerciseID: $0.exercise?.id,
+                level: $0.level,
+                updatedAt: $0.updatedAt,
+                deletedAt: $0.deletedAt
+            )
+        }
         catalog.weightCombos = try context.fetch(FetchDescriptor<WeightCombo>()).map {
             ArchiveWeightCombo(
                 id: $0.id,
@@ -152,7 +190,10 @@ enum ArchiveExportService {
                 allowsBodyweight: $0.allowsBodyweight,
                 isOneSided: $0.isOneSided,
                 defaultEquipmentName: $0.defaultEquipmentName,
+                defaultsToBodyweight: $0.defaultsToBodyweight,
                 equipmentIDs: $0.equipmentItems.map(\.id),
+                executionTypeIDs: $0.executionTypes.map(\.id),
+                separateRecordsPerExecutionType: $0.separateRecordsPerExecutionType,
                 muscleIDs: $0.muscles.map(\.id),
                 categoryIDs: $0.categories.map(\.id),
                 updatedAt: $0.updatedAt,
@@ -164,12 +205,17 @@ enum ArchiveExportService {
                 id: $0.id,
                 exerciseID: $0.exercise?.id,
                 equipmentID: $0.equipment?.id,
+                executionTypeID: $0.executionType?.id,
                 weightUnit: $0.weightUnit,
                 isBodyweight: $0.isBodyweight,
+                isFollowAlong: $0.isFollowAlong,
                 trackingModeRaw: $0.trackingModeRaw,
                 weight: $0.weight,
                 reps: $0.reps,
                 holdSeconds: $0.holdSeconds,
+                sectionRecordGroupID: $0.sectionRecordGroupID,
+                sectionRecordKindRaw: $0.sectionRecordKindRaw,
+                sectionRecordName: $0.sectionRecordName,
                 updatedAt: $0.updatedAt,
                 deletedAt: $0.deletedAt
             )
@@ -180,12 +226,17 @@ enum ArchiveExportService {
                 recordID: $0.record?.id,
                 exerciseID: $0.exercise?.id,
                 equipmentID: $0.equipment?.id,
+                executionTypeID: $0.executionType?.id,
                 weightUnit: $0.weightUnit,
                 isBodyweight: $0.isBodyweight,
+                isFollowAlong: $0.isFollowAlong,
                 trackingModeRaw: $0.trackingModeRaw,
                 weight: $0.weight,
                 reps: $0.reps,
                 holdSeconds: $0.holdSeconds,
+                sectionRecordGroupID: $0.sectionRecordGroupID,
+                sectionRecordKindRaw: $0.sectionRecordKindRaw,
+                sectionRecordName: $0.sectionRecordName,
                 achievedAt: $0.achievedAt,
                 updatedAt: $0.updatedAt,
                 deletedAt: $0.deletedAt
@@ -244,6 +295,7 @@ enum ArchiveExportService {
             clonedFromWorkoutId: workout.clonedFromWorkoutId,
             kindRaw: workout.kindRaw,
             isArchived: workout.isArchived,
+            tagIDs: workout.tags.map(\.id),
             sections: workout.sections
                 .sorted { $0.sortOrder < $1.sortOrder }
                 .map(sectionOut),
@@ -263,6 +315,14 @@ enum ArchiveExportService {
             amrapDurationSeconds: section.amrapDurationSeconds,
             autostart: section.autostart,
             repeatCount: section.repeatCount,
+            getReadySeconds: section.getReadySeconds,
+            repeatsGetReadyEachPass: section.repeatsGetReadyEachPass,
+            sectionRestSeconds: section.sectionRestSeconds,
+            emomToFailure: section.emomToFailure,
+            tracksRecord: section.tracksRecord,
+            recordGroupID: section.recordGroupID,
+            recordLockedAt: section.recordLockedAt,
+            tagIDs: section.tags.map(\.id),
             timeSteps: section.timeSteps
                 .sorted { $0.sortOrder < $1.sortOrder }
                 .map {
@@ -273,6 +333,10 @@ enum ArchiveExportService {
                         exerciseID: $0.exercise?.id,
                         durationSeconds: $0.durationSeconds,
                         colorRaw: $0.colorRaw,
+                        executionTypeID: $0.executionType?.id,
+                        sideRaw: $0.sideRaw,
+                        preferredEquipmentID: $0.preferredEquipment?.id,
+                        prefersBodyweight: $0.prefersBodyweight,
                         updatedAt: $0.updatedAt,
                         deletedAt: $0.deletedAt
                     )
@@ -292,6 +356,8 @@ enum ArchiveExportService {
                         tracksSides: $0.tracksSides,
                         preferredEquipmentID: $0.preferredEquipment?.id,
                         prefersBodyweight: $0.prefersBodyweight,
+                        executionTypeID: $0.executionType?.id,
+                        progressionEnabled: $0.progressionEnabled,
                         updatedAt: $0.updatedAt,
                         deletedAt: $0.deletedAt
                     )
@@ -303,6 +369,9 @@ enum ArchiveExportService {
                         id: $0.id,
                         sortOrder: $0.sortOrder,
                         exerciseID: $0.exercise?.id,
+                        executionTypeID: $0.executionType?.id,
+                        targetReps: $0.targetReps,
+                        sideRaw: $0.sideRaw,
                         updatedAt: $0.updatedAt,
                         deletedAt: $0.deletedAt
                     )
@@ -347,6 +416,7 @@ enum ArchiveExportService {
                         repeatIndex: $0.repeatIndex,
                         equipmentID: $0.equipment?.id,
                         isManualWeight: $0.isManualWeight,
+                        executionTypeID: $0.executionType?.id,
                         loggedAt: $0.loggedAt,
                         isCancelled: $0.isCancelled,
                         updatedAt: $0.updatedAt,
@@ -358,12 +428,27 @@ enum ArchiveExportService {
                         id: $0.id,
                         timeSectionStepID: $0.timeSectionStep?.id,
                         stepExerciseNameSnapshot: $0.stepExerciseNameSnapshot,
+                        executionTypeID: $0.executionType?.id,
                         plannedDurationSeconds: $0.plannedDurationSeconds,
                         actualDurationSeconds: $0.actualDurationSeconds,
                         outcomeRaw: $0.outcomeRaw,
                         loggedAt: $0.loggedAt,
                         sortOrder: $0.sortOrder,
                         repeatIndex: $0.repeatIndex,
+                        updatedAt: $0.updatedAt,
+                        deletedAt: $0.deletedAt
+                    )
+                },
+                sectionResultLogs: session.sectionResultLogs.map {
+                    ArchiveSectionResultLog(
+                        id: $0.id,
+                        sectionID: $0.section?.id,
+                        recordGroupID: $0.recordGroupID,
+                        sectionNameSnapshot: $0.sectionNameSnapshot,
+                        sectionTypeRaw: $0.sectionTypeRaw,
+                        repeatIndex: $0.repeatIndex,
+                        value: $0.value,
+                        loggedAt: $0.loggedAt,
                         updatedAt: $0.updatedAt,
                         deletedAt: $0.deletedAt
                     )

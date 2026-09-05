@@ -120,7 +120,7 @@ struct MuscleEditView: View {
                 TextField("Muscle name", text: $name)
                     .formRow()
             } header: {
-                FormSectionHeader("Name")
+                ListBandHeader(title: "Name")
             }
 
             Section {
@@ -145,7 +145,7 @@ struct MuscleEditView: View {
                 }
                 .formRow()
             } header: {
-                FormSectionHeader("Categories")
+                ListBandHeader(title: "Categories")
             }
         }
         .fullBleedList()

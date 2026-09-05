@@ -32,10 +32,27 @@ final class Exercise: SyncableModel {
     /// Trains one side at a time (split squats, single-arm rows). Unlocks the
     /// per-workout "track left/right separately" option.
     var isOneSided: Bool = false
+    /// Keep a separate personal record per execution type, rather than one record for the
+    /// exercise however it was performed. Only meaningful with more than one type
+    /// attached, which is what `splitsRecordsByExecutionType` folds in — read that rather
+    /// than this flag anywhere a record is being resolved. Non-optional with a `false`
+    /// default so exercises written before this existed decode correctly.
+    var separateRecordsPerExecutionType: Bool = false
     /// Name of the weighted item among `equipmentItems` to prefer when more than one
     /// is attached. nil (or a name no longer attached) falls back to the first, which
     /// is what every exercise did before this existed.
+    ///
+    /// A *name*, not an id, because hand-written seed JSON has to be able to say it —
+    /// which does mean renaming the equipment silently orphans the choice.
     var defaultEquipmentName: String?
+    /// This exercise means bodyweight by default even though weighted equipment is
+    /// attached. `defaultEquipmentName` can't express this: it is looked up among the
+    /// weighted items, and a sentinel string would collide with real equipment.
+    ///
+    /// Distinct from `allowsBodyweight`, which only says bodyweight is *permitted* — this
+    /// makes it the starting selection. Non-optional with a `false` default so exercises
+    /// written before it existed decode correctly; every one of them started loaded.
+    var defaultsToBodyweight: Bool = false
     var updatedAt: Date = Date.now
     var deletedAt: Date?
 
@@ -65,6 +82,15 @@ final class Exercise: SyncableModel {
         set { categoriesStorage = newValue }
     }
 
+    /// Which ways of performing this exercise are offered when building a workout. Empty
+    /// = no choice to make, and every picker for it stays hidden.
+    @Relationship(inverse: \ExecutionType.exercisesStorage)
+    var executionTypesStorage: [ExecutionType]?
+    var executionTypes: [ExecutionType] {
+        get { executionTypesStorage ?? [] }
+        set { executionTypesStorage = newValue }
+    }
+
     // The relationships below exist only so CloudKit's "every relationship needs an
     // inverse" rule is satisfied for the one-directional catalog lookups on the other
     // models (`PersonalRecord.exercise`, `RepSectionExercise.exercise`, etc.) — nothing
@@ -85,6 +111,11 @@ final class Exercise: SyncableModel {
     @Relationship(inverse: \ExerciseSessionNote.exercise)
     var exerciseSessionNotes: [ExerciseSessionNote]?
 
+    /// Unlike the back-references above, this one *is* read: it is how an exercise finds
+    /// the ladder it belongs to, and through it every other rung.
+    @Relationship(inverse: \ProgressionStep.exercise)
+    var progressionSteps: [ProgressionStep]?
+
     /// The user's personal nickname when set, falling back to the catalog `name`.
     var displayName: String {
         let trimmed = label?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -104,10 +135,56 @@ final class Exercise: SyncableModel {
         return normalized(trimmed) != normalized(name)
     }
 
-    /// The weighted item among `equipmentItems`, if any — used to resolve weight
-    /// options/unit. When several are attached, `defaultEquipmentName` picks which;
-    /// without a usable choice the first is used, as it always was. Logging weight
-    /// against multiple simultaneous equipment per set isn't supported.
+    // MARK: - Progression
+
+    /// This exercise's rung, if it is on a ladder.
+    ///
+    /// An exercise belongs to at most one progression — the editor enforces it, and
+    /// `first` here is what that assumption looks like in code. Two ladders claiming the
+    /// same exercise would make "level up" ambiguous with no way to ask which was meant.
+    var progressionStep: ProgressionStep? {
+        // `$0.group?.deletedAt == nil` was the bug: optional-chaining a nil group yields
+        // nil, and `nil == nil` is true, so a rung with *no group at all* passed as live.
+        // Such a rung is invisible in the editor and unreachable by `unlink`, yet
+        // `CatalogDeletionService` read it and refused to delete the exercise forever.
+        // Requiring a real, live group is what makes an orphan simply not count.
+        (progressionSteps ?? []).first {
+            guard $0.deletedAt == nil, let group = $0.group else { return false }
+            return group.deletedAt == nil
+        }
+    }
+
+    /// Rungs pointing at no live ladder. Nothing should produce these, but a hard-deleted
+    /// duplicate exercise or a partially-applied import can — and they used to be
+    /// invisible *and* load-bearing, so `ProgressionSection` offers to clear them.
+    var orphanedProgressionSteps: [ProgressionStep] {
+        (progressionSteps ?? []).filter {
+            guard $0.deletedAt == nil else { return false }
+            guard let group = $0.group else { return true }
+            return group.deletedAt != nil
+        }
+    }
+
+    var progressionGroup: ProgressionGroup? { progressionStep?.group }
+
+    var progressionLevel: Int? { progressionStep?.level }
+
+    /// Live types in a stable display order — the choices every execution-type picker
+    /// offers, and the list the "separate records" toggle counts.
+    var sortedExecutionTypes: [ExecutionType] {
+        executionTypes.filter { $0.deletedAt == nil }.sorted { $0.name < $1.name }
+    }
+
+    /// Whether records should actually be split by execution type right now.
+    ///
+    /// One attached type is enough: a set can always be logged without naming one, so a
+    /// single type already separates "explosive" from "however I usually do it". The
+    /// emptiness check remains only to stop an exercise with no types at all from
+    /// splitting on a facet it cannot express.
+    var splitsRecordsByExecutionType: Bool {
+        separateRecordsPerExecutionType && !sortedExecutionTypes.isEmpty
+    }
+
     /// The weighted items among `equipmentItems`, in a stable display order — the
     /// choices an entry's equipment picker offers.
     var weightedEquipmentOptions: [Equipment] {
@@ -123,6 +200,10 @@ final class Exercise: SyncableModel {
         weightedEquipmentOptions.isEmpty || allowsBodyweight
     }
 
+    /// The weighted item among `equipmentItems`, if any — used to resolve weight
+    /// options/unit. When several are attached, `defaultEquipmentName` picks which;
+    /// without a usable choice the first is used, as it always was. Logging weight
+    /// against multiple simultaneous equipment per set isn't supported.
     var weightedEquipment: Equipment? {
         let weighted = equipmentItems.filter(\.isWeighted)
         if let name = defaultEquipmentName,
@@ -130,6 +211,26 @@ final class Exercise: SyncableModel {
             return chosen
         }
         return weighted.first
+    }
+
+    /// What this exercise is loaded with when nothing else has said otherwise — nil for
+    /// bodyweight, which is also what "no weighted equipment at all" resolves to.
+    ///
+    /// The single answer the builder's picker, both runners and the record pages read, so
+    /// none of them can name a different default than the exercise page shows.
+    /// `allowsBodyweightSource` is re-checked rather than trusted: turning "Allow
+    /// bodyweight" back off would otherwise strand the exercise defaulting to a load it no
+    /// longer offers, with the row that set it hidden and no way back.
+    var defaultWeightedEquipment: Equipment? {
+        guard !(defaultsToBodyweight && allowsBodyweightSource) else { return nil }
+        return weightedEquipment
+    }
+
+    /// Whether there is more than one answer worth asking about. Bodyweight counts as a
+    /// real alternative, so a single weighted item plus bodyweight is still a choice.
+    var hasEquipmentChoice: Bool {
+        weightedEquipmentOptions.count > 1
+            || (allowsBodyweight && !weightedEquipmentOptions.isEmpty)
     }
 
     init(
@@ -145,7 +246,8 @@ final class Exercise: SyncableModel {
         allowsBodyweight: Bool = false,
         isOneSided: Bool = false,
         defaultEquipmentName: String? = nil,
-        equipmentItems: [Equipment] = []
+        equipmentItems: [Equipment] = [],
+        executionTypes: [ExecutionType] = []
     ) {
         self.id = id
         self.name = name
@@ -162,6 +264,8 @@ final class Exercise: SyncableModel {
         self.isOneSided = isOneSided
         self.defaultEquipmentName = defaultEquipmentName
         self.equipmentItemsStorage = equipmentItems
+        self.executionTypesStorage = executionTypes
+        self.separateRecordsPerExecutionType = false
         self.updatedAt = .now
         self.deletedAt = nil
     }

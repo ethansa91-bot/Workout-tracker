@@ -146,10 +146,26 @@ struct SessionHistoryDetailView: View {
                 PassGroup(
                     id: "\(section.id)-\(pass)",
                     title: sectionRoundTitle(section, repeatIndex: pass),
-                    subtitle: sectionKindSummary(section),
+                    subtitle: passSubtitle(section, pass: pass),
                     rows: rows(for: section, pass: pass)
                 )
             }
+        }
+    }
+
+    /// The band's summary, with the round count appended for the two section types that
+    /// produce one. That number is the whole result of an EMOM or AMRAP pass — the
+    /// exercise rows below carry no per-exercise outcome to show it against — so it
+    /// belongs on the band rather than in a row of its own.
+    private func passSubtitle(_ section: WorkoutSection, pass: Int) -> String {
+        let base = sectionKindSummary(section)
+        guard let result = resultLog(for: section, pass: pass) else { return base }
+        return "\(base) · \(PersonalRecordFormatting.sectionSummary(result.value))"
+    }
+
+    private func resultLog(for section: WorkoutSection, pass: Int) -> SectionResultLog? {
+        session.sectionResultLogs.first {
+            $0.deletedAt == nil && $0.section?.id == section.id && $0.repeatIndex == pass
         }
     }
 
@@ -161,7 +177,7 @@ struct SessionHistoryDetailView: View {
                 return ExerciseRow(
                     id: "\(entry.id)-\(pass)",
                     position: index + 1,
-                    title: entry.exercise?.displayName ?? "Exercise",
+                    title: loggedTitle(for: entry, pass: pass),
                     detail: lines.isEmpty ? "Not logged" : "\(lines.count) of \(entry.totalSetSlots) sets",
                     detailIsAbsence: lines.isEmpty,
                     lines: lines
@@ -178,20 +194,20 @@ struct SessionHistoryDetailView: View {
                 return ExerciseRow(
                     id: "\(step.id)-\(pass)",
                     position: index + 1,
-                    title: stepTitle(step),
+                    title: step.displayTitle,
                     detail: stepDetail(log),
                     detailIsAbsence: log == nil,
                     tint: step.resolvedColor.color
                 )
             }
         case .emom, .amrap:
-            // These runners write no logs at all, so the exercises are listed for
-            // completeness and the section's own summary carries the rounds/duration.
+            // These runners log no per-exercise outcome, so the exercises are listed for
+            // completeness and the pass's own summary carries the round count.
             return section.sortedQuickExercises.enumerated().map { index, entry in
                 ExerciseRow(
                     id: "\(entry.id)-\(pass)",
                     position: index + 1,
-                    title: entry.exercise?.displayName ?? "Exercise",
+                    title: entry.displayTitle,
                     detail: nil
                 )
             }
@@ -200,6 +216,41 @@ struct SessionHistoryDetailView: View {
 
     /// Scoped to one pass — the same rule the runner logs by, so a section run three
     /// times doesn't show all three rounds' sets under the first.
+    /// What a rep row is called, taken from the sets actually logged rather than from the
+    /// entry's plan.
+    ///
+    /// What a rep row is called, taken from the sets actually logged rather than from the
+    /// entry's plan.
+    ///
+    /// Two things can disagree with the plan, and for the same reason: the runner lets the
+    /// execution type be changed before the first set, and the progression rung be changed
+    /// at any point. So a workout built as "Band-Assisted Pull Up, Slow" can hold a pass
+    /// logged as "Pull Up, Explosive", and titling from the plan would caption those sets
+    /// with an exercise and a type neither of which they have.
+    ///
+    /// Each facet falls back independently: a pass whose sets disagree *among themselves*
+    /// drops that half of the name, since no single value is true of all of them, and the
+    /// per-set lines below carry the detail either way.
+    private func loggedTitle(for entry: RepSectionExercise, pass: Int) -> String {
+        let logged = session.setLogs.filter {
+            $0.repSectionExercise?.id == entry.id && !$0.isCancelled && $0.repeatIndex == pass
+        }
+        // No logs at all — the row is a plan the pass never reached, so the plan is the
+        // only thing there is to name it with.
+        guard !logged.isEmpty else { return entry.displayTitle }
+
+        let exerciseIDs = Set(logged.map { $0.exercise?.id })
+        let performed = exerciseIDs.count == 1 ? (logged.first?.exercise ?? entry.exercise) : nil
+
+        let typeIDs = Set(logged.map { $0.executionType?.id })
+        let type = typeIDs.count == 1 ? logged.first?.executionType : nil
+
+        // One rung, so name it. Several, and the row spans a level-up — "Pull Up" would be
+        // as wrong as "Band-Assisted Pull Up", so neither is claimed.
+        guard let performed else { return "Multiple exercises" }
+        return ExerciseNaming.title(performed, executionType: type)
+    }
+
     private func setLines(for entry: RepSectionExercise, pass: Int) -> [SetLine] {
         let logs = session.setLogs.filter {
             $0.repSectionExercise?.id == entry.id && !$0.isCancelled && $0.repeatIndex == pass
@@ -216,16 +267,8 @@ struct SessionHistoryDetailView: View {
                 id: log.id,
                 label: setLabel(for: log),
                 value: setValue(for: log),
-                dot: levelColor(for: log)?.color
+                dot: settingColor(for: log)?.color
             )
-        }
-    }
-
-    private func stepTitle(_ step: TimeSectionStep) -> String {
-        switch step.stepType {
-        case .exercise: return step.exercise?.displayName ?? "Exercise"
-        case .rest: return "Rest"
-        case .getReady: return "Get Ready"
         }
     }
 
@@ -249,7 +292,7 @@ struct SessionHistoryDetailView: View {
                         ExerciseRow(
                             id: log.id.uuidString,
                             position: log.setIndex + 1,
-                            title: log.exerciseNameSnapshot ?? log.exercise?.displayName ?? "Exercise",
+                            title: log.displayTitle,
                             detail: setValue(for: log)
                         ),
                         isLast: log.id == sets.last?.id
@@ -269,7 +312,7 @@ struct SessionHistoryDetailView: View {
                             position: log.sortOrder + 1,
                             title: log.timeSectionStep?.stepType == .getReady
                                 ? "Get Ready"
-                                : (log.stepExerciseNameSnapshot ?? "Rest"),
+                                : log.displayTitle,
                             detail: stepDetail(log)
                         ),
                         isLast: log.id == steps.last?.id
@@ -337,19 +380,16 @@ struct SessionHistoryDetailView: View {
     }
 
     private func formattedWeight(_ value: Double, unit: String, exercise: Exercise?) -> String {
-        if unit == Equipment.levelUnit, let equipment = exercise?.weightedEquipment, equipment.isLevelBased {
-            if let combo = equipment.sortedWeightCombos.first(where: { $0.value == value }) {
-                return combo.levelDisplayName
-            }
-            return "Level \(Int(value))"
+        if unit == Equipment.optionUnit, let equipment = exercise?.weightedEquipment, equipment.usesOptions {
+            return WeightCombo.optionDisplayName(for: value, in: equipment.sortedWeightCombos)
         }
         return value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value)) \(unit)" : "\(value) \(unit)"
     }
 
-    private func levelColor(for log: SetLog) -> PaletteColor? {
-        guard log.weightUnit == Equipment.levelUnit,
+    private func settingColor(for log: SetLog) -> PaletteColor? {
+        guard log.weightUnit == Equipment.optionUnit,
               let equipment = log.exercise?.weightedEquipment,
-              equipment.isLevelBased else { return nil }
+              equipment.usesOptions else { return nil }
         return equipment.sortedWeightCombos.first(where: { $0.value == log.weight })?.color
     }
 }

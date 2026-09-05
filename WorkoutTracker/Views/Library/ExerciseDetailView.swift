@@ -3,6 +3,12 @@ import SwiftData
 
 struct ExerciseDetailView: View {
     @Bindable var exercise: Exercise
+    /// Sheeted from the workout builder rather than pushed from the Library. Wraps the
+    /// page in its own `NavigationStack` — `PushedTitleBand` is sized to sit under a real
+    /// navigation bar, and without one it butts against the sheet's top edge — and adds
+    /// the Done that a sheet has no back chevron to replace. `AddPersonalRecordSheet`
+    /// carries the same two jobs for the same reason, under its own `NavigationStack`.
+    var isPresentedAsSheet: Bool = false
     @Environment(\.modelContext) private var context
     @State private var showingEdit = false
     @State private var showingVideoPlayer = false
@@ -16,6 +22,14 @@ struct ExerciseDetailView: View {
     @Query(sort: \ExerciseCategory.name) private var allCategories: [ExerciseCategory]
 
     var body: some View {
+        if isPresentedAsSheet {
+            NavigationStack { content }
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         List {
             // Name, notes and the edit button all live in the green band now, so the
             // first thing under it is the exercise's own content.
@@ -31,21 +45,53 @@ struct ExerciseDetailView: View {
                 favoriteRow
             }
 
-            Section("Muscles") {
+            Section {
                 chipGrid(allMuscles, tint: .appAccent, title: \.name, isSelected: isMuscleSelected, toggle: toggleMuscle)
+            } header: {
+                ListBandHeader(title: "Muscles")
             }
 
-            Section("Passive Equipment") {
+            Section {
                 chipGrid(allEquipment.filter { !$0.isWeighted }, tint: .appStepBrown, title: \.name, isSelected: isEquipmentSelected, toggle: toggleEquipment)
+            } header: {
+                ListBandHeader(title: "Passive Equipment")
             }
 
-            Section("Weighted Equipment") {
+            Section {
+                defaultEquipmentRow
                 chipGrid(allEquipment.filter { $0.isWeighted }, tint: .appStepBlue, title: \.name, isSelected: isEquipmentSelected, toggle: toggleEquipment)
+            } header: {
+                // On the band rather than as a chip among the equipment: it qualifies the
+                // whole section — "this can also be done unloaded" — instead of being one
+                // more thing to attach. It also gets the chip out of `SelectableChip`'s
+                // `.fill` icon swap, which had no symbol to resolve to.
+                ListBandHeader(title: "Weighted Equipment") {
+                    if exercise.weightedEquipment != nil {
+                        BandToggleButton(text: "Allow bodyweight", isOn: exercise.allowsBodyweight) {
+                            toggleFlag { exercise.allowsBodyweight.toggle() }
+                        }
+                    }
+                }
             }
 
-            Section("Categories") {
+            Section {
                 chipGrid(allCategories, tint: .appRust, title: { $0.name.capitalized }, isSelected: isCategorySelected, toggle: toggleCategory)
+            } header: {
+                ListBandHeader(title: "Categories")
             }
+
+            ExecutionTypeChipSection(
+                isSelected: isExecutionTypeSelected,
+                toggle: toggleExecutionType,
+                onCreate: toggleExecutionType,
+                selectedCount: exercise.sortedExecutionTypes.count,
+                separateRecords: Binding(
+                    get: { exercise.separateRecordsPerExecutionType },
+                    set: { newValue in toggleFlag { exercise.separateRecordsPerExecutionType = newValue } }
+                )
+            )
+
+            ProgressionSection(exercise: exercise, context: context)
 
             Section {
                 Button {
@@ -87,6 +133,22 @@ struct ExerciseDetailView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isPresentedAsSheet {
+                // "Done", not "Cancel": every control on this page writes through as it's
+                // touched, so by the time this is tapped the work is already saved.
+                ToolbarItem(placement: .cancellationAction) {
+                    // A glyph, not "Done": the text button rendered blank often enough to
+                    // look broken, and a tick reads the same at a glance.
+                    Button {
+                        dismiss()
+                    } label: {
+                        Label("Done", systemImage: "checkmark")
+                            .labelStyle(.iconOnly)
+                    }
+                }
+            }
+        }
         .alert("Delete \"\(exercise.displayName)\"?", isPresented: $showingDeleteConfirm) {
             Button("Delete", role: .destructive) { deleteThis() }
             Button("Cancel", role: .cancel) { }
@@ -194,20 +256,18 @@ struct ExerciseDetailView: View {
         .buttonStyle(.plain)
     }
 
-    /// Favorite plus the two capability flags that unlock per-workout options. The
-    /// bodyweight chip only appears for exercises that carry weighted equipment — an
-    /// exercise with none is bodyweight already, so the flag would say nothing.
+    /// Favorite, and the one capability flag that isn't tied to a section below.
+    /// "Allow bodyweight" used to live here too; it now qualifies the Weighted Equipment
+    /// band, which is the thing it actually depends on.
     private var favoriteRow: some View {
         FlowLayout(spacing: 8, rowSpacing: 8) {
             SelectableChip(icon: "star", title: "Favorite", isSelected: exercise.isFavorited, tint: Color.appStepYellow) {
                 toggleFlag { exercise.isFavorited.toggle() }
             }
-            if exercise.weightedEquipment != nil {
-                SelectableChip(icon: "figure.strengthtraining.functional", title: "Bodyweight OK", isSelected: exercise.allowsBodyweight, tint: Color.appStepBlue) {
-                    toggleFlag { exercise.allowsBodyweight.toggle() }
-                }
-            }
-            SelectableChip(icon: "arrow.left.and.right", title: "One-sided", isSelected: exercise.isOneSided, tint: Color.appStepBrown) {
+            // No icon: `SelectableChip` appends `.fill` when selected, and
+            // `arrow.left.and.right.fill` is not a symbol — so the chip rendered blank
+            // exactly when it was on.
+            SelectableChip(title: "One-sided", isSelected: exercise.isOneSided, tint: Color.appStepBrown) {
                 toggleFlag { exercise.isOneSided.toggle() }
             }
         }
@@ -232,14 +292,49 @@ struct ExerciseDetailView: View {
         }
     }
 
+    /// Which weighted item — or bodyweight — this exercise means when a workout doesn't
+    /// say. The same control the workout builder's own Equipment picker uses, because it is
+    /// the same question one level up: whatever is chosen here is what that picker opens on.
+    ///
+    /// Offered only when there is more than one answer, which is the rule that picker
+    /// applies too.
+    @ViewBuilder
+    private var defaultEquipmentRow: some View {
+        if exercise.hasEquipmentChoice {
+            SettingMenu(
+                title: "Default equipment",
+                // The tint this section's chips already carry, so the value reads as part
+                // of Weighted Equipment rather than importing the popover's rust.
+                value: exercise.defaultWeightedEquipment?.name ?? "Bodyweight",
+                valueColor: Color.appStepBlue,
+                hugsTitle: true
+            ) {
+                ForEach(exercise.weightedEquipmentOptions) { item in
+                    Button(item.name) {
+                        toggleFlag {
+                            exercise.defaultsToBodyweight = false
+                            exercise.defaultEquipmentName = item.name
+                        }
+                    }
+                }
+                if exercise.allowsBodyweightSource {
+                    Button("Bodyweight") {
+                        toggleFlag {
+                            exercise.defaultsToBodyweight = true
+                            exercise.defaultEquipmentName = nil
+                        }
+                    }
+                }
+            }
+            .formRow(isLast: false)
+        }
+    }
+
     private func toggleFlag(_ change: () -> Void) {
         change()
         exercise.markDirty()
         try? context.save()
     }
-
-    /// Truncated to one line, tap to expand in place — same accordion idea as
-    /// the section card's step rows (rotating chevron, no navigation away).
 
     // MARK: - Chip sections
 
@@ -287,6 +382,20 @@ struct ExerciseDetailView: View {
             exercise.equipmentItems.remove(at: index)
         } else {
             exercise.equipmentItems.append(equipment)
+        }
+        exercise.markDirty()
+        try? context.save()
+    }
+
+    private func isExecutionTypeSelected(_ type: ExecutionType) -> Bool {
+        exercise.executionTypes.contains { $0.id == type.id }
+    }
+
+    private func toggleExecutionType(_ type: ExecutionType) {
+        if let index = exercise.executionTypes.firstIndex(where: { $0.id == type.id }) {
+            exercise.executionTypes.remove(at: index)
+        } else {
+            exercise.executionTypes.append(type)
         }
         exercise.markDirty()
         try? context.save()

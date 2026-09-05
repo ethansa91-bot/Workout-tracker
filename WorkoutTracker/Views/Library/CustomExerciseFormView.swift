@@ -11,6 +11,8 @@ struct CustomExerciseFormView: View {
     @Query(sort: \Equipment.name) private var allEquipment: [Equipment]
     @Query(sort: \Muscle.name) private var allMuscles: [Muscle]
     @Query(sort: \ExerciseCategory.name) private var allCategories: [ExerciseCategory]
+    @Query(filter: #Predicate<ExecutionType> { $0.deletedAt == nil }, sort: \ExecutionType.name)
+    private var allExecutionTypes: [ExecutionType]
 
     @State private var name = ""
     @State private var label = ""
@@ -19,6 +21,8 @@ struct CustomExerciseFormView: View {
     @State private var selectedEquipmentIDs: Set<UUID> = []
     @State private var selectedMuscleIDs: Set<UUID> = []
     @State private var selectedCategoryNames: Set<String> = []
+    @State private var selectedExecutionTypeIDs: Set<UUID> = []
+    @State private var separateRecordsPerExecutionType = false
     @State private var allowsBodyweight = false
     @State private var isOneSided = false
 
@@ -75,10 +79,18 @@ struct CustomExerciseFormView: View {
                     chipGrid(allCategories, tint: .appRust, title: { $0.name.capitalized }, isSelected: { selectedCategoryNames.contains($0.name) }, toggle: toggleCategory)
                 }
 
+                ExecutionTypeChipSection(
+                    isSelected: { selectedExecutionTypeIDs.contains($0.id) },
+                    toggle: toggleExecutionType,
+                    onCreate: toggleExecutionType,
+                    selectedCount: selectedExecutionTypeIDs.count,
+                    separateRecords: $separateRecordsPerExecutionType
+                )
+
                 Section {
                     FlowLayout(spacing: 8, rowSpacing: 8) {
                         if hasWeightedEquipment {
-                            SelectableChip(icon: "figure.strengthtraining.functional", title: "Bodyweight OK", isSelected: allowsBodyweight, tint: .appStepBlue) {
+                            SelectableChip(icon: "figure.strengthtraining.functional", title: "Allow bodyweight", isSelected: allowsBodyweight, tint: .appStepBlue) {
                                 allowsBodyweight.toggle()
                             }
                         }
@@ -90,7 +102,7 @@ struct CustomExerciseFormView: View {
                 } header: {
                     Text("Options")
                 } footer: {
-                    Text("\"Bodyweight OK\" lets a workout offer this exercise unloaded. \"One-sided\" lets a workout log left and right separately.")
+                    Text("\"Allow bodyweight\" lets a workout offer this exercise unloaded. \"One-sided\" lets a workout log left and right separately.")
                 }
 
                 Section("Notes") {
@@ -138,6 +150,11 @@ struct CustomExerciseFormView: View {
         else { selectedEquipmentIDs.insert(equipment.id) }
     }
 
+    private func toggleExecutionType(_ type: ExecutionType) {
+        if selectedExecutionTypeIDs.contains(type.id) { selectedExecutionTypeIDs.remove(type.id) }
+        else { selectedExecutionTypeIDs.insert(type.id) }
+    }
+
     private func toggleCategory(_ category: ExerciseCategory) {
         if selectedCategoryNames.contains(category.name) { selectedCategoryNames.remove(category.name) }
         else { selectedCategoryNames.insert(category.name) }
@@ -166,6 +183,10 @@ struct CustomExerciseFormView: View {
         )
         exercise.muscles = muscles
         exercise.categories = categories
+        exercise.executionTypes = allExecutionTypes.filter { selectedExecutionTypeIDs.contains($0.id) }
+        // Same guard the toggle's visibility applies: a flag set while only one type was
+        // attached, then narrowed to none, would otherwise persist as a dormant true.
+        exercise.separateRecordsPerExecutionType = selectedExecutionTypeIDs.count > 1 && separateRecordsPerExecutionType
         context.insert(exercise)
         try? context.save()
         dismiss()

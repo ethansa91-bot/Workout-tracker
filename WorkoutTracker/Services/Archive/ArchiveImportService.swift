@@ -107,6 +107,7 @@ enum ArchiveImportService {
     private static func validate(_ payload: ArchivePayload) throws {
         let exerciseIDs = Set(payload.catalog.exercises.map(\.id))
         let equipmentIDs = Set(payload.catalog.equipment.map(\.id))
+        let executionTypeIDs = Set(payload.catalog.executionTypes.map(\.id))
         let muscleIDs = Set(payload.catalog.muscles.map(\.id))
         let muscleCategoryIDs = Set(payload.catalog.muscleCategories.map(\.id))
         let exerciseCategoryIDs = Set(payload.catalog.exerciseCategories.map(\.id))
@@ -127,6 +128,10 @@ enum ArchiveImportService {
             require(combo.equipmentID, in: equipmentIDs, "a weight combo references missing equipment")
         }
         for exercise in payload.catalog.exercises {
+            for id in exercise.executionTypeIDs where !executionTypeIDs.contains(id) {
+                problems.append("“\(exercise.name)” references a missing execution type")
+                break
+            }
             for id in exercise.equipmentIDs where !equipmentIDs.contains(id) {
                 problems.append("exercise “\(exercise.name)” references missing equipment")
             }
@@ -137,22 +142,36 @@ enum ArchiveImportService {
                 problems.append("exercise “\(exercise.name)” references a missing category")
             }
         }
+        let workoutTagIDs = Set(payload.catalog.workoutTags.map(\.id))
+        for workout in payload.workouts.workouts {
+            for id in workout.tagIDs where !workoutTagIDs.contains(id) {
+                problems.append("“\(workout.name)” references a missing tag")
+                break
+            }
+        }
+        for step in payload.catalog.progressionSteps {
+            require(step.exerciseID, in: exerciseIDs, "a progression references a missing exercise")
+        }
         for record in payload.catalog.personalRecords {
             require(record.exerciseID, in: exerciseIDs, "a personal record references a missing exercise")
             require(record.equipmentID, in: equipmentIDs, "a personal record references missing equipment")
+            require(record.executionTypeID, in: executionTypeIDs, "a personal record references a missing execution type")
         }
 
         for section in payload.workouts.workouts.flatMap(\.sections) + payload.workouts.templates {
             let label = section.name ?? "untitled section"
             for step in section.timeSteps {
                 require(step.exerciseID, in: exerciseIDs, "section “\(label)” references a missing exercise")
+                require(step.executionTypeID, in: executionTypeIDs, "section “\(label)” references a missing execution type")
             }
             for rep in section.repExercises {
                 require(rep.exerciseID, in: exerciseIDs, "section “\(label)” references a missing exercise")
                 require(rep.preferredEquipmentID, in: equipmentIDs, "section “\(label)” references missing equipment")
+                require(rep.executionTypeID, in: executionTypeIDs, "section “\(label)” references a missing execution type")
             }
             for quick in section.quickExercises {
                 require(quick.exerciseID, in: exerciseIDs, "section “\(label)” references a missing exercise")
+                require(quick.executionTypeID, in: executionTypeIDs, "section “\(label)” references a missing execution type")
             }
         }
 
@@ -172,15 +191,23 @@ enum ArchiveImportService {
                 (payload.workouts.workouts.flatMap(\.sections) + payload.workouts.templates)
                     .flatMap(\.timeSteps).map(\.id)
             )
+            let sectionIDs = Set(
+                (payload.workouts.workouts.flatMap(\.sections) + payload.workouts.templates).map(\.id)
+            )
             for session in sessions.sessions {
                 require(session.workoutID, in: workoutIDs, "a session references a missing workout")
                 for log in session.setLogs {
                     require(log.exerciseID, in: exerciseIDs, "a logged set references a missing exercise")
                     require(log.equipmentID, in: equipmentIDs, "a logged set references missing equipment")
+                    require(log.executionTypeID, in: executionTypeIDs, "a logged set references a missing execution type")
                     require(log.repSectionExerciseID, in: repExerciseIDs, "a logged set references a missing section exercise")
                 }
                 for log in session.stepLogs {
                     require(log.timeSectionStepID, in: timeStepIDs, "a logged step references a missing section step")
+                    require(log.executionTypeID, in: executionTypeIDs, "a logged step references a missing execution type")
+                }
+                for log in session.sectionResultLogs {
+                    require(log.sectionID, in: sectionIDs, "a section result references a missing section")
                 }
                 for note in session.exerciseNotes {
                     require(note.exerciseID, in: exerciseIDs, "a session note references a missing exercise")
@@ -217,15 +244,18 @@ enum ArchiveImportService {
         let exerciseCategories = try upsertExerciseCategories(payload, context: context, summary: &summary)
         let muscles = try upsertMuscles(payload, categories: muscleCategories, context: context, summary: &summary)
         let equipment = try upsertEquipment(payload, context: context, summary: &summary)
+        let executionTypes = try upsertExecutionTypes(payload, context: context, summary: &summary)
         try upsertWeightCombos(payload, equipment: equipment, context: context, summary: &summary)
         let exercises = try upsertExercises(
-            payload, equipment: equipment, muscles: muscles,
+            payload, equipment: equipment, executionTypes: executionTypes, muscles: muscles,
             categories: exerciseCategories, context: context, summary: &summary
         )
-        try upsertPersonalRecords(payload, exercises: exercises, equipment: equipment, context: context, summary: &summary)
-        try upsertPersonalRecordEntries(payload, exercises: exercises, equipment: equipment, context: context, summary: &summary)
+        let workoutTags = try upsertWorkoutTags(payload, context: context, summary: &summary)
+        try upsertProgressions(payload, exercises: exercises, context: context, summary: &summary)
+        try upsertPersonalRecords(payload, exercises: exercises, equipment: equipment, executionTypes: executionTypes, context: context, summary: &summary)
+        try upsertPersonalRecordEntries(payload, exercises: exercises, equipment: equipment, executionTypes: executionTypes, context: context, summary: &summary)
 
-        let refs = WorkoutRefs(exercises: exercises, equipment: equipment)
+        let refs = WorkoutRefs(exercises: exercises, equipment: equipment, executionTypes: executionTypes, workoutTags: workoutTags)
         let workouts = try upsertWorkouts(payload, refs: refs, context: context, summary: &summary)
         try upsertSchedules(payload, workouts: workouts, context: context, summary: &summary)
 
@@ -240,6 +270,8 @@ enum ArchiveImportService {
     private struct WorkoutRefs {
         let exercises: [UUID: Exercise]
         let equipment: [UUID: Equipment]
+        let executionTypes: [UUID: ExecutionType]
+        let workoutTags: [UUID: WorkoutTag]
     }
 
     /// One fetch per type, not one per row — the same reason `CatalogSeedLoader` builds
@@ -372,6 +404,106 @@ enum ArchiveImportService {
         return existing
     }
 
+    private static func upsertExecutionTypes(
+        _ payload: ArchivePayload, context: ModelContext, summary: inout ArchiveImportSummary
+    ) throws -> [UUID: ExecutionType] {
+        var existing = try existingByID(ExecutionType.self, context: context, id: \.id)
+        for dto in payload.catalog.executionTypes {
+            let row: ExecutionType
+            if let found = existing[dto.id] {
+                guard shouldOverwrite(existing: found.updatedAt, incoming: dto.updatedAt) else {
+                    summary.skip("executionTypes"); continue
+                }
+                row = found
+                summary.update("executionTypes")
+            } else {
+                row = ExecutionType(id: dto.id, name: dto.name)
+                context.insert(row)
+                existing[dto.id] = row
+                summary.insert("executionTypes")
+            }
+            row.name = dto.name
+            row.isCustom = dto.isCustom
+            row.updatedAt = dto.updatedAt
+            row.deletedAt = dto.deletedAt
+        }
+        return existing
+    }
+
+    private static func upsertWorkoutTags(
+        _ payload: ArchivePayload, context: ModelContext, summary: inout ArchiveImportSummary
+    ) throws -> [UUID: WorkoutTag] {
+        var existing = try existingByID(WorkoutTag.self, context: context, id: \.id)
+        for dto in payload.catalog.workoutTags {
+            let row: WorkoutTag
+            if let found = existing[dto.id] {
+                guard shouldOverwrite(existing: found.updatedAt, incoming: dto.updatedAt) else {
+                    summary.skip("workoutTags"); continue
+                }
+                row = found
+                summary.update("workoutTags")
+            } else {
+                row = WorkoutTag(id: dto.id, name: dto.name)
+                context.insert(row)
+                existing[dto.id] = row
+                summary.insert("workoutTags")
+            }
+            row.name = dto.name
+            row.isCustom = dto.isCustom
+            row.updatedAt = dto.updatedAt
+            row.deletedAt = dto.deletedAt
+        }
+        return existing
+    }
+
+    /// Groups then steps, so every step has a group to attach to.
+    private static func upsertProgressions(
+        _ payload: ArchivePayload, exercises: [UUID: Exercise],
+        context: ModelContext, summary: inout ArchiveImportSummary
+    ) throws {
+        var groups = try existingByID(ProgressionGroup.self, context: context, id: \.id)
+        for dto in payload.catalog.progressionGroups {
+            let row: ProgressionGroup
+            if let found = groups[dto.id] {
+                guard shouldOverwrite(existing: found.updatedAt, incoming: dto.updatedAt) else {
+                    summary.skip("progressionGroups"); continue
+                }
+                row = found
+                summary.update("progressionGroups")
+            } else {
+                row = ProgressionGroup(id: dto.id)
+                context.insert(row)
+                groups[dto.id] = row
+                summary.insert("progressionGroups")
+            }
+            row.reachedLevel = dto.reachedLevel
+            row.updatedAt = dto.updatedAt
+            row.deletedAt = dto.deletedAt
+        }
+
+        var steps = try existingByID(ProgressionStep.self, context: context, id: \.id)
+        for dto in payload.catalog.progressionSteps {
+            let row: ProgressionStep
+            if let found = steps[dto.id] {
+                guard shouldOverwrite(existing: found.updatedAt, incoming: dto.updatedAt) else {
+                    summary.skip("progressionSteps"); continue
+                }
+                row = found
+                summary.update("progressionSteps")
+            } else {
+                row = ProgressionStep(id: dto.id)
+                context.insert(row)
+                steps[dto.id] = row
+                summary.insert("progressionSteps")
+            }
+            row.group = dto.groupID.flatMap { groups[$0] }
+            row.exercise = dto.exerciseID.flatMap { exercises[$0] }
+            row.level = dto.level
+            row.updatedAt = dto.updatedAt
+            row.deletedAt = dto.deletedAt
+        }
+    }
+
     private static func upsertWeightCombos(
         _ payload: ArchivePayload, equipment: [UUID: Equipment],
         context: ModelContext, summary: inout ArchiveImportSummary
@@ -402,8 +534,9 @@ enum ArchiveImportService {
     }
 
     private static func upsertExercises(
-        _ payload: ArchivePayload, equipment: [UUID: Equipment], muscles: [UUID: Muscle],
-        categories: [UUID: ExerciseCategory], context: ModelContext, summary: inout ArchiveImportSummary
+        _ payload: ArchivePayload, equipment: [UUID: Equipment], executionTypes: [UUID: ExecutionType],
+        muscles: [UUID: Muscle], categories: [UUID: ExerciseCategory],
+        context: ModelContext, summary: inout ArchiveImportSummary
     ) throws -> [UUID: Exercise] {
         var existing = try existingByID(Exercise.self, context: context, id: \.id)
         for dto in payload.catalog.exercises {
@@ -436,7 +569,10 @@ enum ArchiveImportService {
             row.allowsBodyweight = dto.allowsBodyweight
             row.isOneSided = dto.isOneSided
             row.defaultEquipmentName = dto.defaultEquipmentName
+            row.defaultsToBodyweight = dto.defaultsToBodyweight ?? false
             row.equipmentItems = dto.equipmentIDs.compactMap { equipment[$0] }
+            row.executionTypes = dto.executionTypeIDs.compactMap { executionTypes[$0] }
+            row.separateRecordsPerExecutionType = dto.separateRecordsPerExecutionType
             row.muscles = dto.muscleIDs.compactMap { muscles[$0] }
             row.categories = dto.categoryIDs.compactMap { categories[$0] }
             row.updatedAt = dto.updatedAt
@@ -447,7 +583,7 @@ enum ArchiveImportService {
 
     private static func upsertPersonalRecords(
         _ payload: ArchivePayload, exercises: [UUID: Exercise], equipment: [UUID: Equipment],
-        context: ModelContext, summary: inout ArchiveImportSummary
+        executionTypes: [UUID: ExecutionType], context: ModelContext, summary: inout ArchiveImportSummary
     ) throws {
         var existing = try existingByID(PersonalRecord.self, context: context, id: \.id)
         for dto in payload.catalog.personalRecords {
@@ -466,12 +602,17 @@ enum ArchiveImportService {
             }
             row.exercise = dto.exerciseID.flatMap { exercises[$0] }
             row.equipment = dto.equipmentID.flatMap { equipment[$0] }
+            row.executionType = dto.executionTypeID.flatMap { executionTypes[$0] }
             row.weightUnit = dto.weightUnit
             row.isBodyweight = dto.isBodyweight
+            row.isFollowAlong = dto.isFollowAlong ?? false
             row.trackingModeRaw = dto.trackingModeRaw
             row.weight = dto.weight
             row.reps = dto.reps
             row.holdSeconds = dto.holdSeconds
+            row.sectionRecordGroupID = dto.sectionRecordGroupID
+            row.sectionRecordKindRaw = dto.sectionRecordKindRaw
+            row.sectionRecordName = dto.sectionRecordName
             row.updatedAt = dto.updatedAt
             row.deletedAt = dto.deletedAt
         }
@@ -481,7 +622,7 @@ enum ArchiveImportService {
     /// to link to.
     private static func upsertPersonalRecordEntries(
         _ payload: ArchivePayload, exercises: [UUID: Exercise], equipment: [UUID: Equipment],
-        context: ModelContext, summary: inout ArchiveImportSummary
+        executionTypes: [UUID: ExecutionType], context: ModelContext, summary: inout ArchiveImportSummary
     ) throws {
         let records = try existingByID(PersonalRecord.self, context: context, id: \.id)
         var existing = try existingByID(PersonalRecordEntry.self, context: context, id: \.id)
@@ -502,12 +643,17 @@ enum ArchiveImportService {
             row.record = dto.recordID.flatMap { records[$0] }
             row.exercise = dto.exerciseID.flatMap { exercises[$0] }
             row.equipment = dto.equipmentID.flatMap { equipment[$0] }
+            row.executionType = dto.executionTypeID.flatMap { executionTypes[$0] }
             row.weightUnit = dto.weightUnit
             row.isBodyweight = dto.isBodyweight
+            row.isFollowAlong = dto.isFollowAlong ?? false
             row.trackingModeRaw = dto.trackingModeRaw
             row.weight = dto.weight
             row.reps = dto.reps
             row.holdSeconds = dto.holdSeconds
+            row.sectionRecordGroupID = dto.sectionRecordGroupID
+            row.sectionRecordKindRaw = dto.sectionRecordKindRaw
+            row.sectionRecordName = dto.sectionRecordName
             row.achievedAt = dto.achievedAt
             row.updatedAt = dto.updatedAt
             row.deletedAt = dto.deletedAt
@@ -543,6 +689,7 @@ enum ArchiveImportService {
             workout.clonedFromWorkoutId = dto.clonedFromWorkoutId
             workout.kindRaw = dto.kindRaw
             workout.isArchived = dto.isArchived
+            workout.tags = dto.tagIDs.compactMap { refs.workoutTags[$0] }
             workout.updatedAt = dto.updatedAt
             workout.deletedAt = dto.deletedAt
 
@@ -589,6 +736,16 @@ enum ArchiveImportService {
         section.amrapDurationSeconds = dto.amrapDurationSeconds
         section.autostart = dto.autostart
         section.repeatCount = dto.repeatCount
+        section.getReadySeconds = dto.getReadySeconds ?? 0
+        section.repeatsGetReadyEachPass = dto.repeatsGetReadyEachPass ?? true
+        section.sectionRestSeconds = dto.sectionRestSeconds ?? 0
+        section.emomToFailure = dto.emomToFailure ?? false
+        section.tracksRecord = dto.tracksRecord ?? false
+        // Restored verbatim, unlike a share: this is the user's own backup, so the
+        // section rejoins the record it was already filing under and keeps its lock.
+        section.recordGroupID = dto.recordGroupID
+        section.recordLockedAt = dto.recordLockedAt
+        section.tags = dto.tagIDs.compactMap { refs.workoutTags[$0] }
         section.updatedAt = dto.updatedAt
         section.deletedAt = dto.deletedAt
 
@@ -626,6 +783,14 @@ enum ArchiveImportService {
             step.exercise = dto.exerciseID.flatMap { refs.exercises[$0] }
             step.durationSeconds = dto.durationSeconds
             step.colorRaw = dto.colorRaw
+            // Same guard the rep entry's equipment gets: a file can't select a type the
+            // catalog exercise doesn't carry.
+            step.executionType = resolvedExecutionType(dto.executionTypeID, for: step.exercise, refs: refs)
+            step.side = resolvedSide(dto.sideRaw, for: step.exercise)
+            // Same membership guard the rep entry's equipment gets: a file can't select
+            // equipment the catalog exercise doesn't carry as a weighted option.
+            step.preferredEquipment = resolvedPreferredEquipment(dto.preferredEquipmentID, for: step.exercise, refs: refs)
+            step.prefersBodyweight = (dto.prefersBodyweight ?? false) && (step.exercise?.allowsBodyweightSource ?? false)
             step.updatedAt = dto.updatedAt
             step.deletedAt = dto.deletedAt
         }
@@ -670,9 +835,42 @@ enum ArchiveImportService {
                 entry.preferredEquipment = nil
             }
             entry.prefersBodyweight = dto.prefersBodyweight && (exercise?.allowsBodyweightSource ?? false)
+            entry.executionType = resolvedExecutionType(dto.executionTypeID, for: exercise, refs: refs)
+            entry.progressionEnabled = dto.progressionEnabled
             entry.updatedAt = dto.updatedAt
             entry.deletedAt = dto.deletedAt
         }
+    }
+
+    /// An execution type only survives import if the exercise actually carries it —
+    /// otherwise the entry would name a type its own pickers never offer, which is the
+    /// same trap `preferredEquipment` guards against just above.
+    private static func resolvedExecutionType(
+        _ id: UUID?, for exercise: Exercise?, refs: WorkoutRefs
+    ) -> ExecutionType? {
+        guard let id, let type = refs.executionTypes[id],
+              exercise?.executionTypes.contains(where: { $0.id == type.id }) == true
+        else { return nil }
+        return type
+    }
+
+    /// The weighted-equipment counterpart to `resolvedExecutionType`, spelled out here
+    /// because the rep branch inlines the same three conditions.
+    private static func resolvedPreferredEquipment(
+        _ id: UUID?, for exercise: Exercise?, refs: WorkoutRefs
+    ) -> Equipment? {
+        guard let id, let equipment = refs.equipment[id],
+              exercise?.equipmentItems.contains(where: { $0.id == equipment.id && $0.isWeighted }) == true
+        else { return nil }
+        return equipment
+    }
+
+    /// The same capability guard `tracksSides` gets: a side is only meaningful on an
+    /// exercise the catalog marks one-sided, so a file can't pin "Left" onto a movement
+    /// whose own pickers would never offer it.
+    private static func resolvedSide(_ raw: String?, for exercise: Exercise?) -> SetSide? {
+        guard exercise?.isOneSided == true else { return nil }
+        return raw.flatMap(SetSide.init(rawValue:))
     }
 
     private static func upsertQuickExercises(
@@ -697,6 +895,9 @@ enum ArchiveImportService {
             entry.section = section
             entry.sortOrder = dto.sortOrder
             entry.exercise = dto.exerciseID.flatMap { refs.exercises[$0] }
+            entry.executionType = resolvedExecutionType(dto.executionTypeID, for: entry.exercise, refs: refs)
+            entry.side = resolvedSide(dto.sideRaw, for: entry.exercise)
+            entry.targetReps = dto.targetReps
             entry.updatedAt = dto.updatedAt
             entry.deletedAt = dto.deletedAt
         }
@@ -763,6 +964,7 @@ enum ArchiveImportService {
         var existing = try existingByID(WorkoutSession.self, context: context, id: \.id)
         let repExercises = try existingByID(RepSectionExercise.self, context: context, id: \.id)
         let timeSteps = try existingByID(TimeSectionStep.self, context: context, id: \.id)
+        let sections = try existingByID(WorkoutSection.self, context: context, id: \.id)
 
         for dto in file.sessions {
             let session: WorkoutSession
@@ -824,6 +1026,10 @@ enum ArchiveImportService {
                 log.sideRaw = logDTO.sideRaw
                 log.repeatIndex = logDTO.repeatIndex
                 log.equipment = logDTO.equipmentID.flatMap { refs.equipment[$0] }
+                // Not run through `resolvedExecutionType`: this is history, and a set
+                // genuinely performed under a type the exercise has since dropped still
+                // was, so the record it filed under has to keep resolving.
+                log.executionType = logDTO.executionTypeID.flatMap { refs.executionTypes[$0] }
                 log.isManualWeight = logDTO.isManualWeight
                 log.loggedAt = logDTO.loggedAt
                 log.isCancelled = logDTO.isCancelled
@@ -855,12 +1061,45 @@ enum ArchiveImportService {
                 log.session = session
                 log.timeSectionStep = logDTO.timeSectionStepID.flatMap { timeSteps[$0] }
                 log.stepExerciseNameSnapshot = logDTO.stepExerciseNameSnapshot
+                // Not filtered through `resolvedExecutionType`, for the same reason a
+                // logged set isn't: this is history, and a step genuinely performed under
+                // a type the exercise has since dropped still was.
+                log.executionType = logDTO.executionTypeID.flatMap { refs.executionTypes[$0] }
                 log.plannedDurationSeconds = logDTO.plannedDurationSeconds
                 log.actualDurationSeconds = logDTO.actualDurationSeconds
                 log.outcomeRaw = logDTO.outcomeRaw
                 log.loggedAt = logDTO.loggedAt
                 log.sortOrder = logDTO.sortOrder
                 log.repeatIndex = logDTO.repeatIndex
+                log.updatedAt = logDTO.updatedAt
+                log.deletedAt = logDTO.deletedAt
+            }
+
+            var resultLogs = Dictionary(session.sectionResultLogs.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            for logDTO in dto.sectionResultLogs {
+                let log: SectionResultLog
+                if let found = resultLogs[logDTO.id] {
+                    guard shouldOverwrite(existing: found.updatedAt, incoming: logDTO.updatedAt) else {
+                        summary.skip("sectionResultLogs"); continue
+                    }
+                    log = found
+                    summary.update("sectionResultLogs")
+                } else {
+                    log = SectionResultLog(id: logDTO.id, session: session)
+                    context.insert(log)
+                    resultLogs[logDTO.id] = log
+                    summary.insert("sectionResultLogs")
+                }
+                log.session = session
+                // A missing section is survivable — the log carries its own name and type
+                // snapshot precisely so a result outlives the section that produced it.
+                log.section = logDTO.sectionID.flatMap { sections[$0] }
+                log.recordGroupID = logDTO.recordGroupID
+                log.sectionNameSnapshot = logDTO.sectionNameSnapshot
+                log.sectionTypeRaw = logDTO.sectionTypeRaw
+                log.repeatIndex = logDTO.repeatIndex
+                log.value = logDTO.value
+                log.loggedAt = logDTO.loggedAt
                 log.updatedAt = logDTO.updatedAt
                 log.deletedAt = logDTO.deletedAt
             }

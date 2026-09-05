@@ -4,7 +4,7 @@ import SwiftData
 struct RepSessionRunnerView: View {
     @Bindable var session: WorkoutSession
     let section: WorkoutSection
-    let soundProfile: TimerSoundProfile
+    let cues: TimerCueSettings
     let onSectionComplete: () -> Void
 
     @Environment(\.modelContext) private var context
@@ -33,17 +33,40 @@ struct RepSessionRunnerView: View {
     /// What an exercise's weight is being loaded with for this session. Session-local
     /// rather than persisted: the workout's own `preferredEquipment` is the default,
     /// and this is the in-the-moment override.
+    /// Deliberately only two cases. Typing a weight in is *not* a source — it's a way
+    /// of entering a weight on the equipment you already chose, reached by tapping the
+    /// value on a set row. A third "manual" source logged sets with no equipment at all,
+    /// which filed their records under a null equipment the Records screen keys apart
+    /// from the real one.
     enum WeightSource: Hashable {
         case equipment(UUID)
-        /// Type the number in — for a loaded bar or a machine that isn't in the catalog.
-        /// Offered for every exercise, not just ones with weighted equipment attached.
-        case manual
         /// No external load. Weight logs as 0 and the steppers give way to a plain
         /// "Bodyweight" readout.
         case bodyweight
     }
 
     @State private var weightSourceByEntry: [UUID: WeightSource] = [:]
+
+    /// How an exercise is being performed this session — the execution-type counterpart
+    /// to `WeightSource`, session-local for the same reason: the workout's own
+    /// `executionType` is the default, and this is the in-the-moment override.
+    ///
+    /// An enum rather than a bare `UUID?` in the dictionary, because "chose none" and
+    /// "hasn't chosen" have to stay distinguishable — a nested optional value would
+    /// collapse them and make an explicit "None" fall back to the workout's setting.
+    enum ExecutionChoice: Hashable {
+        case none
+        case type(UUID)
+    }
+
+    @State private var executionByEntry: [UUID: ExecutionChoice] = [:]
+
+    /// Which rung of a progression this entry is being performed at — the id of the chosen
+    /// exercise, session-local like the two overrides above.
+    ///
+    /// A plain id rather than an enum: unlike execution type there is no "none" to tell
+    /// apart from "hasn't chosen", because a ladder always resolves to some exercise.
+    @State private var levelByEntry: [UUID: UUID] = [:]
     /// Which exercise card has its record-history popover open, if any.
     @State private var historyPopoverEntryID: UUID?
 
@@ -55,7 +78,10 @@ struct RepSessionRunnerView: View {
     }
 
     var body: some View {
-        if let entry = currentEntry, let exercise = entry.exercise {
+        // `resolvedExercise`, not `entry.exercise`: the progression menu can swap which
+        // exercise this entry is being performed as, and everything below is built from
+        // this one binding.
+        if let entry = currentEntry, let exercise = resolvedExercise(for: entry) {
             VStack(spacing: 0) {
                 // No insets: the band runs edge to edge like every other runner's
                 // header, so its own fill is what meets the screen sides.
@@ -149,7 +175,7 @@ struct RepSessionRunnerView: View {
             HStack(alignment: .top, spacing: 0) {
                 RestTimerView(
                     totalSeconds: entry.customRestSeconds ?? AppSettings.defaultRestSeconds,
-                    soundProfile: soundProfile,
+                    cues: cues,
                     isSessionActive: session.status == .inProgress,
                     startSignal: $restStartSignal,
                     stopSignal: $restStopSignal,
@@ -178,7 +204,7 @@ struct RepSessionRunnerView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(exercise.displayName)
+                        Text(headingTitle(entry: entry, exercise: exercise))
                             .font(nameFont(bandHeight: geometry.size.height))
                             // No guard at all before this: a long name simply spilled
                             // out of the band. Two lines is what the taller iPad band
@@ -239,11 +265,15 @@ struct RepSessionRunnerView: View {
             // Both modes: a max-time hold can be loaded too, and the same
             // "locked once a set is logged" rule applies to either.
             equipmentLine(entry: entry, exercise: exercise)
+            executionLine(entry: entry, exercise: exercise)
+            progressionLine(entry: entry, exercise: exercise)
             recordLine(entry: entry, exercise: exercise)
 
             Divider()
 
             setsSection(entry: entry, exercise: exercise)
+
+            addTypedWeightsRow(entry: entry, exercise: exercise)
 
             Divider()
 
@@ -284,7 +314,6 @@ struct RepSessionRunnerView: View {
                     if allowsBodyweightSource(for: entry, exercise: exercise) {
                         Button("Bodyweight") { select(.bodyweight, for: entry) }
                     }
-                    Button("Manual entry") { select(.manual, for: entry) }
                 } label: {
                     Image(systemName: "pencil")
                         .foregroundStyle(canEdit ? Color.appAccent : Color.secondary)
@@ -296,16 +325,101 @@ struct RepSessionRunnerView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// How the exercise is being performed, with the same glass pencil menu the equipment
+    /// line uses — and the same lock, since the sets already logged belong to the type
+    /// that was selected when they were made.
+    ///
+    /// Hidden entirely for an exercise carrying no types: unlike equipment, there is no
+    /// implicit fallback worth naming when the catalog offers nothing.
+    @ViewBuilder
+    private func executionLine(entry: RepSectionExercise, exercise: Exercise) -> some View {
+        let options = exercise.sortedExecutionTypes
+        if !options.isEmpty {
+            let canEdit = canChangeEquipment(for: entry)
+            HStack(spacing: 8) {
+                Image(systemName: "bolt.fill")
+                    .font(.caption)
+                    .foregroundStyle(Color.appAccent)
+                Text(executionLabel(for: entry, exercise: exercise))
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Spacer(minLength: 8)
+                GlassEffectContainer {
+                    Menu {
+                        ForEach(options) { type in
+                            Button(type.name) { select(.type(type.id), for: entry) }
+                        }
+                        Button("None") { select(.none, for: entry) }
+                    } label: {
+                        Image(systemName: "pencil")
+                            .foregroundStyle(canEdit ? Color.appAccent : Color.secondary)
+                    }
+                    .buttonStyle(.glass)
+                    .disabled(!canEdit)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// Which rung of the progression is being performed, with the same glass pencil menu
+    /// the equipment and execution lines use.
+    ///
+    /// **Deliberately not locked once a set is logged**, unlike those two. They lock
+    /// because the sets already recorded belong to what was chosen; a progression swap is
+    /// the opposite case — logging sets 1 and 2 at one rung and set 3 at the next *is*
+    /// levelling up, and it is the reason the control exists.
+    @ViewBuilder
+    private func progressionLine(entry: RepSectionExercise, exercise: Exercise) -> some View {
+        if let group = progressionGroup(for: entry, exercise: exercise) {
+            HStack(spacing: 8) {
+                Image(systemName: "figure.stairs")
+                    .font(.caption)
+                    .foregroundStyle(Color.appAccent)
+                Text(progressionLabel(exercise: exercise, group: group))
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Spacer(minLength: 8)
+                GlassEffectContainer {
+                    Menu {
+                        ForEach(group.sortedSteps) { step in
+                            if let rung = step.exercise {
+                                Button("Level \(step.level) · \(rung.displayName)") {
+                                    selectProgression(rung.id, for: entry)
+                                }
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "pencil")
+                            .foregroundStyle(Color.appAccent)
+                    }
+                    .buttonStyle(.glass)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// "Level 3 of 5" — the rung's *name* is already the card's heading, so repeating it
+    /// here would say the same thing twice in adjacent lines.
+    private func progressionLabel(exercise: Exercise, group: ProgressionGroup) -> String {
+        "Level \(exercise.progressionLevel ?? 1) of \(group.maxLevel)"
+    }
+
     /// The record for the equipment in use, with "last" appended only when there is one.
     @ViewBuilder
     private func recordLine(entry: RepSectionExercise, exercise: Exercise) -> some View {
         let equipment = chosenEquipment(for: entry, exercise: exercise)
+        let executionType = recordExecutionType(for: entry, exercise: exercise)
         // Looked up by the shape this entry tracks: a max-time record and a weight/reps
         // record for the same equipment are different records, and reading either as the
         // other used to overwrite it.
         let record = PersonalRecordQueries.current(
             for: exercise,
             equipment: equipment,
+            executionType: executionType,
             trackingMode: entry.trackingMode,
             isBodyweight: isBodyweightSource(for: entry, exercise: exercise),
             context: context
@@ -315,7 +429,7 @@ struct RepSessionRunnerView: View {
             Image(systemName: "trophy.fill")
                 .font(.caption)
                 .foregroundStyle(Color.appAccent)
-            Text(recordSummary(entry: entry, exercise: exercise, equipment: equipment, record: record))
+            Text(recordSummary(entry: entry, exercise: exercise, equipment: equipment, executionType: executionType, record: record))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -402,13 +516,18 @@ struct RepSessionRunnerView: View {
         entry: RepSectionExercise,
         exercise: Exercise,
         equipment: Equipment?,
+        executionType: ExecutionType?,
         record: PersonalRecord?
     ) -> String {
+        // The derived fallbacks are scoped to match the record they stand in for —
+        // otherwise an exercise splitting by type would show one type's record above
+        // another type's history the moment the record was missing.
+        let splits = exercise.splitsRecordsByExecutionType
         switch entry.trackingMode {
         case .repsWeight:
             let best: SetLogQueries.BestSet? = record.map { SetLogQueries.BestSet(weight: $0.weight ?? 0, reps: $0.reps ?? 0) }
-                ?? SetLogQueries.bestSetEver(exercise: exercise, equipment: equipment, context: context)
-            let last = SetLogQueries.lastBestSet(exercise: exercise, equipment: equipment, excluding: session, context: context)
+                ?? SetLogQueries.bestSetEver(exercise: exercise, equipment: equipment, executionType: executionType, scopesByExecutionType: splits, context: context)
+            let last = SetLogQueries.lastBestSet(exercise: exercise, equipment: equipment, executionType: executionType, scopesByExecutionType: splits, excluding: session, context: context)
             guard let best else { return "No record set yet" }
             var text = "\(best.reps) × \(formattedWeight(best.weight, exercise: exercise))"
             if let last {
@@ -418,8 +537,8 @@ struct RepSessionRunnerView: View {
         case .maxHoldTime:
             // `record` is already resolved for this equipment by the caller, and the
             // history fallbacks are scoped to match — a loaded hold is its own record.
-            let bestHold = record?.holdSeconds ?? SetLogQueries.bestHoldEver(exercise: exercise, equipment: equipment, context: context)
-            let lastHold = SetLogQueries.lastHoldSeconds(exercise: exercise, equipment: equipment, excluding: session, context: context)
+            let bestHold = record?.holdSeconds ?? SetLogQueries.bestHoldEver(exercise: exercise, equipment: equipment, executionType: executionType, scopesByExecutionType: splits, context: context)
+            let lastHold = SetLogQueries.lastHoldSeconds(exercise: exercise, equipment: equipment, executionType: executionType, scopesByExecutionType: splits, excluding: session, context: context)
             guard let bestHold else { return "No record set yet" }
             var text = "\(bestHold)s"
             if let lastHold { text += " · last \(lastHold)s" }
@@ -433,20 +552,45 @@ struct RepSessionRunnerView: View {
         clearDrafts()
     }
 
+    /// Drafts are cleared alongside the choice for the same reason equipment does it: with
+    /// records split by type, set 1 seeds from the chosen type's record, and keeping the
+    /// old draft would show the previous type's numbers under the new one's name.
+    private func select(_ choice: ExecutionChoice, for entry: RepSectionExercise) {
+        executionByEntry[entry.id] = choice
+        clearDrafts()
+    }
+
+    /// Clearing drafts matters most here. This is the one choice that can change *after*
+    /// sets are logged, and `carryoverValues` seeds each set from the previous one within
+    /// the entry — without this, set 3 on the harder rung would open at set 2's reps and
+    /// weight from the easier one.
+    private func selectProgression(_ exerciseID: UUID, for entry: RepSectionExercise) {
+        levelByEntry[entry.id] = exerciseID
+        // The equipment choice belonged to the *previous* rung. Rungs rarely share
+        // equipment, and a stale id resolves to nil in `chosenEquipment` while
+        // `weightSource` still reports `.equipment` — which logs a real weight against no
+        // equipment at all, the shape that files a phantom record.
+        weightSourceByEntry[entry.id] = nil
+        clearDrafts()
+    }
+
     @ViewBuilder
     private func setsSection(entry: RepSectionExercise, exercise: Exercise) -> some View {
         let weightOptions = activeWeightOptions(for: entry, exercise: exercise)
         let logs = loggedSets(for: entry)
-        let last = SetLogQueries.lastBestSet(exercise: exercise, excluding: session, context: context)
+        let splits = exercise.splitsRecordsByExecutionType
+        let executionType = recordExecutionType(for: entry, exercise: exercise)
+        let last = SetLogQueries.lastBestSet(exercise: exercise, executionType: executionType, scopesByExecutionType: splits, excluding: session, context: context)
         let bestHold = entry.trackingMode == .maxHoldTime
             ? (PersonalRecordQueries.current(
                     for: exercise,
                     equipment: chosenEquipment(for: entry, exercise: exercise),
+                    executionType: executionType,
                     trackingMode: .maxHoldTime,
                     isBodyweight: isBodyweightSource(for: entry, exercise: exercise),
                     context: context
                )?.holdSeconds
-                ?? SetLogQueries.bestHoldEver(exercise: exercise, equipment: chosenEquipment(for: entry, exercise: exercise), context: context))
+                ?? SetLogQueries.bestHoldEver(exercise: exercise, equipment: chosenEquipment(for: entry, exercise: exercise), executionType: executionType, scopesByExecutionType: splits, context: context))
             : nil
 
         if let key = activeSetKey(for: entry) {
@@ -500,7 +644,7 @@ struct RepSessionRunnerView: View {
                         case .maxHoldTime:
                             HoldSetRowView(
                                 setNumber: key.index + 1,
-                                exerciseName: exercise.displayName,
+                                exerciseName: headingTitle(entry: entry, exercise: exercise),
                                 headStartSeconds: entry.headStartSeconds,
                                 previousBest: bestHold,
                                 recordedSeconds: .constant(log.holdSeconds ?? 0),
@@ -520,6 +664,76 @@ struct RepSessionRunnerView: View {
                 }
             }
         }
+    }
+
+    /// Offers to put this pass's typed weights on the equipment's ladder, so next time
+    /// they can be stepped to instead of typed again.
+    ///
+    /// One row for the pass rather than one under each set: in the ordinary case of a
+    /// single odd weight they look the same, and it avoids repeating the identical offer
+    /// under every set that shares it.
+    @ViewBuilder
+    private func addTypedWeightsRow(entry: RepSectionExercise, exercise: Exercise) -> some View {
+        let missing = typedWeightsMissingFromEquipment(entry: entry, exercise: exercise)
+        if let equipment = chosenEquipment(for: entry, exercise: exercise), !missing.isEmpty {
+            Button {
+                addWeightsToEquipment(missing, equipment: equipment)
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.circle")
+                    Text("Add \(missing.map { formattedWeightValue($0, unit: equipment.effectiveWeightUnit) }.joined(separator: ", ")) to \(equipment.name)")
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    Spacer(minLength: 0)
+                }
+                .font(.caption)
+                .foregroundStyle(Color.appAccent)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// Distinct weights logged in this pass that the equipment has no preset for. Empty
+    /// for bodyweight, and for equipment with no ladder at all — there is nothing to add
+    /// to, and every weight would qualify.
+    private func typedWeightsMissingFromEquipment(entry: RepSectionExercise, exercise: Exercise) -> [Double] {
+        let options = activeWeightOptions(for: entry, exercise: exercise)
+        guard !options.isEmpty else { return [] }
+        // Holds are included: a weighted plank is loaded on the same equipment and its
+        // weight is just as absent from the ladder. Bodyweight sets aren't loaded at all.
+        var seen: [Double] = []
+        for log in loggedSets(for: entry) where log.isBodyweight != true {
+            let weight = log.weight
+            guard !options.contains(where: { abs($0.value - weight) < 0.0001 }) else { continue }
+            guard !seen.contains(where: { abs($0 - weight) < 0.0001 }) else { continue }
+            seen.append(weight)
+        }
+        return seen.sorted()
+    }
+
+    /// Where each weight lands in the ladder comes from its value, not from `sortOrder`
+    /// (see `Equipment.sortedWeightCombos`) — so 5 kg added to a 20/25/30 barbell sits
+    /// first rather than after 30. `sortOrder` is still assigned to keep the stored row
+    /// coherent for the archive round-trip.
+    private func addWeightsToEquipment(_ weights: [Double], equipment: Equipment) {
+        var nextOrder = (equipment.weightCombos.map(\.sortOrder).max() ?? -1) + 1
+        for weight in weights {
+            // `typedWeightsMissingFromEquipment` already filters these, so this is only
+            // belt-and-braces — a duplicate preset makes the ± stepper look stuck.
+            guard !equipment.sortedWeightCombos.contains(where: { abs($0.value - weight) < 0.0001 }) else { continue }
+            context.insert(WeightCombo(equipment: equipment, value: weight, sortOrder: nextOrder))
+            nextOrder += 1
+        }
+        equipment.markDirty()
+        try? context.save()
+    }
+
+    /// A weight the equipment doesn't have yet, named the way it will read once added —
+    /// an option by number, anything else as "value unit". `Equipment.optionUnit` is a
+    /// storage token, so printing it here offered to "Add 7 level".
+    private func formattedWeightValue(_ value: Double, unit: String) -> String {
+        if unit == Equipment.optionUnit { return WeightCombo.optionDisplayName(for: value) }
+        return value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value)) \(unit)" : "\(value) \(unit)"
     }
 
     /// A completed side-tracked set: the set number once, its two sides stacked tight
@@ -682,7 +896,7 @@ struct RepSessionRunnerView: View {
             case .maxHoldTime:
                 HoldSetRowView(
                     setNumber: key.index + 1,
-                    exerciseName: exercise.displayName,
+                    exerciseName: headingTitle(entry: entry, exercise: exercise),
                     headStartSeconds: entry.headStartSeconds,
                     previousBest: bestHold,
                     recordedSeconds: bindingHoldSeconds(key),
@@ -919,13 +1133,13 @@ struct RepSessionRunnerView: View {
 
     private var previousExerciseName: String? {
         guard currentIndex > 0 else { return nil }
-        return entries[currentIndex - 1].exercise?.displayName
+        return neighbourTitle(entries[currentIndex - 1])
     }
 
     private var nextExerciseName: String? {
         let next = currentIndex + 1
         guard next < entries.count else { return nil }
-        return entries[next].exercise?.displayName
+        return neighbourTitle(entries[next])
     }
 
     private var isLastExerciseInSection: Bool {
@@ -980,18 +1194,22 @@ struct RepSessionRunnerView: View {
         if entry.prefersBodyweight { return .bodyweight }
         if let preferred = entry.preferredEquipment { return .equipment(preferred.id) }
         // The catalog's own resolution, not the alphabetically first item — otherwise
-        // the runner silently disagrees with the default shown in the builder.
-        if let resolved = exercise.weightedEquipment { return .equipment(resolved.id) }
+        // the runner silently disagrees with the default shown in the builder. Reads
+        // `defaultWeightedEquipment`, so an exercise that means bodyweight by default
+        // starts unloaded rather than on whichever weight happens to be attached.
+        if let resolved = exercise.defaultWeightedEquipment { return .equipment(resolved.id) }
         return .bodyweight
     }
 
     private func chosenEquipment(for entry: RepSectionExercise, exercise: Exercise) -> Equipment? {
         guard case .equipment(let id) = weightSource(for: entry, exercise: exercise) else { return nil }
-        return weightedOptions(for: exercise).first { $0.id == id }
-    }
-
-    private func isManualEntry(for entry: RepSectionExercise, exercise: Exercise) -> Bool {
-        weightSource(for: entry, exercise: exercise) == .manual
+        // Falling back rather than returning nil. `weightSource` resolves an id from three
+        // places that aren't validated against this list — a stale `preferredEquipment`,
+        // an equipment since un-flagged as weighted, one detached from the exercise — and
+        // a nil here while the source still says `.equipment` logs a real weight under no
+        // equipment, which the Records screen keys apart as its own phantom record.
+        let options = weightedOptions(for: exercise)
+        return options.first { $0.id == id } ?? options.first
     }
 
     /// True when nothing is loaded — the sets show "Bodyweight" instead of a stepper.
@@ -1009,25 +1227,17 @@ struct RepSessionRunnerView: View {
     /// How each set's weight control should render, given the exercise's source.
     private func weightMode(for entry: RepSectionExercise, exercise: Exercise) -> SetRowView.WeightMode {
         switch weightSource(for: entry, exercise: exercise) {
-        case .manual: return .manual
         case .bodyweight: return .bodyweight
         case .equipment: return .stepper
         }
     }
 
-    /// The weight a set would log right now — the typed number in manual mode, zero for
-    /// bodyweight, otherwise the stepper's draft.
+    /// The weight a set would log right now — zero for bodyweight, otherwise the
+    /// draft the stepper and the wheel both edit.
     private func resolvedWeight(entry: RepSectionExercise, exercise: Exercise, key: SetKey) -> (weight: Double, isBodyweight: Bool) {
         switch weightSource(for: entry, exercise: exercise) {
         case .bodyweight:
             return (0, true)
-        case .manual:
-            // Same draft the wheel edits — so it prefills from the record and carries
-            // forward from the previous set exactly like a stepper set does. Floored at
-            // the wheel's own minimum: a loaded set weighing nothing is a bodyweight
-            // set, which is a separate source.
-            let manual = draftValues(entry: entry, exercise: exercise, key: key).weight
-            return (max(WeightWheelPicker.minimumValue, manual), false)
         case .equipment:
             let values = draftValues(entry: entry, exercise: exercise, key: key)
             return (values.isBodyweight ? 0 : values.weight, values.isBodyweight)
@@ -1041,9 +1251,115 @@ struct RepSessionRunnerView: View {
         loggedSets(for: entry).isEmpty
     }
 
+    /// What the entry either side of this one will be called when you reach it.
+    ///
+    /// Through `resolvedExercise` rather than `displayTitle`, so a neighbour on a ladder
+    /// names the rung it will actually open at. Its session override is unset by
+    /// definition — you haven't been there yet — so this resolves to the reached level.
+    private func neighbourTitle(_ entry: RepSectionExercise) -> String {
+        ExerciseNaming.title(resolvedExercise(for: entry), executionType: entry.executionType)
+    }
+
+    // MARK: - Progression choice
+
+    /// The exercise this entry is actually being performed as.
+    ///
+    /// **Every read of `entry.exercise` during a run must come through here**, or the
+    /// screen shows one exercise while the log records another. `body` binds this once and
+    /// passes it down, which covers the card; the logging paths resolve it themselves.
+    private func resolvedExercise(for entry: RepSectionExercise) -> Exercise? {
+        guard let planned = entry.exercise else { return nil }
+        // The entry opted out: run exactly what the workout says. Checked here and not
+        // only in `progressionLine`, or the substitution would still happen silently with
+        // no control on screen to explain it.
+        guard entry.progressionEnabled else { return planned }
+        guard let group = planned.progressionGroup else { return planned }
+
+        // The session's own choice wins outright — it is the whole point of the menu.
+        if let chosenID = levelByEntry[entry.id],
+           let chosen = group.sortedSteps.first(where: { $0.exercise?.id == chosenID })?.exercise {
+            return chosen
+        }
+
+        // Otherwise open at the level actually reached, but never *below* what the workout
+        // asked for: building a session around the easy rung on purpose is a legitimate
+        // thing to do, and reaching level 4 shouldn't silently rewrite it.
+        let plannedLevel = planned.progressionLevel ?? 1
+        guard group.reachedLevel > plannedLevel else { return planned }
+
+        // Several exercises can share a level, so there may be no single answer. The
+        // planned exercise wins if it is one of them; otherwise take the first, which
+        // `sortedSteps` orders by name so it can't shuffle between renders.
+        let candidates = group.steps(atLevel: group.reachedLevel)
+        return candidates.first(where: { $0.exercise?.id == planned.id })?.exercise
+            ?? candidates.first?.exercise
+            ?? planned
+    }
+
+    /// The ladder to offer, if this entry is on one worth offering.
+    private func progressionGroup(for entry: RepSectionExercise, exercise: Exercise) -> ProgressionGroup? {
+        guard entry.progressionEnabled else { return nil }
+        guard let group = exercise.progressionGroup, group.sortedSteps.count > 1 else { return nil }
+        return group
+    }
+
+    /// Raises the ladder's reached level to whatever was just performed.
+    ///
+    /// Never lowers it. Dropping to an easier rung for a session is not losing a level —
+    /// the same one-way rule a personal record follows, which is what makes the next
+    /// workout open where you actually got to.
+    private func raiseReachedLevel(performing exercise: Exercise) {
+        guard let group = exercise.progressionGroup,
+              let level = exercise.progressionLevel,
+              level > group.reachedLevel
+        else { return }
+        group.reachedLevel = level
+        group.markDirty()
+        try? context.save()
+    }
+
+    // MARK: - Execution type choice
+
+    /// The session's choice, falling back to the workout's, then to no type at all.
+    private func executionChoice(for entry: RepSectionExercise, exercise: Exercise) -> ExecutionChoice {
+        if let chosen = executionByEntry[entry.id] { return chosen }
+        if let preferred = entry.executionType { return .type(preferred.id) }
+        return .none
+    }
+
+    /// What the set being logged right now was performed as. Resolved against the
+    /// exercise's live list, so a type detached from the catalog mid-workout reads as
+    /// none rather than as a stale name.
+    private func chosenExecutionType(for entry: RepSectionExercise, exercise: Exercise) -> ExecutionType? {
+        guard case .type(let id) = executionChoice(for: entry, exercise: exercise) else { return nil }
+        return exercise.sortedExecutionTypes.first { $0.id == id }
+    }
+
+    /// The type a record lookup should be scoped to — nil unless this exercise actually
+    /// splits its records, which is the whole of the "separate records per type" rule.
+    private func recordExecutionType(for entry: RepSectionExercise, exercise: Exercise) -> ExecutionType? {
+        PersonalRecordQueries.resolvedExecutionType(
+            chosenExecutionType(for: entry, exercise: exercise),
+            for: exercise
+        )
+    }
+
+    /// The exercise's name with the execution type folded in, for every heading this
+    /// runner shows.
+    ///
+    /// Built from `chosenExecutionType` rather than `entry.displayTitle`, because this is
+    /// the one place the type can be changed mid-workout: the heading has to name what the
+    /// next set will actually be logged as, not what the workout was built with.
+    private func headingTitle(entry: RepSectionExercise, exercise: Exercise) -> String {
+        ExerciseNaming.title(exercise, executionType: chosenExecutionType(for: entry, exercise: exercise))
+    }
+
+    private func executionLabel(for entry: RepSectionExercise, exercise: Exercise) -> String {
+        chosenExecutionType(for: entry, exercise: exercise)?.name ?? "No execution type"
+    }
+
     private func equipmentLabel(for entry: RepSectionExercise, exercise: Exercise) -> String {
         switch weightSource(for: entry, exercise: exercise) {
-        case .manual: return "Manual entry"
         case .bodyweight: return "Bodyweight"
         case .equipment: return chosenEquipment(for: entry, exercise: exercise)?.name ?? "Bodyweight"
         }
@@ -1051,8 +1367,20 @@ struct RepSessionRunnerView: View {
 
     /// The unit that a set logged right now would carry.
     private func activeWeightUnit(for entry: RepSectionExercise, exercise: Exercise) -> String {
-        if isManualEntry(for: entry, exercise: exercise) { return AppSettings.weightUnit }
-        return chosenEquipment(for: entry, exercise: exercise)?.effectiveWeightUnit ?? AppSettings.weightUnit
+        chosenEquipment(for: entry, exercise: exercise)?.effectiveWeightUnit ?? AppSettings.weightUnit
+    }
+
+    /// Whether a logged weight was typed rather than picked off the equipment's ladder.
+    /// Derived rather than tracked as a mode: a weight that matches no preset is by
+    /// definition one that was entered by hand, which is exactly what `SetLog`'s own
+    /// `isManualWeight` documents. `nil` when there are no presets to deviate from.
+    ///
+    /// Compared with a tolerance — these are `Double`s that have been through a wheel
+    /// and a stepper, and exact equality would flag a matching weight as manual.
+    private func manualWeightFlag(weight: Double, options: [WeightCombo]) -> Bool? {
+        guard !options.isEmpty else { return nil }
+        let matchesPreset = options.contains { abs($0.value - weight) < 0.0001 }
+        return matchesPreset ? nil : true
     }
 
     private func activeWeightOptions(for entry: RepSectionExercise, exercise: Exercise) -> [WeightCombo] {
@@ -1167,11 +1495,8 @@ struct RepSessionRunnerView: View {
             let unit = AppSettings.weightUnit
             return value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value)) \(unit)" : "\(value) \(unit)"
         }
-        if equipment.isLevelBased {
-            if let combo = equipment.sortedWeightCombos.first(where: { $0.value == value }) {
-                return combo.levelDisplayName
-            }
-            return "Level \(Int(value))"
+        if equipment.usesOptions {
+            return WeightCombo.optionDisplayName(for: value, in: equipment.sortedWeightCombos)
         }
         let unit = equipment.effectiveWeightUnit
         return value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value)) \(unit)" : "\(value) \(unit)"
@@ -1184,15 +1509,20 @@ struct RepSessionRunnerView: View {
         // Seeded from the same equipment the set will be logged on, so switching
         // equipment re-seeds from that equipment's own history.
         let equipment = entry.flatMap { chosenEquipment(for: $0, exercise: exercise) }
+        // And from the same execution type, for the same reason — switching type re-seeds
+        // from that type's own history once the exercise keeps records apart.
+        let executionType = entry.flatMap { recordExecutionType(for: $0, exercise: exercise) }
+        let splits = exercise.splitsRecordsByExecutionType
         // Reps and weight, so only the weight/reps record has anything to seed from.
         let record = PersonalRecordQueries.current(
             for: exercise,
             equipment: equipment,
+            executionType: executionType,
             trackingMode: .repsWeight,
             isBodyweight: entry.map { isBodyweightSource(for: $0, exercise: exercise) } ?? false,
             context: context
         )
-        let best = SetLogQueries.lastBestSet(exercise: exercise, equipment: equipment, excluding: session, context: context)
+        let best = SetLogQueries.lastBestSet(exercise: exercise, equipment: equipment, executionType: executionType, scopesByExecutionType: splits, excluding: session, context: context)
         let weightOptions = (equipment ?? exercise.weightedEquipment)?.sortedWeightCombos.map(\.value) ?? []
         return (
             reps: record?.reps ?? best?.reps ?? 8,
@@ -1264,32 +1594,42 @@ struct RepSessionRunnerView: View {
     ) {
         restStartSignal += 1
         beginSaveLockout()
+        // The rung actually being performed, which the progression menu may have changed
+        // since this entry started. Everything below reads this, never `entry.exercise`.
+        let performed = resolvedExercise(for: entry)
         // Resolved the same way the steppers display it, so logging a set the user
         // never touched saves exactly the value they were shown.
-        let values = values ?? entry.exercise.map { draftValues(entry: entry, exercise: $0, key: key) }
+        let values = values ?? performed.map { draftValues(entry: entry, exercise: $0, key: key) }
         let reps = values?.reps ?? draftReps[key] ?? 8
 
         // The weight comes from whichever source this exercise is set to — typed number,
         // bodyweight zero, or the stepper's draft — so what's saved is what was shown.
-        let resolved = entry.exercise.map { resolvedWeight(entry: entry, exercise: $0, key: key) }
-        let isManual = entry.exercise.map { isManualEntry(for: entry, exercise: $0) } ?? false
+        let resolved = performed.map { resolvedWeight(entry: entry, exercise: $0, key: key) }
         let weight = resolved?.weight ?? values?.weight ?? draftWeight[key] ?? 0
         let isBodyweight = resolved?.isBodyweight ?? values?.isBodyweight ?? false
 
         let log = SetLog(
             session: session,
             repSectionExercise: entry,
-            exercise: entry.exercise,
-            exerciseNameSnapshot: entry.exercise?.displayName,
+            exercise: performed,
+            exerciseNameSnapshot: performed?.displayName,
             setIndex: key.index,
             reps: reps,
             weight: weight,
-            weightUnit: entry.exercise.map { activeWeightUnit(for: entry, exercise: $0) } ?? AppSettings.weightUnit,
+            weightUnit: performed.map { activeWeightUnit(for: entry, exercise: $0) } ?? AppSettings.weightUnit,
             isBodyweight: isBodyweight ? true : nil,
             side: key.side,
             repeatIndex: currentRepeat,
-            equipment: isManual ? nil : entry.exercise.flatMap { chosenEquipment(for: entry, exercise: $0) },
-            isManualWeight: isManual ? true : nil
+            // The equipment is always recorded now, typed weight or not — a record filed
+            // under a null equipment is keyed apart from the real one.
+            equipment: performed.flatMap { chosenEquipment(for: entry, exercise: $0) },
+            isManualWeight: manualWeightFlag(
+                weight: weight,
+                options: performed.map { activeWeightOptions(for: entry, exercise: $0) } ?? []
+            ),
+            // Stamped whether or not this exercise splits records: the flag can be turned
+            // on later, and history that never recorded the type could never be split.
+            executionType: performed.flatMap { chosenExecutionType(for: entry, exercise: $0) }
         )
         context.insert(log)
         session.markDirty()
@@ -1302,7 +1642,6 @@ struct RepSessionRunnerView: View {
             weight: weight,
             holdSeconds: nil,
             isBodyweight: isBodyweight,
-            isManual: isManual
         )
     }
 
@@ -1318,7 +1657,7 @@ struct RepSessionRunnerView: View {
         // otherwise let it feed back into the other's lookup, so the second side could
         // inherit the first's values instead of its own.
         let resolved: [(SetKey, (reps: Int, weight: Double, isBodyweight: Bool))] = pending.compactMap { key in
-            guard let exercise = entry.exercise else { return nil }
+            guard let exercise = resolvedExercise(for: entry) else { return nil }
             return (key, draftValues(entry: entry, exercise: exercise, key: key))
         }
 
@@ -1337,26 +1676,34 @@ struct RepSessionRunnerView: View {
         // `0` sentinel — `holdSeconds` is what makes this a hold — but weight,
         // equipment and the bodyweight flag are all real values now rather than being
         // dropped while a derived `weightUnit` was stored anyway.
-        let resolved = entry.exercise.map { resolvedWeight(entry: entry, exercise: $0, key: key) }
-        let isManual = entry.exercise.map { isManualEntry(for: entry, exercise: $0) } ?? false
+        let performed = resolvedExercise(for: entry)
+        let resolved = performed.map { resolvedWeight(entry: entry, exercise: $0, key: key) }
         let weight = resolved?.weight ?? 0
         let isBodyweight = resolved?.isBodyweight ?? false
 
         let log = SetLog(
             session: session,
             repSectionExercise: entry,
-            exercise: entry.exercise,
-            exerciseNameSnapshot: entry.exercise?.displayName,
+            exercise: performed,
+            exerciseNameSnapshot: performed?.displayName,
             setIndex: key.index,
             reps: 0,
             weight: weight,
-            weightUnit: entry.exercise.map { activeWeightUnit(for: entry, exercise: $0) } ?? AppSettings.weightUnit,
+            weightUnit: performed.map { activeWeightUnit(for: entry, exercise: $0) } ?? AppSettings.weightUnit,
             holdSeconds: holdSeconds,
             isBodyweight: isBodyweight ? true : nil,
             side: key.side,
             repeatIndex: currentRepeat,
-            equipment: isManual ? nil : entry.exercise.flatMap { chosenEquipment(for: entry, exercise: $0) },
-            isManualWeight: isManual ? true : nil
+            // The equipment is always recorded now, typed weight or not — a record filed
+            // under a null equipment is keyed apart from the real one.
+            equipment: performed.flatMap { chosenEquipment(for: entry, exercise: $0) },
+            isManualWeight: manualWeightFlag(
+                weight: weight,
+                options: performed.map { activeWeightOptions(for: entry, exercise: $0) } ?? []
+            ),
+            // Stamped whether or not this exercise splits records: the flag can be turned
+            // on later, and history that never recorded the type could never be split.
+            executionType: performed.flatMap { chosenExecutionType(for: entry, exercise: $0) }
         )
         context.insert(log)
         session.markDirty()
@@ -1369,7 +1716,6 @@ struct RepSessionRunnerView: View {
             weight: weight,
             holdSeconds: holdSeconds,
             isBodyweight: isBodyweight,
-            isManual: isManual
         )
     }
 
@@ -1377,23 +1723,28 @@ struct RepSessionRunnerView: View {
     /// one, filing the old value into history. Silent by design — a record is worth
     /// seeing afterwards, not worth interrupting a set for.
     ///
-    /// Manual-weight entries are skipped: they carry no equipment, so a record written
-    /// from one would file under a null equipment the Records screen keys separately from
-    /// the real one.
+    /// A typed weight counts like any other: it now carries the equipment it was
+    /// performed on, so its record files under that equipment rather than under a null
+    /// one the Records screen would key separately.
     private func recordIfBest(
         entry: RepSectionExercise,
         trackingMode: RepExerciseTrackingMode,
         reps: Int?,
         weight: Double?,
         holdSeconds: Int?,
-        isBodyweight: Bool,
-        isManual: Bool
+        isBodyweight: Bool
     ) {
-        guard !isManual, let exercise = entry.exercise else { return }
+        guard let exercise = resolvedExercise(for: entry) else { return }
+        // Before the `beats` guard below, which returns early on a set that didn't break
+        // any record — reaching a harder rung at all is the achievement here, whatever
+        // the numbers were.
+        raiseReachedLevel(performing: exercise)
         let equipment = isBodyweight ? nil : chosenEquipment(for: entry, exercise: exercise)
+        let executionType = recordExecutionType(for: entry, exercise: exercise)
         let existing = PersonalRecordQueries.current(
             for: exercise,
             equipment: equipment,
+            executionType: executionType,
             trackingMode: trackingMode,
             isBodyweight: isBodyweight,
             context: context
@@ -1411,6 +1762,7 @@ struct RepSessionRunnerView: View {
         PersonalRecordQueries.setRecord(
             for: exercise,
             equipment: equipment,
+            executionType: executionType,
             existing: existing,
             trackingMode: trackingMode,
             reps: reps,

@@ -6,12 +6,23 @@ import Foundation
 enum AppSettings {
     private static let defaultRestSecondsKey = "settings.defaultRestSeconds"
     private static let weightUnitKey = "settings.weightUnit"
-    private static let timerSoundProfileKey = "settings.timerSoundProfile"
+    /// Superseded by the `sound.*` keys below. Still read once, by
+    /// `SoundSettingsMigration`, so an upgrading device keeps the cues it had.
+    static let legacyTimerSoundProfileKey = "settings.timerSoundProfile"
+    private static let soundEndEnabledKey = "settings.sound.endEnabled"
+    private static let soundWarningEnabledKey = "settings.sound.warningEnabled"
+    private static let soundWarningSecondsKey = "settings.sound.warningSeconds"
     private static let speechEnabledKey = "settings.speechEnabled"
     private static let speechVoiceIdentifierKey = "settings.speechVoiceIdentifier"
     private static let shareCodeKey = "settings.shareCode"
     private static let displayNameKey = "settings.displayName"
     private static let workoutVideoAutoplayKey = "settings.workoutVideoAutoplay"
+    private static let voiceAnnounceNextEnabledKey = "settings.voice.announceNextEnabled"
+    private static let voiceAnnounceNextSecondsKey = "settings.voice.announceNextSeconds"
+    private static let voiceTimeLeftEnabledKey = "settings.voice.timeLeftEnabled"
+    private static let voiceCountdownEnabledKey = "settings.voice.countdownEnabled"
+    private static let voiceCountdownFromSecondsKey = "settings.voice.countdownFromSeconds"
+    private static let voiceAnnounceStartEnabledKey = "settings.voice.announceStartEnabled"
 
     static var defaultRestSeconds: Int {
         get {
@@ -29,11 +40,35 @@ enum AppSettings {
         set { UserDefaults.standard.set(newValue, forKey: weightUnitKey) }
     }
 
-    static var timerSoundProfile: TimerSoundProfile {
+    // MARK: - Timer sounds
+    //
+    // Three independent settings where there used to be one three-case profile. The end
+    // tone was previously unconditional and the warning could only fire at 5s or 10s;
+    // both are now free, which is what lets the beep and the spoken cue below be timed
+    // against each other rather than one being hardcoded.
+
+    /// Defaults to on — the end tone was unconditional before this setting existed, and
+    /// a timer that finishes in silence would be a surprising upgrade.
+    static var soundEndEnabled: Bool {
         get {
-            UserDefaults.standard.string(forKey: timerSoundProfileKey).flatMap(TimerSoundProfile.init) ?? .endOnly
+            guard UserDefaults.standard.object(forKey: soundEndEnabledKey) != nil else { return true }
+            return UserDefaults.standard.bool(forKey: soundEndEnabledKey)
         }
-        set { UserDefaults.standard.set(newValue.rawValue, forKey: timerSoundProfileKey) }
+        set { UserDefaults.standard.set(newValue, forKey: soundEndEnabledKey) }
+    }
+
+    /// Off by default, matching the old `.endOnly` profile.
+    static var soundWarningEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: soundWarningEnabledKey) }
+        set { UserDefaults.standard.set(newValue, forKey: soundWarningEnabledKey) }
+    }
+
+    static var soundWarningSeconds: Int {
+        get {
+            let stored = UserDefaults.standard.integer(forKey: soundWarningSecondsKey)
+            return stored == 0 ? 5 : stored
+        }
+        set { UserDefaults.standard.set(newValue, forKey: soundWarningSecondsKey) }
     }
 
     /// Whether a Follow Along step autoplays the exercise's video.
@@ -59,6 +94,61 @@ enum AppSettings {
     static var speechEnabled: Bool {
         get { UserDefaults.standard.bool(forKey: speechEnabledKey) }
         set { UserDefaults.standard.set(newValue, forKey: speechEnabledKey) }
+    }
+
+    /// Say what's coming next, so many seconds before the current step ends. On by
+    /// default — it was the only spoken cue before this, and turning speech on at all is
+    /// already an explicit choice.
+    static var voiceAnnounceNextEnabled: Bool {
+        get {
+            guard UserDefaults.standard.object(forKey: voiceAnnounceNextEnabledKey) != nil else { return true }
+            return UserDefaults.standard.bool(forKey: voiceAnnounceNextEnabledKey)
+        }
+        set { UserDefaults.standard.set(newValue, forKey: voiceAnnounceNextEnabledKey) }
+    }
+
+    static var voiceAnnounceNextSeconds: Int {
+        get {
+            let stored = UserDefaults.standard.integer(forKey: voiceAnnounceNextSecondsKey)
+            return stored == 0 ? 10 : stored
+        }
+        set { UserDefaults.standard.set(newValue, forKey: voiceAnnounceNextSecondsKey) }
+    }
+
+    /// Append "Ten seconds left" to the announcement above — the second half of the one
+    /// combined cue this used to be, now separable from it.
+    static var voiceTimeLeftEnabled: Bool {
+        get {
+            guard UserDefaults.standard.object(forKey: voiceTimeLeftEnabledKey) != nil else { return true }
+            return UserDefaults.standard.bool(forKey: voiceTimeLeftEnabledKey)
+        }
+        set { UserDefaults.standard.set(newValue, forKey: voiceTimeLeftEnabledKey) }
+    }
+
+    /// Speak the last few seconds one at a time — "three, two, one". Independent of the
+    /// announcement, and off by default: it is new behaviour, not a restatement of
+    /// anything the app did before.
+    static var voiceCountdownEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: voiceCountdownEnabledKey) }
+        set { UserDefaults.standard.set(newValue, forKey: voiceCountdownEnabledKey) }
+    }
+
+    static var voiceCountdownFromSeconds: Int {
+        get {
+            let stored = UserDefaults.standard.integer(forKey: voiceCountdownFromSecondsKey)
+            return stored == 0 ? 3 : stored
+        }
+        set { UserDefaults.standard.set(newValue, forKey: voiceCountdownFromSecondsKey) }
+    }
+
+    /// Name each step as it begins. On by default — this is what "Speak exercise names"
+    /// did, so an upgrading device that had speech on keeps hearing it.
+    static var voiceAnnounceStartEnabled: Bool {
+        get {
+            guard UserDefaults.standard.object(forKey: voiceAnnounceStartEnabledKey) != nil else { return true }
+            return UserDefaults.standard.bool(forKey: voiceAnnounceStartEnabledKey)
+        }
+        set { UserDefaults.standard.set(newValue, forKey: voiceAnnounceStartEnabledKey) }
     }
 
     /// `nil` means "whatever the device offers first" — resolved by

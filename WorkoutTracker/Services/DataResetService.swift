@@ -15,6 +15,7 @@ enum DataResetService {
         // SwiftData's standard relationship-aware deletion path instead.
         try deleteAll(SetLog.self, context: context)
         try deleteAll(StepLog.self, context: context)
+        try deleteAll(SectionResultLog.self, context: context)
         try deleteAll(ExerciseSessionNote.self, context: context)
         try deleteAll(WorkoutSession.self, context: context)
         // Before its parent: entries cascade, but deleting them first keeps the
@@ -28,10 +29,14 @@ enum DataResetService {
         try deleteAll(SectionExerciseEntry.self, context: context)
         try deleteAll(WorkoutSection.self, context: context)
         try deleteAll(Workout.self, context: context)
+        try deleteAll(WorkoutTag.self, context: context)
+        try deleteAll(ProgressionStep.self, context: context)
+        try deleteAll(ProgressionGroup.self, context: context)
         try deleteAll(Exercise.self, context: context)
         try deleteAll(WeightCombo.self, context: context)
         try deleteAll(Equipment.self, context: context)
         try deleteAll(ExerciseCategory.self, context: context)
+        try deleteAll(ExecutionType.self, context: context)
         try deleteAll(Muscle.self, context: context)
         try deleteAll(MuscleCategory.self, context: context)
         try context.save()
@@ -42,6 +47,9 @@ enum DataResetService {
         // deletes everything and then fails to reseed must not look like it succeeded).
         UserDefaults.standard.removeObject(forKey: SeedDataLoader.seededFlagKey)
         try CatalogSeedLoader.seed(context: context)
+        // Not `seedIfNeeded` — its flag is already set on a device that has launched
+        // once, so the guard would leave the reset store with no execution types.
+        ExecutionTypeSeed.seed(context: context)
         for key in WorkoutTrackerApp.legacyMigrationFlagKeys {
             UserDefaults.standard.set(true, forKey: key)
         }

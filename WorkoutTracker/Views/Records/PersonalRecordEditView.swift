@@ -1,577 +1,380 @@
 import SwiftUI
 import SwiftData
 
-/// One exercise's personal records, with the two things that decide *which* record you
-/// are looking at as selectable lines at the top: the equipment it was set on, and
-/// whether it's a weight/reps best or a max hold. Everything below — the value controls,
-/// the Save gate and the history — follows that selection.
+/// One exercise's personal records: every equipment/execution-type/tracking-mode
+/// combination it has a record for (saved or just logged), each its own collapsible
+/// section with its own history — rather than the equipment/type/mode selectors that
+/// used to sit fixed at the top of this page, deciding which single record you were
+/// looking at.
 ///
-/// Absent a saved record for the chosen combination the form prefills from session
-/// history, and absent that from the equipment's lightest preset, so a new record starts
-/// somewhere real rather than at zero.
+/// The highest real, comparable weight this exercise has ever moved — separately for
+/// reps and for max time, converted to one unit so different equipment can be compared
+/// at all — leads the list, highlighted rather than restated. Creating a genuinely new
+/// combination moved behind "Add Record"; see `AddPersonalRecordSheet`, which is also
+/// what the Records list's own "+" opens directly.
 struct PersonalRecordEditView: View {
-    /// Which load a record belongs to. Mirrors the session runner's `WeightSource` minus
-    /// its manual case — a typed-in weight carries no equipment, so a record written from
-    /// one has no key to file under.
-    private enum RecordSource: Hashable {
-        case equipment(UUID)
-        case bodyweight
-        /// Records saved before records were kept per equipment. Offered in the menu only
-        /// while it's already the selection, so it can be returned to but never newly chosen.
-        case none
-    }
+    let exercise: Exercise
 
     @Environment(\.modelContext) private var context
-    @Environment(\.dismiss) private var dismiss
 
-    /// The sheet path needs a stack of its own for its title and Done; the push path
-    /// already has the Records list's, and nesting a second one there swallowed the back
-    /// button and made `dismiss()` pop the wrong stack.
-    var isPresentedAsSheet: Bool = false
-
-    /// nil only on the add path, until the exercise line picks one.
-    @State private var exercise: Exercise?
-    @State private var source: RecordSource
-    @State private var trackingMode: RepExerciseTrackingMode
-    @State private var loadedRecord: PersonalRecord?
-    @State private var weight: Double = 0
-    @State private var reps: Int = 0
-    @State private var holdSeconds: Int = 0
-    /// Level-based equipment only: true when the value sits off the level ladder, which
-    /// swaps the stepper for a typed field so an off-ladder level stays editable.
-    @State private var useCustomWeight = false
-    @State private var showingExercisePicker = false
-    @State private var showingRepsWheel = false
-    @State private var showingTimeWheel = false
-    @State private var hasLoaded = false
-
-    /// Kept so a record whose equipment has since been detached from the exercise still
-    /// opens on the right one — `equipmentItems` would no longer resolve it.
-    private let initialEquipment: Equipment?
-    /// Only the add path lets the exercise change; opened from the Records list the title
-    /// band already names it, and swapping it there would silently retarget the edit.
-    private let allowsExerciseChange: Bool
-
-    init(
-        exercise: Exercise? = nil,
-        equipment: Equipment? = nil,
-        isBodyweight: Bool = false,
-        trackingMode: RepExerciseTrackingMode = .repsWeight,
-        /// The record being opened really is a legacy one saved with no equipment. Only
-        /// then does a nil `equipment` mean `.none` — otherwise it just means "not
-        /// resolved", and opening on "No equipment" offered a source the exercise
-        /// doesn't even have and that vanishes the moment you switch away from it.
-        hasNoEquipmentRecord: Bool = false,
-        isPresentedAsSheet: Bool = false
-    ) {
-        self.isPresentedAsSheet = isPresentedAsSheet
-        self.initialEquipment = equipment
-        self.allowsExerciseChange = exercise == nil
-        _exercise = State(initialValue: exercise)
-        _trackingMode = State(initialValue: trackingMode)
-        if isBodyweight {
-            _source = State(initialValue: .bodyweight)
-        } else if let equipment {
-            _source = State(initialValue: .equipment(equipment.id))
-        } else if hasNoEquipmentRecord {
-            _source = State(initialValue: .none)
-        } else if let exercise, let resolved = exercise.weightedEquipment {
-            _source = State(initialValue: .equipment(resolved.id))
-        } else if exercise != nil {
-            _source = State(initialValue: .bodyweight)
-        } else {
-            _source = State(initialValue: .none)
-        }
-    }
+    @State private var variants: [RecordVariant] = []
+    /// Which variant's history is open — at most one at a time, the same idiom used
+    /// throughout the app for a tap-to-expand row (see `EquipmentDetailView.optionRow`).
+    @State private var expandedHistoryKey: RecordVariantKey?
+    /// The variant the pencil opened a corrector for — a settings-style bottom sheet
+    /// (`RecordEditPopup`) rather than an inline row, the same pattern
+    /// `SectionSettingsPanel` uses for a section's own settings.
+    @State private var editingVariant: RecordVariant?
+    @State private var showingAddRecord = false
+    /// A past history entry the trash icon was tapped on, awaiting the confirm alert —
+    /// not `role: .destructive` on the icon itself, since that plays no removal
+    /// animation here the way a destructive swipe action would (see
+    /// `SessionHistoryListView`'s own version of this pattern); the role belongs on the
+    /// alert's own confirm button instead.
+    @State private var pendingDeleteEntry: PersonalRecordEntry?
+    /// The variant whose *standing* value the trash icon was tapped on — distinct from
+    /// `pendingDeleteEntry` since there's no `PersonalRecordEntry` to point at for the
+    /// current value, only the record itself. See `deleteCurrentValue`.
+    @State private var pendingDeleteCurrent: RecordVariant?
 
     var body: some View {
-        if isPresentedAsSheet {
-            NavigationStack { content }
-        } else {
-            content
-        }
-    }
-
-    private var content: some View {
-        List {
-            if allowsExerciseChange {
-                GlassButtonRow(
-                    systemImage: "figure.strengthtraining.traditional",
-                    title: "Exercise",
-                    value: exercise?.displayName ?? "Choose…"
-                ) {
-                    showingExercisePicker = true
-                }
-                .formRow(isLast: false)
-            }
-
-            GlassMenuRow(
-                systemImage: isBodyweight ? "figure.strengthtraining.functional" : "dumbbell.fill",
-                title: "Equipment",
-                value: equipmentLabel,
-                isEnabled: exercise != nil
-            ) {
-                equipmentMenu
-            }
-            .formRow(isLast: false)
-
-            GlassMenuRow(
-                systemImage: "trophy.fill",
-                title: "Record type",
-                value: trackingMode == .maxHoldTime ? "Max Time" : "Weight & Reps",
-                isEnabled: exercise != nil
-            ) {
-                Button("Weight & Reps") { trackingMode = .repsWeight }
-                Button("Max Time") { trackingMode = .maxHoldTime }
-            }
-            .formRow(isLast: false)
-
-            valueSection
-            saveSection
-            historySection
-        }
-        .fullBleedList()
-        .safeAreaInset(edge: .top, spacing: 0) {
-            PushedTitleBand(title: exercise?.displayName ?? "New Record")
-        }
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if isPresentedAsSheet {
-                // "Done", not "Cancel": saving happens in the page now, so by the time
-                // this is tapped the work is already committed.
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
-                }
-            }
-        }
-        .sheet(isPresented: $showingExercisePicker) {
-            // No `excluding:` — an exercise that already has a barbell record is exactly
-            // the one you'd reach for to add a dumbbell one.
-            ExercisePickerView { picked in
-                exercise = picked
-                source = defaultSource(for: picked)
-                reload()
-            }
-        }
-        .onChange(of: source) { reload() }
-        .onChange(of: trackingMode) { reload() }
-        .onAppear {
-            // Guarded: a push can re-appear, and reloading then would throw away edits
-            // the user came back to finish.
-            guard !hasLoaded else { return }
-            hasLoaded = true
-            reload()
-        }
-    }
-
-    // MARK: - Selection
-
-    private var isBodyweight: Bool { source == .bodyweight }
-
-    /// Looked up on the exercise, falling back to whatever the caller handed over — a
-    /// record can outlive its equipment being detached, and it still has to open on it.
-    private var selectedEquipment: Equipment? {
-        guard case .equipment(let id) = source else { return nil }
-        if let match = exercise?.equipmentItems.first(where: { $0.id == id }) { return match }
-        return initialEquipment?.id == id ? initialEquipment : nil
-    }
-
-    /// The exercise's weighted equipment, plus the current selection when it isn't among
-    /// them — otherwise switching away from an unusual record would be a one-way door.
-    private var equipmentOptions: [Equipment] {
-        guard let exercise else { return [] }
-        var options = exercise.weightedEquipmentOptions
-        if let current = selectedEquipment, !options.contains(where: { $0.id == current.id }) {
-            options.insert(current, at: 0)
-        }
-        return options
-    }
-
-    @ViewBuilder
-    private var equipmentMenu: some View {
-        ForEach(equipmentOptions) { item in
-            Button(item.name) { source = .equipment(item.id) }
-        }
-        // The `|| source ==` half matches what `.none` below already does: a record
-        // that opens on bodyweight has to be able to return to it, even on an exercise
-        // the catalog says can't be done unloaded.
-        if exercise?.allowsBodyweightSource == true || source == .bodyweight {
-            Button("Bodyweight") { source = .bodyweight }
-        }
-        if source == RecordSource.none {
-            Button("No equipment") { source = .none }
-        }
-    }
-
-    private var equipmentLabel: String {
-        switch source {
-        case .bodyweight: return "Bodyweight"
-        case .none: return "No equipment"
-        case .equipment: return selectedEquipment?.name ?? "No equipment"
-        }
-    }
-
-    private func defaultSource(for exercise: Exercise) -> RecordSource {
-        if let resolved = exercise.weightedEquipment { return .equipment(resolved.id) }
-        return .bodyweight
-    }
-
-    private var weightUnit: String {
-        selectedEquipment?.effectiveWeightUnit ?? AppSettings.weightUnit
-    }
-
-    // MARK: - Value controls
-
-    @ViewBuilder
-    private var valueSection: some View {
-        if exercise != nil {
-            switch trackingMode {
-            case .repsWeight:
-                if !isBodyweight {
-                    weightControl(isLast: false)
-                }
-                repsRow.formRow()
-            case .maxHoldTime:
-                // Weight first, then the time — the order the record reads in
-                // (`20 kg × 60s`) and the order the hold card logs it in.
-                if !isBodyweight {
-                    weightControl(isLast: false)
-                }
-                timeRow.formRow()
-            }
-        }
-    }
-
-    /// The one shape every number on this page takes: a label, then ⊖ value ⊕. The value
-    /// itself is a button wherever a wheel is offered, so a big jump doesn't mean forty taps.
-    ///
-    /// `.borderless` on the buttons is load-bearing: a `List` row with plain buttons in it
-    /// treats a tap anywhere on the row as a tap on all of them.
-    @ViewBuilder
-    private func numberRow<Value: View>(
-        _ label: String,
-        onStep: @escaping (Int) -> Void,
-        @ViewBuilder value: () -> Value
-    ) -> some View {
-        HStack(spacing: 12) {
-            Text(label)
-            Spacer()
-            Button {
-                onStep(-1)
-            } label: {
-                Image(systemName: "minus.circle")
-            }
-            .buttonStyle(.borderless)
-            value()
-            Button {
-                onStep(1)
-            } label: {
-                Image(systemName: "plus.circle")
-            }
-            .buttonStyle(.borderless)
-        }
-        .foregroundStyle(Color.appAccent)
-    }
-
-    /// The value rendered as a button that opens its wheel.
-    ///
-    /// The popover hangs off the button rather than the row: attached to the enclosing
-    /// `HStack` it presents from the full row width and points at the wrong place.
-    private func wheelValue<Wheel: View>(
-        _ text: String,
-        isPresented: Binding<Bool>,
-        @ViewBuilder wheel: @escaping () -> Wheel
-    ) -> some View {
-        Button {
-            isPresented.wrappedValue = true
-        } label: {
-            Text(text)
-                .foregroundStyle(Color.appInk)
-                .frame(minWidth: 88)
-        }
-        .buttonStyle(.borderless)
-        .popover(isPresented: isPresented) { wheel() }
-    }
-
-    private var repsRow: some View {
-        numberRow("Reps", onStep: { reps = min(200, max(0, reps + $0)) }) {
-            wheelValue("\(reps)", isPresented: $showingRepsWheel) {
-                GlassNumberWheel(title: "Reps", value: $reps, range: 0...200) { "\($0) reps" }
-            }
-        }
-    }
-
-    private var timeRow: some View {
-        numberRow("Max time", onStep: { holdSeconds = min(3600, max(0, holdSeconds + $0)) }) {
-            wheelValue("\(holdSeconds)s", isPresented: $showingTimeWheel) {
-                GlassNumberWheel(title: "Max time", value: $holdSeconds, range: 0...3600) { "\($0)s" }
-            }
-        }
-    }
-
-    /// Steps through the selected equipment's presets rather than taking a typed number,
-    /// so the record is set the same way the set that earns it is logged.
-    ///
-    /// The only number here with no wheel: its ladder is the equipment's own handful of
-    /// presets, walkable in a few taps, and a wheel couldn't carry the level colour dots.
-    @ViewBuilder
-    private func weightControl(isLast: Bool) -> some View {
-        let equipment = selectedEquipment
-        let isLevelBased = equipment?.isLevelBased == true
-        if isLevelBased {
-            Toggle("Custom value", isOn: $useCustomWeight)
-                .formRow(isLast: false)
-        }
-        if isLevelBased && useCustomWeight {
-            HStack {
-                Text("Level")
-                Spacer()
-                TextField("Value", value: $weight, format: .number)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 100)
-            }
-            .formRow(isLast: isLast)
-        } else {
-            let options = equipment?.sortedWeightCombos ?? []
-            numberRow(isLevelBased ? "Level" : "Weight", onStep: { step($0, options: options) }) {
-                weightDisplay.frame(minWidth: 88)
-            }
-            .formRow(isLast: isLast)
-        }
-    }
-
-    /// `allowsBodyweight: false` on purpose — bodyweight is an explicit choice on the
-    /// equipment line here, so the ladder must not slide off its bottom into it behind
-    /// the selector's back.
-    private func step(_ delta: Int, options: [WeightCombo]) {
-        weight = steppedSetWeight(
-            delta: delta,
-            weight: weight,
-            isBodyweight: false,
-            options: options,
-            allowsBodyweight: false
-        ).weight
-    }
-
-    /// Level-based equipment shows the matching level's color dot and name, the way a set
-    /// row does; everything else shows "value unit".
-    @ViewBuilder
-    private var weightDisplay: some View {
-        if let equipment = selectedEquipment, equipment.isLevelBased {
-            if let combo = equipment.sortedWeightCombos.first(where: { $0.value == weight }) {
-                HStack(spacing: 4) {
-                    if let color = combo.color {
-                        Circle().fill(color.color).frame(width: 8, height: 8)
-                    }
-                    Text(combo.levelDisplayName)
-                        .foregroundStyle(Color.appInk)
-                }
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            } else {
-                Text("Level \(Int(weight))")
-                    .foregroundStyle(Color.appInk)
-            }
-        } else {
-            Text(formattedSetWeight(weight, unit: weightUnit))
-                .foregroundStyle(Color.appInk)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-    }
-
-    // MARK: - Save
-
-    /// A brand-new record has to hold something; the gate below would otherwise let an
-    /// empty one through, since anything beats no record at all.
-    private var hasValue: Bool {
-        trackingMode == .maxHoldTime ? holdSeconds > 0 : reps > 0
-    }
-
-    /// Only a value that actually beats the standing record can be saved — heavier, or
-    /// more reps at the same weight, or a longer hold. Straight through
-    /// `PersonalRecordQueries.beats`, the same ranking a set logged in a session is
-    /// promoted by, so the two can't disagree about what counts as a record.
-    private var canSave: Bool {
-        guard exercise != nil, hasValue else { return false }
-        return PersonalRecordQueries.beats(
-            record: loadedRecord,
-            trackingMode: trackingMode,
-            reps: trackingMode == .maxHoldTime ? nil : reps,
-            weight: isBodyweight ? nil : weight,
-            holdSeconds: trackingMode == .maxHoldTime ? holdSeconds : nil,
-            isBodyweight: isBodyweight
-        )
-    }
-
-    @ViewBuilder
-    private var saveSection: some View {
-        if exercise != nil {
-            Section {
-                Button {
-                    save()
-                } label: {
-                    Text("Save")
-                        .foregroundStyle(canSave ? Color.appAccent : Color.secondary)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.glassProminent)
-                .tint(Color.appAccent.opacity(0.25))
-                .disabled(!canSave)
-                .formRow()
-            } footer: {
-                FormSectionFooter("Save unlocks once the value beats the current record.")
-            }
-        }
-    }
-
-    /// Routed through `PersonalRecordQueries.setRecord` rather than mutating in place, so
-    /// replacing a value files the old one into history instead of destroying it.
-    ///
-    /// Stays on the page: the point of saving here is to see the result — the history
-    /// gains a row and Save locks again, because the form now matches the record.
-    private func save() {
-        guard let exercise, canSave else { return }
-        // Stamped rather than re-derived at display time, so the number keeps its meaning
-        // if the exercise's equipment changes later.
-        let unit = isBodyweight ? nil : weightUnit
-        loadedRecord = PersonalRecordQueries.setRecord(
-            for: exercise,
-            equipment: selectedEquipment,
-            existing: loadedRecord,
-            trackingMode: trackingMode,
-            // A hold has no rep count, and a rep record has no hold — each carries only
-            // what its own shape means.
-            reps: trackingMode == .maxHoldTime ? nil : reps,
-            weight: isBodyweight ? nil : weight,
-            holdSeconds: trackingMode == .maxHoldTime ? holdSeconds : nil,
-            isBodyweight: isBodyweight,
-            weightUnit: unit,
-            context: context
-        )
-    }
-
-    // MARK: - Loading
-
-    /// Re-resolves the record behind the current selection and re-seeds the form from it.
-    /// Called whenever the equipment, the record type or the exercise changes — those are
-    /// the three things that decide which record this page is editing.
-    private func reload() {
-        guard let exercise else {
-            loadedRecord = nil
-            return
-        }
-        let equipment = selectedEquipment
-        let record = PersonalRecordQueries.current(
-            for: exercise,
-            equipment: equipment,
-            trackingMode: trackingMode,
-            isBodyweight: isBodyweight,
-            context: context
-        )
-        loadedRecord = record
-
-        if let record {
-            weight = record.weight ?? 0
-            reps = record.reps ?? 0
-            holdSeconds = record.holdSeconds ?? 0
-        } else {
-            seedFromHistory(exercise: exercise, equipment: equipment)
-        }
-
-        // An off-ladder value has no level to step to, so the typed field is the only
-        // control that can represent it.
-        useCustomWeight = equipment?.isLevelBased == true
-            && weight != 0
-            && !equipment!.sortedWeightCombos.contains { $0.value == weight }
-    }
-
-    /// No saved record yet: fall back to the best this exercise was actually logged at on
-    /// this equipment, and failing that to the lightest weight the equipment offers — so
-    /// picking an equipment you've never set a record on starts at its first notch rather
-    /// than at nothing.
-    private func seedFromHistory(exercise: Exercise, equipment: Equipment?) {
-        let lightest = equipment?.sortedWeightCombos.first?.value ?? 0
-        switch trackingMode {
-        case .maxHoldTime:
-            reps = 0
-            holdSeconds = SetLogQueries.bestHoldEver(exercise: exercise, equipment: equipment, context: context) ?? 0
-            weight = isBodyweight ? 0 : lightest
-        case .repsWeight:
-            holdSeconds = 0
-            if isBodyweight {
-                reps = SetLogQueries.bestBodyweightRepsEver(exercise: exercise, context: context) ?? 0
-                weight = 0
-            } else if let best = SetLogQueries.bestSetEver(exercise: exercise, equipment: equipment, context: context) {
-                weight = best.weight
-                reps = best.reps
-            } else {
-                weight = lightest
-                reps = 0
-            }
-        }
-    }
-
-    // MARK: - History
-
-    /// The record's progression, newest first: the standing record, then every value it
-    /// superseded. Read-only below the top row — history is a log of what actually
-    /// happened rather than something to revise.
-    ///
-    /// Shown as soon as there is a saved record, even with no history behind it: the row
-    /// carries the date the record was set, which nothing else on the page does.
-    @ViewBuilder
-    private var historySection: some View {
-        if let record = loadedRecord {
-            Section {
-                // A record carries no achievement date of its own, so `updatedAt` is the
-                // best stamp available — the same one `setRecord` files superseded values
-                // under. Not swipe-deletable: removing the record itself is the Records
-                // list's swipe, and doing it here would leave the page editing nothing.
-                historyRow(
-                    text: PersonalRecordFormatting.summary(record),
-                    date: record.updatedAt,
-                    isCurrent: true
+        Group {
+            if variants.isEmpty {
+                ContentUnavailableView(
+                    "No Records Yet",
+                    systemImage: "trophy",
+                    description: Text("Add Record below to set one.")
                 )
-                // Already filtered of tombstones and sorted newest first by the getter.
-                ForEach(record.history) { entry in
-                    historyRow(
-                        text: historySummary(entry),
-                        date: entry.achievedAt,
-                        isCurrent: false
-                    )
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            SyncDeletion.delete(entry, context: context)
-                            try? context.save()
-                        } label: {
-                            Label("Delete", systemImage: "trash")
+            } else {
+                List {
+                    ForEach(sortedVariants) { variant in
+                        Group {
+                            headerRow(variant)
+                            if expandedHistoryKey == variant.key {
+                                historyRows(for: variant)
+                            }
+                            // A boundary after every variant's own content, whatever that
+                            // content happens to be — collapsed header or an open history.
+                            // `headerRow`/`historyRows` only ever decide separators
+                            // *within* a variant (header vs. its own expanded history);
+                            // without this, two collapsed variants sat back to back with
+                            // no line between them at all.
+                            variantDivider(isLast: variant.id == sortedVariants.last?.id)
                         }
                     }
                 }
-            } header: {
-                FormSectionHeader("Record Progression")
-            } footer: {
-                FormSectionFooter("Each time this record is beaten — here or during a workout — the value it replaced is kept with the date it was set.")
+                .fullBleedList()
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            PushedTitleBand(title: exercise.displayName)
+        }
+        .safeAreaInset(edge: .bottom) {
+            // Hidden while the edit popup is up: it opens at a fitted, partial height
+            // (`SettingsPanelSheet`) that leaves the sheet's translucent material over
+            // whatever's behind it, and a second call-to-action floating under that read
+            // as two competing bottom actions.
+            if editingVariant == nil {
+                addRecordButton
+            }
+        }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingAddRecord) {
+            AddPersonalRecordSheet(exercise: exercise, onSaved: refresh)
+        }
+        .sheet(item: $editingVariant) { variant in
+            RecordEditPopup(exercise: exercise, variant: variant, context: context) { _ in
+                refresh()
+                editingVariant = nil
+            }
+        }
+        .alert("Delete this entry?", isPresented: Binding(
+            get: { pendingDeleteEntry != nil },
+            set: { if !$0 { pendingDeleteEntry = nil } }
+        )) {
+            Button("Delete", role: .destructive) { deletePendingEntry() }
+            Button("Cancel", role: .cancel) { pendingDeleteEntry = nil }
+        } message: {
+            Text("This can't be undone.")
+        }
+        .alert("Delete this record?", isPresented: Binding(
+            get: { pendingDeleteCurrent != nil },
+            set: { if !$0 { pendingDeleteCurrent = nil } }
+        )) {
+            Button("Delete", role: .destructive) { deletePendingCurrent() }
+            Button("Cancel", role: .cancel) { pendingDeleteCurrent = nil }
+        } message: {
+            Text("The next most recent value on file takes its place. If there isn't one, this removes the record entirely.")
+        }
+        .onAppear(perform: refresh)
+    }
+
+    private func refresh() {
+        variants = PersonalRecordVariants.variants(for: exercise, context: context)
+    }
+
+    private func deletePendingEntry() {
+        guard let entry = pendingDeleteEntry else { return }
+        SyncDeletion.delete(entry, context: context)
+        try? context.save()
+        pendingDeleteEntry = nil
+        refresh()
+    }
+
+    private func deletePendingCurrent() {
+        guard let variant = pendingDeleteCurrent else { return }
+        pendingDeleteCurrent = nil
+        deleteCurrentValue(for: variant)
+    }
+
+    /// Deletes the record's own standing value in favor of whatever it most recently
+    /// superseded — the mirror image of `PersonalRecordQueries.setRecord`, which files
+    /// the current value into a fresh history entry every time a *new* one is saved.
+    /// With no history to fall back to, there's nothing left to promote, so this is the
+    /// same as deleting the whole record.
+    private func deleteCurrentValue(for variant: RecordVariant) {
+        guard let record = variant.record else { return }
+        guard let mostRecent = record.history.first else {
+            deleteRecord(for: variant)
+            return
+        }
+        record.weight = mostRecent.weight
+        record.reps = mostRecent.reps
+        record.holdSeconds = mostRecent.holdSeconds
+        record.weightUnit = mostRecent.weightUnit
+        // The record's own `updatedAt` doubles as its "when this was achieved" stamp —
+        // `setRecord` establishes that convention itself, stamping a fresh entry's
+        // `achievedAt` from the record's `updatedAt` at the moment it's superseded.
+        // Reversing that has to restore the same stamp, or this would read as achieved
+        // just now instead of whenever it actually was.
+        record.updatedAt = mostRecent.achievedAt
+        SyncDeletion.delete(mostRecent, context: context)
+        try? context.save()
+        refresh()
+    }
+
+    private var addRecordButton: some View {
+        Button {
+            showingAddRecord = true
+        } label: {
+            Label("Add Record", systemImage: "plus")
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.glassProminent)
+        .buttonBorderShape(.roundedRectangle(radius: 12))
+        .padding()
+    }
+
+    // MARK: - Ordering and the absolute record
+
+    /// The absolute-record variant(s) lead, each still in its own natural place among
+    /// the rest — not duplicated, just promoted and, in the row itself, highlighted.
+    private var sortedVariants: [RecordVariant] {
+        let absoluteIDs = Set(absoluteRecordVariants.map(\.id))
+        guard !absoluteIDs.isEmpty else { return variants }
+        let promoted = variants.filter { absoluteIDs.contains($0.id) }
+        let rest = variants.filter { !absoluteIDs.contains($0.id) }
+        return promoted + rest
+    }
+
+    /// The single highest real weight this exercise has ever moved, separately for
+    /// reps and for max time — unit-converted so a kg record and an lb record can be
+    /// compared at all. Bodyweight, option-based equipment and Follow Along records are
+    /// excluded by `RecordVariant.absoluteComparisonWeightInKg` itself: "options are
+    /// separate, not used for absolute records," bodyweight has no load to compare, and
+    /// a carried Follow Along load isn't a performance to rank the same way a rep or
+    /// hold record is.
+    private var absoluteRecordVariants: [RecordVariant] {
+        [RepExerciseTrackingMode.repsWeight, .maxHoldTime].compactMap { mode in
+            variants
+                .filter { $0.trackingMode == mode }
+                .compactMap { variant in variant.absoluteComparisonWeightInKg.map { (variant, $0) } }
+                .max { $0.1 < $1.1 }
+                .map(\.0)
+        }
+    }
+
+    // MARK: - Rows
+
+    private func headerRow(_ variant: RecordVariant) -> some View {
+        let isAbsolute = absoluteRecordVariants.contains { $0.id == variant.id }
+        let isHistoryExpanded = expandedHistoryKey == variant.key
+
+        return HStack(spacing: 8) {
+            if isAbsolute {
+                Image(systemName: "trophy.fill")
+                    .foregroundStyle(Color.appAccent)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(variant.headerLabel)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.appInk)
+                HStack(spacing: 4) {
+                    if let color = variant.settingColor {
+                        Circle().fill(color.color).frame(width: 8, height: 8)
+                    }
+                    Text(variant.summary)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.appRust)
+                }
+            }
+            Spacer(minLength: 8)
+            Button {
+                editingVariant = variant
+            } label: {
+                Image(systemName: "pencil")
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(Color.appAccent)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .rotationEffect(.degrees(isHistoryExpanded ? 90 : 0))
+        }
+        .padding(.leading, 16)
+        .padding(.vertical, 12)
+        // No trailing padding: `fullBleedRow` already reserves the standard 16pt gutter
+        // on that edge (for what's normally a `NavigationLink` chevron), and its
+        // separator lines up with that same edge — leaving content flush to its own
+        // trailing edge is what puts this row's own chevron on that exact line instead
+        // of stopping another 16pt short of it.
+        .contentShape(Rectangle())
+        // The tappable area is the whole row except the pencil, which is its own
+        // button and takes the tap first within its own bounds.
+        .onTapGesture {
+            withAnimation { expandedHistoryKey = isHistoryExpanded ? nil : variant.key }
+        }
+        .background(Color.appSurface)
+        .fullBleedRow(isLast: !isHistoryExpanded)
+        .swipeActions(edge: .trailing) {
+            // Only offered once there's an actual `PersonalRecord` to remove — a
+            // derived-only variant has nothing behind it but the sets themselves, and
+            // deleting those isn't what a swipe on the Records screen should ever do.
+            if variant.record != nil {
+                Button(role: .destructive) {
+                    deleteRecord(for: variant)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
             }
         }
     }
 
-    private func historyRow(text: String, date: Date, isCurrent: Bool) -> some View {
-        HStack {
-            Text(text)
-                .font(.body.weight(isCurrent ? .semibold : .regular))
-                .foregroundStyle(Color.appInk)
-            Spacer()
-            Text(date.formatted(date: .abbreviated, time: .omitted))
-                .font(.caption)
-                .foregroundStyle(.secondary)
+    /// Removes the variant's saved record entirely — its whole history along with it, not
+    /// just the standing value — and refreshes. A variant still backed by logged sets
+    /// reappears as a derived one rather than vanishing outright; one with nothing else
+    /// behind it disappears, and the page falls back to its empty state once none are left.
+    private func deleteRecord(for variant: RecordVariant) {
+        guard let record = variant.record else { return }
+        for entry in record.history {
+            SyncDeletion.delete(entry, context: context)
+        }
+        SyncDeletion.delete(record, context: context)
+        try? context.save()
+        if expandedHistoryKey == variant.key { expandedHistoryKey = nil }
+        refresh()
+    }
+
+    /// A separator-only row, with no content of its own — see the call site's comment
+    /// for why this is the one thing that reliably marks the end of a variant.
+    private func variantDivider(isLast: Bool) -> some View {
+        Color.clear
+            .frame(height: 0)
+            .fullBleedRow(isLast: isLast)
+    }
+
+    /// The record's progression, newest first — the standing record, then every value
+    /// it superseded. Read-only below the top row: history is a log of what actually
+    /// happened rather than something to revise.
+    @ViewBuilder
+    private func historyRows(for variant: RecordVariant) -> some View {
+        if let record = variant.record {
+            historyRow(
+                text: PersonalRecordFormatting.summary(record),
+                date: record.updatedAt,
+                isCurrent: true,
+                isLast: record.history.isEmpty,
+                onDelete: { pendingDeleteCurrent = variant }
+            )
+            ForEach(record.history) { entry in
+                historyRow(
+                    text: PersonalRecordFormatting.summary(entry),
+                    date: entry.achievedAt,
+                    isCurrent: false,
+                    isLast: entry.id == record.history.last?.id,
+                    onDelete: { pendingDeleteEntry = entry }
+                )
+            }
+        } else {
+            // No explicit record — just the best of what's actually been logged — but
+            // that's not "unsaved" any more than a record filed automatically mid-workout
+            // is: doing the workout is the main way a record is set at all, so this reads
+            // as the same kind of row as every other, just with no history behind it yet.
+            historyRow(text: variant.summary, date: nil, isCurrent: true, isLast: true)
         }
     }
 
-    private func historySummary(_ entry: PersonalRecordEntry) -> String {
-        PersonalRecordFormatting.summary(entry)
+    /// `onDelete` is offered for the current value and every past entry alike — a wrong
+    /// value is a wrong value whichever one it is — but never for the derived-only
+    /// fallback row, which has no `PersonalRecord`/`PersonalRecordEntry` behind it at
+    /// all, only the logged sets themselves.
+    private func historyRow(text: String, date: Date?, isCurrent: Bool, isLast: Bool, onDelete: (() -> Void)? = nil) -> some View {
+        HStack {
+            Text(text)
+                .font(.subheadline.weight(isCurrent ? .semibold : .regular))
+                .foregroundStyle(Color.appInk)
+            Spacer()
+            if let date {
+                Text(date.formatted(date: .abbreviated, time: .omitted))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            if let onDelete {
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(Color.appDanger)
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 12)
+        .fullBleedRow(isLast: isLast)
+    }
+}
+
+/// The pencil's correction popup: a bottom sheet fitted to its own content, the same
+/// `SettingsPanelSheet` chrome `SectionSettingsPanel` uses — a settings-style panel
+/// rather than the row growing in place, which is what this replaced.
+private struct RecordEditPopup: View {
+    let exercise: Exercise
+    let variant: RecordVariant
+    let context: ModelContext
+    let onSaved: (PersonalRecord) -> Void
+
+    /// Measured by `SettingsPanelSheet` so the sheet opens exactly as tall as this needs.
+    @State private var contentSize: CGSize = .zero
+
+    var body: some View {
+        SettingsPanelSheet(contentSize: $contentSize) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(variant.headerLabel)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.appInk)
+                Divider()
+                RecordValueEditor(
+                    exercise: exercise,
+                    equipment: variant.equipment,
+                    isBodyweight: variant.isBodyweight,
+                    executionType: variant.executionType,
+                    trackingMode: variant.trackingMode,
+                    isFollowAlong: variant.isFollowAlong,
+                    existing: variant.record,
+                    context: context,
+                    onSaved: onSaved
+                )
+            }
+        }
     }
 }

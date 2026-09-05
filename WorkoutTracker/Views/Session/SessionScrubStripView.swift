@@ -63,9 +63,13 @@ struct SessionScrubStripView: View {
 
     private func stepChip(_ step: TimeSectionStep, index: Int, width: CGFloat, height: CGFloat) -> some View {
         VStack(spacing: 4) {
-            Text(chipTitle(step))
+            Text(step.displayTitle)
                 .font(.caption)
                 .lineLimit(2)
+                // Folding the execution type into the title made these longer than the
+                // two lines a chip has room for, so they scale down rather than truncate
+                // the type — which is the half that distinguishes adjacent chips.
+                .minimumScaleFactor(0.7)
                 .multilineTextAlignment(.center)
                 .frame(height: height * 0.4)
             Text("\(step.durationSeconds)s")
@@ -92,13 +96,7 @@ struct SessionScrubStripView: View {
         }
     }
 
-    private func chipTitle(_ step: TimeSectionStep) -> String {
-        switch step.stepType {
-        case .exercise: return step.exercise?.displayName ?? "Exercise"
-        case .rest: return "Rest"
-        case .getReady: return "Get Ready"
-        }
-    }
+
 
     /// Aesthetic test: the fill stays the same plain gray for every non-active chip
     /// regardless of color — lighter while upcoming, slightly darker once completed,

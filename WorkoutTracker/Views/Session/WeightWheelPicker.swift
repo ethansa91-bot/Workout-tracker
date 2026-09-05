@@ -5,6 +5,10 @@ import SwiftUI
 ///
 /// Starts at 1 rather than 0: a loaded set weighing nothing is a bodyweight set, which
 /// is its own weight source. The range runs high enough that no gym load hits the end.
+///
+/// Never shown for option-based equipment: its ladder is the whole set of values, so
+/// there is nothing to type. `unit` is printed as given, and `Equipment.optionUnit` is a
+/// storage token that would read as a literal "level" — so don't route one here.
 struct WeightWheelPicker: View {
     @Binding var value: Double
     let unit: String

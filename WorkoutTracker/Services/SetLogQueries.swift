@@ -4,6 +4,13 @@ import SwiftData
 /// Historical-performance lookups that power both the rep-session set-row prefill and
 /// the "you're doing worse than last time" comparison.
 enum SetLogQueries {
+    /// Every lookup here takes an optional `executionType` paired with an explicit
+    /// `scopesByExecutionType` flag rather than reading nil as "all types".
+    ///
+    /// nil already means two different things across this file — "any equipment" in
+    /// `bestSetEver`, "unloaded only" in `bestHoldEver` — and a third reading of it would
+    /// make every call site guess. With the flag off, behaviour is exactly what it was
+    /// before execution types existed; with it on, nil means the untyped slice specifically.
     struct BestSet {
         let weight: Double
         let reps: Int
@@ -20,7 +27,7 @@ enum SetLogQueries {
     /// nothing was loaded, not because 0 was the load lifted.
     /// `equipment` scopes the lookup to sets logged on that equipment — history from a
     /// barbell shouldn't prefill a dumbbell set. Pass `nil` for all equipment.
-    static func lastBestSet(exercise: Exercise, equipment: Equipment? = nil, excluding session: WorkoutSession, context: ModelContext) -> BestSet? {
+    static func lastBestSet(exercise: Exercise, equipment: Equipment? = nil, executionType: ExecutionType? = nil, scopesByExecutionType: Bool = false, excluding session: WorkoutSession, context: ModelContext) -> BestSet? {
         let exerciseID = exercise.id
         let sessionID = session.id
         var descriptor = FetchDescriptor<SetLog>(
@@ -34,6 +41,7 @@ enum SetLogQueries {
         if let equipment {
             logs = logs.filter { $0.equipment?.id == equipment.id }
         }
+        logs = scoped(logs, to: executionType, enabled: scopesByExecutionType)
         guard !logs.isEmpty else { return nil }
         guard let mostRecentSessionID = logs.first?.session?.id else { return nil }
         let mostRecentSessionLogs = logs.filter { $0.session?.id == mostRecentSessionID }
@@ -42,6 +50,15 @@ enum SetLogQueries {
             return a.reps < b.reps
         }) else { return nil }
         return BestSet(weight: best.weight, reps: best.reps)
+    }
+
+    /// Narrows a fetched batch to one execution type, or leaves it untouched when the
+    /// caller isn't splitting. Kept as one helper so every lookup applies the rule the
+    /// same way — nil with the flag on means "logged without a type", not "any type".
+    private static func scoped(_ logs: [SetLog], to executionType: ExecutionType?, enabled: Bool) -> [SetLog] {
+        guard enabled else { return logs }
+        let id = executionType?.id
+        return logs.filter { $0.executionType?.id == id }
     }
 
     // MARK: - Bodyweight
@@ -53,7 +70,7 @@ enum SetLogQueries {
 
     /// Most reps at body load in the most recent session that has any, excluding the
     /// one in progress.
-    static func lastBodyweightReps(exercise: Exercise, excluding session: WorkoutSession, context: ModelContext) -> Int? {
+    static func lastBodyweightReps(exercise: Exercise, executionType: ExecutionType? = nil, scopesByExecutionType: Bool = false, excluding session: WorkoutSession, context: ModelContext) -> Int? {
         let exerciseID = exercise.id
         let sessionID = session.id
         // The bodyweight/hold conditions are applied in Swift rather than in the
@@ -67,13 +84,14 @@ enum SetLogQueries {
         )
         descriptor.fetchLimit = 400
         guard let fetched = try? context.fetch(descriptor) else { return nil }
-        let logs = fetched.filter { $0.holdSeconds == nil && $0.isBodyweight == true }
+        let logs = scoped(fetched.filter { $0.holdSeconds == nil && $0.isBodyweight == true },
+                          to: executionType, enabled: scopesByExecutionType)
         guard !logs.isEmpty, let mostRecentSessionID = logs.first?.session?.id else { return nil }
         return logs.filter { $0.session?.id == mostRecentSessionID }.map(\.reps).max()
     }
 
     /// Most reps at body load across all history.
-    static func bestBodyweightRepsEver(exercise: Exercise, context: ModelContext) -> Int? {
+    static func bestBodyweightRepsEver(exercise: Exercise, executionType: ExecutionType? = nil, scopesByExecutionType: Bool = false, context: ModelContext) -> Int? {
         let exerciseID = exercise.id
         let descriptor = FetchDescriptor<SetLog>(
             predicate: #Predicate { log in
@@ -81,8 +99,8 @@ enum SetLogQueries {
             }
         )
         guard let fetched = try? context.fetch(descriptor) else { return nil }
-        return fetched
-            .filter { $0.holdSeconds == nil && $0.isBodyweight == true }
+        return scoped(fetched.filter { $0.holdSeconds == nil && $0.isBodyweight == true },
+                      to: executionType, enabled: scopesByExecutionType)
             .map(\.reps)
             .max()
     }
@@ -90,7 +108,7 @@ enum SetLogQueries {
     /// The best set (highest weight, ties broken by most reps) across *all* history,
     /// not scoped to the most recent session — used for an all-time personal record,
     /// where `lastBestSet`'s "most recent session only" scoping would be wrong.
-    static func bestSetEver(exercise: Exercise, equipment: Equipment? = nil, context: ModelContext) -> BestSet? {
+    static func bestSetEver(exercise: Exercise, equipment: Equipment? = nil, executionType: ExecutionType? = nil, scopesByExecutionType: Bool = false, context: ModelContext) -> BestSet? {
         let exerciseID = exercise.id
         let descriptor = FetchDescriptor<SetLog>(
             predicate: #Predicate { log in log.exercise?.id == exerciseID && log.isCancelled == false && log.holdSeconds == nil && log.isBodyweight == nil }
@@ -99,6 +117,7 @@ enum SetLogQueries {
         if let equipment {
             logs = logs.filter { $0.equipment?.id == equipment.id }
         }
+        logs = scoped(logs, to: executionType, enabled: scopesByExecutionType)
         guard !logs.isEmpty else { return nil }
         guard let best = logs.max(by: { a, b in
             if a.weight != b.weight { return a.weight < b.weight }
@@ -123,18 +142,21 @@ enum SetLogQueries {
     /// Scoped by equipment the same way `bestSetEver` is: a hold can be loaded, and a
     /// 90s unweighted plank isn't the same achievement as a 90s plank under a 20 lb
     /// plate. `nil` equipment means unloaded holds only.
-    static func bestHoldEver(exercise: Exercise, equipment: Equipment? = nil, context: ModelContext) -> Int? {
+    static func bestHoldEver(exercise: Exercise, equipment: Equipment? = nil, executionType: ExecutionType? = nil, scopesByExecutionType: Bool = false, context: ModelContext) -> Int? {
         let exerciseID = exercise.id
         let descriptor = FetchDescriptor<SetLog>(
             predicate: #Predicate { log in log.exercise?.id == exerciseID && log.isCancelled == false && log.holdSeconds != nil }
         )
         guard let logs = try? context.fetch(descriptor) else { return nil }
-        return logs.filter { $0.equipment?.id == equipment?.id }.compactMap(\.holdSeconds).max()
+        return scoped(logs.filter { $0.equipment?.id == equipment?.id },
+                      to: executionType, enabled: scopesByExecutionType)
+            .compactMap(\.holdSeconds)
+            .max()
     }
 
     /// The best hold from the most recent *prior* session that logged this exercise —
     /// same "most recent session, best value within it" shape as `lastBestSet`.
-    static func lastHoldSeconds(exercise: Exercise, equipment: Equipment? = nil, excluding session: WorkoutSession, context: ModelContext) -> Int? {
+    static func lastHoldSeconds(exercise: Exercise, equipment: Equipment? = nil, executionType: ExecutionType? = nil, scopesByExecutionType: Bool = false, excluding session: WorkoutSession, context: ModelContext) -> Int? {
         let exerciseID = exercise.id
         let sessionID = session.id
         var descriptor = FetchDescriptor<SetLog>(
@@ -145,7 +167,8 @@ enum SetLogQueries {
         )
         descriptor.fetchLimit = 200
         guard let fetched = try? context.fetch(descriptor) else { return nil }
-        let logs = fetched.filter { $0.equipment?.id == equipment?.id }
+        let logs = scoped(fetched.filter { $0.equipment?.id == equipment?.id },
+                          to: executionType, enabled: scopesByExecutionType)
         guard !logs.isEmpty else { return nil }
         guard let mostRecentSessionID = logs.first?.session?.id else { return nil }
         let mostRecentSessionLogs = logs.filter { $0.session?.id == mostRecentSessionID }

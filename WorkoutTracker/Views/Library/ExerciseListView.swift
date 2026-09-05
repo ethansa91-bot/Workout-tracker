@@ -8,6 +8,10 @@ struct ExerciseListView: View {
     @State private var searchText = ""
     @State private var filter = ExerciseFilter()
     @State private var showingCreateSheet = false
+    /// Hidden by default: three rows of chips above a list is a lot of header to look
+    /// past when you arrived to search for one exercise. The star stays out in the band
+    /// because it is the one filter worth a single tap.
+    @State private var showingFilters = false
 
     private var filtered: [Exercise] {
         allExercises.filter { exercise in
@@ -38,22 +42,30 @@ struct ExerciseListView: View {
             }
         }
         .fullBleedList()
+        // Without this a plain list keeps its own top inset, leaving a strip of ground
+        // between the header and the first row.
+        .contentMargins(.top, 0, for: .scrollContent)
         // Band, search and filters ride together above the list rather than scrolling
         // with it — the filters are how you narrow a 180-row catalogue, so losing them
         // on the first swipe made them nearly useless.
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
-                PushedTitleBand(title: "Exercises")
+                PushedTitleBand(title: "Exercises") {
+                    HeaderFilterControls(filter: $filter, showingFilters: $showingFilters)
+                }
                 InlineSearchField(prompt: "Search exercises", text: $searchText)
-                ExerciseQuickFilterView(filter: $filter)
-                    .frame(maxWidth: .infinity)
-                    .background(Color.appSurface)
-                    .overlay(alignment: .bottom) {
-                        Rectangle()
-                            .fill(Color.appHairline)
-                            .frame(height: 0.5)
-                    }
+                if showingFilters {
+                    ExerciseQuickFilterView(filter: $filter)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.appSurface)
+                        .overlay(alignment: .bottom) {
+                            Rectangle()
+                                .fill(Color.appHairline)
+                                .frame(height: 0.5)
+                        }
+                }
             }
+            .animation(.easeInOut(duration: 0.2), value: showingFilters)
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)

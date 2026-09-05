@@ -18,6 +18,10 @@ struct ScheduleListView: View {
         let name: String
         let date: Date
         let icon: String
+        /// What the row opens. `nil` where the workout behind the session is gone —
+        /// `name` and `icon` keep their own fallbacks, so the row still renders, just
+        /// without anywhere to go.
+        let workout: Workout?
     }
 
     @Environment(\.modelContext) private var context
@@ -77,7 +81,8 @@ struct ScheduleListView: View {
                     id: session.id,
                     name: session.workout?.name ?? "Workout",
                     date: session.startedAt,
-                    icon: session.workout.map(workoutTypeIcon) ?? "figure.strengthtraining.traditional"
+                    icon: session.workout.map(workoutTypeIcon) ?? "figure.strengthtraining.traditional",
+                    workout: session.workout
                 )
             }
     }
@@ -128,6 +133,13 @@ struct ScheduleListView: View {
                         )
                     } else {
                         List {
+                            // First, and one quiet line: it's a doorway to a screenful of
+                            // stale occurrences, not part of the recap, so it says how
+                            // many there are and gets out of the way of the days below.
+                            if olderMissedCount > 0 {
+                                olderMissedLine
+                            }
+
                             // Both recaps live under one band, so the window they cover
                             // is named once instead of being left implicit.
                             if !missedRecent.isEmpty || !completedRecent.isEmpty {
@@ -136,29 +148,6 @@ struct ScheduleListView: View {
                                     completedGroup
                                 } header: {
                                     bandHeader("Last 7 days")
-                                }
-                            }
-
-                            // Banded like everything else, so whatever lands first under
-                            // the green title is always a header rather than a bare row.
-                            if olderMissedCount > 0 {
-                                Section {
-                                    NavigationLink {
-                                        MissedWorkoutsView(cutoff: missedCutoff)
-                                    } label: {
-                                        HStack {
-                                            Label("Missed Workouts", systemImage: "calendar.badge.exclamationmark")
-                                                .foregroundStyle(Color.appDanger)
-                                            Spacer()
-                                            Text("\(olderMissedCount)")
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 12)
-                                    }
-                                    .fullBleedRow()
-                                } header: {
-                                    bandHeader("Older than 7 days")
                                 }
                             }
 
@@ -210,6 +199,8 @@ struct ScheduleListView: View {
                 // Workouts stack and the destination has to be total.
                 case .archives:
                     ArchivedWorkoutsView()
+                case .olderMissed(let cutoff):
+                    MissedWorkoutsView(cutoff: cutoff)
                 }
             }
             .navigationTitle("")
@@ -251,6 +242,37 @@ struct ScheduleListView: View {
     }
 
     // MARK: - Headers
+
+    /// The whole "Older than 7 days" section, reduced to one quiet line.
+    ///
+    /// Deliberately not a `ListBandHeader` like the sections below it: a band announces
+    /// something you're meant to read, and stale occurrences are the opposite — a number
+    /// worth knowing and a way in, ranked *below* every band on the page despite sitting
+    /// above them. Muted caption on the page's own ground, indented to the same 20pt as
+    /// a band title so it still lines up with "Last 7 days".
+    private var olderMissedLine: some View {
+        Button {
+            path.append(.olderMissed(cutoff: missedCutoff))
+        } label: {
+            HStack(spacing: 4) {
+                Text("Older than 7 days (\(olderMissedCount))")
+                // The one thing that isn't plain text: without it nothing says the line
+                // opens anything, and it's the only way to reach the bulk cancel.
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                Spacer(minLength: 0)
+            }
+            .font(.caption)
+            .foregroundStyle(Color.appInkMuted)
+            .padding(.horizontal, HeaderMetrics.bandHorizontalInset)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
 
     private func bandHeader(_ title: String) -> some View {
         ListBandHeader(title: title)
@@ -307,6 +329,7 @@ struct ScheduleListView: View {
                         name: occurrence.workout?.name ?? "Workout",
                         date: occurrence.date,
                         icon: occurrence.workout.map(workoutTypeIcon) ?? "figure.strengthtraining.traditional",
+                        workout: occurrence.workout,
                         isLast: occurrence.id == missedRecent.last?.id && closesSection
                     )
                     .swipeActions(edge: .leading) { moveButton(occurrence) }
@@ -336,6 +359,7 @@ struct ScheduleListView: View {
                         name: completed.name,
                         date: completed.date,
                         icon: completed.icon,
+                        workout: completed.workout,
                         isLast: completed.id == completedRecent.last?.id
                     )
                 }
@@ -379,12 +403,32 @@ struct ScheduleListView: View {
 
     /// Takes values rather than a model, so a missed occurrence and a completed session
     /// render as the same row despite coming from different types.
-    private func summaryRow(name: String, date: Date, icon: String, isLast: Bool) -> some View {
+    ///
+    /// Both open the workout, which is why `workout` comes in alongside the name it was
+    /// already flattened to — the completed side reaches it through the session. Where
+    /// the workout is gone the row still renders, just without a link.
+    @ViewBuilder
+    private func summaryRow(name: String, date: Date, icon: String, workout: Workout?, isLast: Bool) -> some View {
+        Group {
+            if let workout {
+                NavigationLink(value: WorkoutRoute.workout(workout)) {
+                    summaryRowContent(name: name, date: date, icon: icon)
+                }
+            } else {
+                summaryRowContent(name: name, date: date, icon: icon)
+            }
+        }
+        .fullBleedRow(isLast: isLast)
+    }
+
+    private func summaryRowContent(name: String, date: Date, icon: String) -> some View {
         HStack(spacing: 12) {
             IconBadge(systemName: icon)
             VStack(alignment: .leading, spacing: 3) {
                 Text(name)
-                Text(date.formatted(date: .abbreviated, time: .omitted))
+                // Named day first, like the day bands below: "Sep 2" alone doesn't say
+                // which day of the week it was, which is what a past week is read by.
+                Text("\(Self.dayNameFormatter.string(from: date)) · \(date.formatted(date: .abbreviated, time: .omitted))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -392,7 +436,6 @@ struct ScheduleListView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .fullBleedRow(isLast: isLast)
     }
 
     // MARK: - Scheduled rows

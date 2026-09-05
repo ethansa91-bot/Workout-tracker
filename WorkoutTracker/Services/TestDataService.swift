@@ -88,6 +88,16 @@ enum TestDataService {
         // Shorter than the 10-round default — this is for a quick spot-check, not a
         // real workout.
         try WorkoutEditingService.updateEmomRoundCount(section, to: 2, context: context)
+        // A second, open-ended section in the same workout: the tappable counter, the
+        // end-of-workout record card and the lock/template promotion all need a
+        // to-failure EMOM to exercise, and pairing it with the fixed one above means a
+        // single run covers both round modes.
+        let toFailure = try WorkoutEditingService.addSection(to: workout, type: .emom, context: context)
+        for exercise in exercises {
+            try WorkoutEditingService.addQuickExercise(to: toFailure, exercise: exercise, context: context)
+        }
+        try WorkoutEditingService.updateEmomToFailure(toFailure, to: true, context: context)
+        try WorkoutEditingService.updateTracksRecord(toFailure, to: true, context: context)
     }
 
     private static func makeAmrapWorkout(exercises: [Exercise], context: ModelContext) throws {
@@ -98,6 +108,8 @@ enum TestDataService {
         }
         // Shorter than the 12-minute default, same reasoning as the EMOM round count.
         try WorkoutEditingService.updateAmrapDuration(section, to: 60, context: context)
+        // Tracked, so one minute of tapping the counter produces a record to check.
+        try WorkoutEditingService.updateTracksRecord(section, to: true, context: context)
     }
 
     // MARK: - Cleanup

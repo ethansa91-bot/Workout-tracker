@@ -4,7 +4,7 @@ import SwiftData
 struct TimeSessionRunnerView: View {
     @Bindable var session: WorkoutSession
     let section: WorkoutSection
-    let soundProfile: TimerSoundProfile
+    let cues: TimerCueSettings
     let onSectionComplete: () -> Void
 
     @Environment(\.modelContext) private var context
@@ -14,9 +14,9 @@ struct TimeSessionRunnerView: View {
     @State private var pendingJumpIndex: Int?
     @State private var showingJumpConfirm = false
 
-    /// Seeded from `section.autostart` — once true (whether from autostart or a
-    /// tapped play button), stays true for the rest of the section; only entering
-    /// the section for the first time is gated, not every step within it.
+    /// Seeded from `WorkoutSessionService.autostartsRunning` — once true (whether from
+    /// autostart or a tapped play button), stays true for the rest of the section; only
+    /// entering the section for the very first pass is gated, not every repeat of it.
     @State private var isRunning: Bool
 
     /// When the current step ends, or nil when the countdown is stopped.
@@ -26,15 +26,30 @@ struct TimeSessionRunnerView: View {
     /// switched apps and resumed from where it stopped instead of catching up.
     @State private var stepEndsAt: Date?
 
-    init(session: WorkoutSession, section: WorkoutSection, soundProfile: TimerSoundProfile, onSectionComplete: @escaping () -> Void) {
+    /// The exercise to name as this section runs out, or nil when nothing continues past
+    /// it. Supplied by `SessionRunnerView`, which is the only level that can see sibling
+    /// sections. Evaluated at the moment of the cue, not at init — a lookahead computed
+    /// early would answer for the wrong pass.
+    let upNext: () -> String?
+
+    /// Counting down the breather between two passes. The section's last step is finished
+    /// and logged; only the clock is still running.
+    @State private var isSectionResting = false
+
+    init(session: WorkoutSession, section: WorkoutSection, cues: TimerCueSettings, upNext: @escaping () -> String? = { nil }, onSectionComplete: @escaping () -> Void) {
         self.session = session
         self.section = section
-        self.soundProfile = soundProfile
+        self.cues = cues
+        self.upNext = upNext
         self.onSectionComplete = onSectionComplete
-        _isRunning = State(initialValue: section.autostart)
+        _isRunning = State(initialValue: WorkoutSessionService.autostartsRunning(session, section: section))
     }
 
-    private var steps: [TimeSectionStep] { section.sortedTimeSteps }
+    /// What this pass actually plays — a Get Ready of 0, or one that doesn't repeat, is
+    /// gone rather than present-and-instant. Every index in this view, the scrub strip and
+    /// `StepLog.sortOrder` is relative to this array, so they stay consistent with each
+    /// other as long as they all read it.
+    private var steps: [TimeSectionStep] { section.runnableTimeSteps(pass: currentRepeat) }
     private var currentIndex: Int { session.currentStepIndex ?? 0 }
     private var currentStep: TimeSectionStep? {
         guard currentIndex >= 0, currentIndex < steps.count else { return nil }
@@ -50,12 +65,16 @@ struct TimeSessionRunnerView: View {
     /// The step's color, filling the timer area the same solid way the scrub strip
     /// fills its active chip. Always present now that "never chosen" resolves to a
     /// real selection — green for an exercise, gray for Rest/Get Ready.
-    private var timerTint: Color { currentStep?.resolvedColor.color ?? Color.appAccent }
+    private var timerTint: Color {
+        if isSectionResting { return PaletteColor.gray.color }
+        return currentStep?.resolvedColor.color ?? Color.appAccent
+    }
 
     /// Gray is a mid-tone, where white text washes out — everything else in the
     /// palette is deep enough to carry it.
     private var timerForeground: Color {
-        currentStep?.resolvedColor == .gray ? Color.appInk : .white
+        if isSectionResting { return Color.appInk }
+        return currentStep?.resolvedColor == .gray ? Color.appInk : .white
     }
 
     var body: some View {
@@ -233,6 +252,50 @@ struct TimeSessionRunnerView: View {
         }
     }
 
+    /// What you last held this at, when the step names weighted equipment and a record
+    /// exists. The Follow Along counterpart to the rep runner's `recordLine`, and the
+    /// whole point of recording the weight in the first place — a fixed-duration step
+    /// otherwise gives you nothing to aim at.
+    ///
+    /// Under the name rather than in `timerArea`: that block is one tap target for
+    /// pause/resume, and hanging a second thing off it is the trap `RestTimerView` hit.
+    @ViewBuilder
+    private func recordLine(_ step: TimeSectionStep, exercise: Exercise) -> some View {
+        if let equipment = recordEquipment(for: step, exercise: exercise),
+           let record = PersonalRecordQueries.current(
+               for: exercise,
+               equipment: equipment,
+               executionType: PersonalRecordQueries.resolvedExecutionType(step.executionType, for: exercise),
+               trackingMode: .maxHoldTime,
+               isBodyweight: false,
+               isFollowAlong: true,
+               context: context
+           ),
+           record.weight != nil {
+            HStack(spacing: 6) {
+                Image(systemName: "trophy.fill")
+                    .font(.caption)
+                    .foregroundStyle(Color.appAccent)
+                Text("\(PersonalRecordFormatting.summary(record)) · \(equipment.name)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+        }
+    }
+
+    /// The step's own equipment choice, validated against the exercise's live weighted
+    /// options — the same fallback `chosenEquipment` performs on the rep side, so a stale
+    /// reference reads a real record rather than none.
+    private func recordEquipment(for step: TimeSectionStep, exercise: Exercise) -> Equipment? {
+        guard !step.prefersBodyweight else { return nil }
+        let options = exercise.weightedEquipmentOptions
+        guard !options.isEmpty else { return nil }
+        let id = step.preferredEquipment?.id ?? exercise.defaultWeightedEquipment?.id
+        return options.first { $0.id == id } ?? options.first
+    }
+
     /// Rest and Get Ready have no media, just a symbol and a word — kept on one line so
     /// the icon reads as part of the label rather than floating off in the timer pane.
     /// Sizing the symbol from the shared `.title` font keeps the two scaling together.
@@ -258,44 +321,53 @@ struct TimeSessionRunnerView: View {
     /// the scroll view.
     private func titleMediaView(_ step: TimeSectionStep) -> some View {
         VStack(spacing: 12) {
-            switch step.stepType {
-            case .exercise:
-                if let exercise = step.exercise {
-                    if ExerciseMediaView.hasMedia(exercise) {
-                        // Unchanged from before: fixed box, `.title` name beneath it.
-                        ExerciseMediaView(exercise: exercise, mode: .autoplayWorkout(maxSeconds: min(30, Double(step.durationSeconds))), fillsWidth: true)
+            // The between-passes rest borrows the ordinary rest's face — it is the same
+            // thing to the person doing it, and inventing a second one would only make
+            // them look at two designs for one idea.
+            if isSectionResting {
+                statusLabel("pause.circle.fill", "Rest")
+            } else {
+                switch step.stepType {
+                case .exercise:
+                    if let exercise = step.exercise {
+                        if ExerciseMediaView.hasMedia(exercise) {
+                            // Unchanged from before: fixed box, `.title` name beneath it.
+                            ExerciseMediaView(exercise: exercise, mode: .autoplayWorkout(maxSeconds: min(30, Double(step.durationSeconds))), fillsWidth: true)
+                                .id(exercise.id)
+                                .padding(.horizontal)
+                            Text(step.displayTitle)
+                                .font(.title.bold())
+                                .multilineTextAlignment(.center)
+                            recordLine(step, exercise: exercise)
+                        } else {
+                            // Nothing to show, so the placeholder box is dropped entirely
+                            // and the name takes the freed space.
+                            Text(step.displayTitle)
+                                .font(.system(size: 52, weight: .bold, design: .rounded))
+                                .minimumScaleFactor(0.4)
+                                .multilineTextAlignment(.center)
+                                .padding(.vertical, 24)
+                            recordLine(step, exercise: exercise)
+                        }
+                        ExerciseVideoButton(exercise: exercise)
                             .id(exercise.id)
                             .padding(.horizontal)
-                        Text(exercise.displayName)
+                        ExerciseDescriptionView(exercise: exercise)
+                            .id(exercise.id)
+                        // Read-only here — notes are entered from the end-of-workout
+                        // summary, but what you noted last time is worth seeing mid-set.
+                        ExerciseNotePreview(session: session, exercise: exercise)
+                            .id(exercise.id)
+                    } else {
+                        Text("Exercise")
                             .font(.title.bold())
                             .multilineTextAlignment(.center)
-                    } else {
-                        // Nothing to show, so the placeholder box is dropped entirely
-                        // and the name takes the freed space.
-                        Text(exercise.displayName)
-                            .font(.system(size: 52, weight: .bold, design: .rounded))
-                            .minimumScaleFactor(0.4)
-                            .multilineTextAlignment(.center)
-                            .padding(.vertical, 24)
                     }
-                    ExerciseVideoButton(exercise: exercise)
-                        .id(exercise.id)
-                        .padding(.horizontal)
-                    ExerciseDescriptionView(exercise: exercise)
-                        .id(exercise.id)
-                    // Read-only here — notes are entered from the end-of-workout
-                    // summary, but what you noted last time is worth seeing mid-set.
-                    ExerciseNotePreview(session: session, exercise: exercise)
-                        .id(exercise.id)
-                } else {
-                    Text("Exercise")
-                        .font(.title.bold())
-                        .multilineTextAlignment(.center)
+                case .rest:
+                    statusLabel("pause.circle.fill", "Rest")
+                case .getReady:
+                    statusLabel("hourglass", "Get Ready")
                 }
-            case .rest:
-                statusLabel("pause.circle.fill", "Rest")
-            case .getReady:
-                statusLabel("hourglass", "Get Ready")
             }
         }
         .frame(maxWidth: .infinity)
@@ -353,9 +425,11 @@ struct TimeSessionRunnerView: View {
 
     // MARK: - Spoken cues
 
-    /// What a step is called out loud. `displayName` rather than `name` — a person is
-    /// listening, so the friendly label is the right one (the opposite of the export,
-    /// where a parser reads the string and needs the catalog name).
+    /// What a step is called out loud, before the execution type is folded in.
+    ///
+    /// Deliberately *not* `step.displayTitle`: that already appends the type, and
+    /// `spokenLabel` below has its own rule for when to say it — only the type is spoken
+    /// when it's the sole thing that changed between two steps.
     private func spokenName(for step: TimeSectionStep) -> String {
         switch step.stepType {
         case .exercise: return step.exercise?.displayName ?? "Exercise"
@@ -364,24 +438,113 @@ struct TimeSessionRunnerView: View {
         }
     }
 
-    /// One combined cue at ten seconds: how long is left, and what's coming next.
-    /// Skipped on steps barely longer than the cue itself, where it would land almost
-    /// on top of the step-start announcement.
-    private func announceWarningIfNeeded() {
-        guard AppSettings.speechEnabled, remainingSeconds == 10 else { return }
-        guard let currentStep, currentStep.durationSeconds >= 12 else { return }
-
-        let nextIndex = currentIndex + 1
-        guard nextIndex < steps.count else {
-            SpeechAnnouncer.speak("Ten seconds left")
-            return
+    /// What a step is called out loud, given what came before it.
+    ///
+    /// The whole of the rule: when two consecutive steps are the same exercise differing
+    /// only in side or in execution type, only the part that changed is spoken. Hearing
+    /// "Split Squat" again tells the listener nothing they don't already know — "Right" is
+    /// the only thing that actually changed, and it's what they need in the second before
+    /// it starts. Alternating sides is the case this exists for.
+    private func spokenLabel(for step: TimeSectionStep, following previous: TimeSectionStep?) -> String {
+        if let previous,
+           step.stepType == .exercise, previous.stepType == .exercise,
+           let exerciseID = step.exercise?.id, exerciseID == previous.exercise?.id {
+            let sideChanged = step.side != previous.side
+            let typeChanged = step.executionType?.id != previous.executionType?.id
+            // Only when it's the *sole* difference — if both moved, the full name is the
+            // honest thing to say.
+            if sideChanged, !typeChanged, let side = step.side {
+                // Long form: spoken on its own, "Left" could be heard as an instruction
+                // or a direction rather than as which side is next.
+                return side.longLabel
+            }
+            if typeChanged, !sideChanged, let type = step.executionType {
+                return type.name
+            }
         }
-        SpeechAnnouncer.speak("Ten seconds left. Next: \(spokenName(for: steps[nextIndex]))")
+        let name = spokenName(for: step)
+        guard step.stepType == .exercise else { return name }
+        return ExerciseNaming.title(name, side: step.side, executionType: step.executionType)
+    }
+
+    /// "Next: Push Up", optionally followed by "Ten seconds left", at the configured mark.
+    ///
+    /// Skipped on steps barely longer than the cue itself, where it would land almost on
+    /// top of the step-start announcement — the old rule, now derived from the configured
+    /// seconds instead of a hardcoded 12 against a hardcoded 10.
+    private func announceNextIfNeeded() {
+        guard AppSettings.speechEnabled, AppSettings.voiceAnnounceNextEnabled else { return }
+        let mark = AppSettings.voiceAnnounceNextSeconds
+        guard remainingSeconds == mark else { return }
+        // Measured against whatever phase is actually running: during a between-passes
+        // rest the current step is the one that just finished, and its length says
+        // nothing about how long there is left to speak into.
+        let phaseSeconds = isSectionResting
+            ? section.sectionRest(after: currentRepeat)
+            : (currentStep?.durationSeconds ?? 0)
+        guard phaseSeconds >= mark + 2 else { return }
+
+        // Time first, then what's coming: "ten seconds left" is the cue to start winding
+        // down, and hearing it after the next exercise's name means acting on it a beat
+        // late. The name is also the half worth having last, since it is what you carry
+        // into the next step.
+        var parts: [String] = []
+        if AppSettings.voiceTimeLeftEnabled {
+            parts.append("\(mark) second\(mark == 1 ? "" : "s") left")
+        }
+        let nextIndex = currentIndex + 1
+        if nextIndex < steps.count, !isSectionResting, let currentStep {
+            parts.append("Next: \(spokenLabel(for: steps[nextIndex], following: currentStep))")
+        } else if !isSectionResting, section.sectionRest(after: currentRepeat) > 0 {
+            // The pass is over but the next thing is the breather, not the exercise after
+            // it. Naming the exercise here would announce something two phases away — the
+            // rest's own cue names it, ten seconds before the rest ends.
+            parts.append("Next: Rest")
+        } else if let name = upNext() {
+            // Nothing left in this pass, but something continues past it — another pass of
+            // this section, or another Follow Along. Naming it keeps the countdown reading
+            // as one motion rather than stopping dead at the section boundary.
+            parts.append("Next: \(name)")
+        } else {
+            parts.append(endOfSectionPhrase)
+        }
+        guard !parts.isEmpty else { return }
+        SpeechAnnouncer.speak(parts.joined(separator: ". "))
+    }
+
+    /// The last few seconds, one number per tick.
+    ///
+    /// Independent of the announcement above rather than part of it: the two answer
+    /// different questions ("what's coming" vs "how long now"), and pinning the countdown
+    /// to whatever time happened to be left after an utterance finished would make its
+    /// length depend on the speed of the chosen voice.
+    private func announceCountdownIfNeeded() {
+        guard AppSettings.speechEnabled, AppSettings.voiceCountdownEnabled else { return }
+        guard remainingSeconds > 0, remainingSeconds <= AppSettings.voiceCountdownFromSeconds else { return }
+        // Not on the same tick as the announcement — a number cutting off "Next: Push Up"
+        // mid-word is worse than skipping one count.
+        guard !(AppSettings.voiceAnnounceNextEnabled && remainingSeconds == AppSettings.voiceAnnounceNextSeconds) else { return }
+        SpeechAnnouncer.speak("\(remainingSeconds)")
+    }
+
+    /// A named section is worth saying; an unnamed one falls back to
+    /// `"Follow Along Section"`, and "End section Follow Along Section" is not a sentence.
+    private var endOfSectionPhrase: String {
+        guard let name = section.name?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !name.isEmpty
+        else { return "End of section" }
+        return "End section, \(name)"
     }
 
     private func announceCurrentStep() {
-        guard AppSettings.speechEnabled, let currentStep else { return }
-        SpeechAnnouncer.speak(spokenName(for: currentStep))
+        guard AppSettings.speechEnabled, AppSettings.voiceAnnounceStartEnabled else { return }
+        if isSectionResting {
+            SpeechAnnouncer.speak("Rest")
+            return
+        }
+        guard let currentStep else { return }
+        let previous = currentIndex > 0 ? steps[currentIndex - 1] : nil
+        SpeechAnnouncer.speak(spokenLabel(for: currentStep, following: previous))
     }
 
     // MARK: - Step clock
@@ -431,13 +594,20 @@ struct TimeSessionRunnerView: View {
         // countdown jumps, and a beep or a "ten seconds left" for a threshold that passed
         // while the app was in the background would land late and mean nothing.
         guard previous - current == 1 else { return }
-        SoundPlayer.playWarningIfNeeded(remainingSeconds: current, profile: soundProfile)
-        announceWarningIfNeeded()
+        SoundPlayer.playWarningIfNeeded(remainingSeconds: current, cues: cues)
+        announceNextIfNeeded()
+        announceCountdownIfNeeded()
     }
 
     private func completeCurrentStep() {
+        if isSectionResting {
+            SoundPlayer.playTimerCompleteIfNeeded(cues: cues)
+            isSectionResting = false
+            onSectionComplete()
+            return
+        }
         guard let currentStep else { return }
-        SoundPlayer.playTimerComplete()
+        SoundPlayer.playTimerCompleteIfNeeded(cues: cues)
         logStep(currentStep, outcome: .completed, actualDuration: currentStep.durationSeconds)
         advance()
     }
@@ -452,6 +622,7 @@ struct TimeSessionRunnerView: View {
             session: session,
             timeSectionStep: step,
             stepExerciseNameSnapshot: step.exercise?.displayName,
+            executionType: step.executionType,
             plannedDurationSeconds: step.durationSeconds,
             actualDurationSeconds: max(0, actualDuration),
             outcome: outcome,
@@ -467,11 +638,21 @@ struct TimeSessionRunnerView: View {
             session.currentStepIndex = next
             session.markDirty()
             try? context.save()
-        } else {
-            session.markDirty()
-            try? context.save()
-            onSectionComplete()
+            return
         }
+        session.markDirty()
+        try? context.save()
+
+        // Played at the tail of the pass that just finished, not the head of the next
+        // one: `SessionRunnerView` keys this view on the pass, so there is no "next pass"
+        // instance yet to run it in.
+        let rest = section.sectionRest(after: currentRepeat)
+        guard rest > 0 else {
+            onSectionComplete()
+            return
+        }
+        isSectionResting = true
+        beginStep(seconds: rest)
     }
 
     private func requestJump(to index: Int) {

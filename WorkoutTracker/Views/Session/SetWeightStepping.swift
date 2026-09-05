@@ -4,10 +4,10 @@ import Foundation
 /// with. Shared by `SetRowView` and `HoldSetRowView` — a max-hold set can be loaded
 /// too, so both rows offer the same three shapes.
 enum SetWeightMode {
-    /// +/- through the equipment's preset combos.
+    /// A loaded set: +/- steps the equipment's preset combos, and the value itself is
+    /// tappable for a weight that has no preset. There is no separate "manual" mode —
+    /// typing a weight doesn't change what it was performed on.
     case stepper
-    /// A tappable value that opens the number pad — no presets to step through.
-    case manual
     /// Nothing loaded: a fixed "Bodyweight" readout, weight logs as 0.
     case bodyweight
 }
@@ -47,4 +47,33 @@ func steppedSetWeight(
 /// "20 lb" / "22.5 kg" — trailing `.0` trimmed, since preset weights are usually whole.
 func formattedSetWeight(_ value: Double, unit: String) -> String {
     value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value)) \(unit)" : "\(value) \(unit)"
+}
+
+/// The option matching `value` on this equipment's ladder — "3. Red", or "opt. 3" for
+/// an option with no name.
+///
+/// A thin wrapper over `WeightCombo.optionDisplayName(for:in:)` so the set rows read the
+/// same as the other two helpers here; the resolution itself lives on the model, where
+/// records and history reach it too.
+func formattedSetOption(_ value: Double, options: [WeightCombo]) -> String {
+    WeightCombo.optionDisplayName(for: value, in: options)
+}
+
+/// Converts between kg and lb for *comparison* only — nothing in this app displays a
+/// weight in anything but the unit it was actually stamped with.
+///
+/// Exists for the record page's "absolute record": the highest real weight for an
+/// exercise across every equipment it's been recorded on, which is meaningless to
+/// compare without a common unit first. Before this, no conversion existed anywhere in
+/// the app — every weight was stored and shown verbatim in whatever unit it was set in.
+enum WeightUnitConversion {
+    private static let kgPerLb = 1 / 2.20462
+
+    /// `value`, in kilograms, given the unit it's actually expressed in. Anything other
+    /// than "lb" is treated as already kg — the app has exactly two real weight units,
+    /// and a third string here (a level/option unit) should never reach this function;
+    /// see `RecordVariant.absoluteComparisonWeightInKg`, its only caller, for the guard.
+    static func kilograms(_ value: Double, unit: String) -> Double {
+        unit == "lb" ? value * kgPerLb : value
+    }
 }

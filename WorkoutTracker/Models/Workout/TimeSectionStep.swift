@@ -47,8 +47,27 @@ final class TimeSectionStep: SyncableModel, Orderable {
     /// Backing storage for `color` — `nil` means "no custom color," which falls back
     /// to the app's default accent in the scrub strip.
     var colorRaw: String?
+    /// How this step's exercise is performed. Fixed for the whole run — a Follow Along
+    /// step is chosen when the workout is built and can't be changed mid-workout, unlike
+    /// a rep entry's. nil for rest steps and for any step that names no type.
+    var executionType: ExecutionType?
+    /// Raw value of `side`. nil for a step worked both sides — including every step
+    /// written before one-sided steps existed. Only meaningful when the exercise is
+    /// marked `isOneSided`.
+    var sideRaw: String?
+    /// Which weighted equipment this workout holds the step with, when the exercise has
+    /// more than one. nil falls back to the exercise's own resolution. Mirrors
+    /// `RepSectionExercise.preferredEquipment` — a loaded plank is a loaded plank whether
+    /// it is counted in sets or held for a duration.
+    var preferredEquipment: Equipment?
+    /// This step is performed unloaded, ignoring `preferredEquipment`. Non-optional with a
+    /// `false` default so steps written before this existed decode correctly.
+    var prefersBodyweight: Bool = false
     var updatedAt: Date = Date.now
     var deletedAt: Date?
+    /// The publisher's `ArchiveTimeStep.id`, for the same reason `WorkoutSection` carries
+    /// `sourceSectionId` one level up — see that field's doc comment.
+    var sourceStepId: UUID?
 
     /// Exists only to satisfy CloudKit's "every relationship needs an inverse" rule for
     /// `StepLog.timeSectionStep` — nothing in the app reads or writes this back-reference.
@@ -65,6 +84,14 @@ final class TimeSectionStep: SyncableModel, Orderable {
         set { colorRaw = newValue?.rawValue }
     }
 
+    /// Which side this step works, when the exercise is one-sided. Distinct from a rep
+    /// entry's `tracksSides`, which means "log this set twice, once per side" — here the
+    /// step *is* one side, and the other side is a separate step.
+    var side: SetSide? {
+        get { sideRaw.flatMap(SetSide.init(rawValue:)) }
+        set { sideRaw = newValue?.rawValue }
+    }
+
     /// The color a step actually displays as. "Never chosen" is a real selection
     /// rather than an absent one: green for exercises, gray for Rest and Get Ready.
     ///
@@ -76,7 +103,20 @@ final class TimeSectionStep: SyncableModel, Orderable {
         return stepType == .exercise ? .green : .gray
     }
 
-    init(id: UUID = UUID(), section: WorkoutSection? = nil, sortOrder: Int, stepType: TimeStepType, exercise: Exercise? = nil, durationSeconds: Int) {
+    /// What this step is called wherever it's listed — the scrub strip's chips, the
+    /// all-exercises panel, the builder's rows, history, and the runner's own heading.
+    ///
+    /// Those five had a private copy of this switch each, which is how the execution type
+    /// could reach one and not the others.
+    var displayTitle: String {
+        switch stepType {
+        case .exercise: return ExerciseNaming.title(exercise, side: side, executionType: executionType)
+        case .rest: return "Rest"
+        case .getReady: return "Get Ready"
+        }
+    }
+
+    init(id: UUID = UUID(), section: WorkoutSection? = nil, sortOrder: Int, stepType: TimeStepType, exercise: Exercise? = nil, durationSeconds: Int, executionType: ExecutionType? = nil) {
         self.id = id
         self.section = section
         self.sortOrder = sortOrder
@@ -84,6 +124,7 @@ final class TimeSectionStep: SyncableModel, Orderable {
         self.exercise = exercise
         self.durationSeconds = durationSeconds
         self.colorRaw = nil
+        self.executionType = executionType
         self.updatedAt = .now
         self.deletedAt = nil
     }

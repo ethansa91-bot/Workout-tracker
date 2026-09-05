@@ -11,8 +11,8 @@ struct SessionOverviewItem: Identifiable {
     let title: String
     /// What this exercise is currently set to, shown in rust beneath its name.
     let summary: String?
-    /// `nil` for EMOM/AMRAP entries, which have no settings of their own — those rows
-    /// get no gear rather than an empty popover.
+    /// `nil` only where there is genuinely nothing to configure. Every row has a gear
+    /// now, including EMOM/AMRAP entries, which carry a rep count and an execution type.
     let settings: ExerciseSettingsTarget?
     var color: Color?
 }
@@ -28,6 +28,14 @@ struct SectionCardSiblings {
     let onDelete: () -> Void
     let onClone: () -> Void
     let onSaveAsTemplate: () -> Void
+}
+
+/// The exercise-settings panel's target plus the row it belongs to, so one `.sheet(item:)`
+/// on the card can serve every row. `ExerciseSettingsTarget` is an enum over model objects
+/// and carries no identity of its own.
+struct IdentifiedExerciseSettings: Identifiable {
+    let id: UUID
+    let target: ExerciseSettingsTarget
 }
 
 /// A section's header band and its full-bleed exercise rows.
@@ -63,15 +71,17 @@ struct SectionCardView: View {
     /// Sticky headers need the gray band and the exercise rows handed to a `Section`'s
     /// `header:` and content slots separately, so the two are rendered by two instances
     /// rather than one. They share `isCollapsed` through its binding; everything else
-    /// each half owns is local to it (select mode and the exercise popovers live in the
-    /// body, the section popovers and the edit sheet in the header), so nothing is lost
+    /// each half owns is local to it (select mode and the exercise panels live in the
+    /// body, the section panel and the edit sheet in the header), so nothing is lost
     /// by splitting.
     enum Part {
         /// Header band, plus the Select/Add row that pins with it.
         case header
         /// The exercise rows.
         case body
-        /// Both, stacked — the template editor, which pins nothing.
+        /// Both, stacked. No caller left: both screens split the card so their action
+        /// row can pin. Kept as the default so a new caller that doesn't care about
+        /// pinning gets a working card from the shortest possible argument list.
         case whole
     }
 
@@ -103,17 +113,30 @@ struct SectionCardView: View {
     @Binding var pendingDeleteItemID: UUID?
     @State private var showingSectionSettings = false
     @State private var showingDescription = false
-    @State private var settingsPopoverItemID: UUID?
+    @State private var settingsItemID: UUID?
     @State private var positionPickerItemID: UUID?
     @State private var showingSectionPositionPicker = false
     @State private var positionPickerValue = 1
     @State private var showingAddExercises = false
     @State private var showingEditSheet = false
+    /// The exercise whose page is open, if any. Held on the card rather than in the gear
+    /// settings panel: a sheet presented from inside another sheet dies with it.
+    @State private var exerciseBeingEdited: Exercise?
     @State private var nameText = ""
     @State private var descriptionText = ""
 
     private var isLocked: Bool { section.isLocked }
+
+    /// Whether this section's record identity already has a template, in which case saving
+    /// another would be a second live section feeding one record — see
+    /// `WorkoutSectionCloningService.saveAsTemplate`, which refuses it.
+    private var hasRecordTemplate: Bool {
+        guard section.tracksRecord, let groupID = section.recordGroupID else { return false }
+        return SectionResultService.sectionsSharing(groupID: groupID, context: context)
+            .contains { $0.isTemplate && $0.id != section.id }
+    }
     private var showsActions: Bool { !isLocked && !inSectionSelectMode }
+
     /// Collapsing is a reading affordance, not an edit — a locked workout is exactly
     /// where it earns its keep, since those are the ones with a full history behind
     /// them and the most sections to scroll past. It goes only while selecting, when a
@@ -174,12 +197,35 @@ struct SectionCardView: View {
         // made it — which is why a bulk change has to switch it off rather than just
         // omitting `withAnimation` at the call site.
         .animation(suppressCollapseAnimation ? nil : .easeInOut(duration: 0.25), value: isCollapsed)
+        .sheet(item: Binding(
+            get: { openExerciseSettings },
+            set: { if $0 == nil { settingsItemID = nil } }
+        )) { open in
+            ExerciseSettingsPanel(
+                target: open.target,
+                context: context,
+                onClone: {
+                    settingsItemID = nil
+                    cloneItems([open.id])
+                },
+                onDelete: {
+                    settingsItemID = nil
+                    pendingDeleteItemID = open.id
+                    showingBatchDeleteConfirm = true
+                },
+                onEditExercise: editExerciseAction(for: open.target),
+                onAddRest: addRestAction(for: open.target)
+            )
+        }
         .sheet(isPresented: $showingAddExercises) {
             MultiExercisePickerView(existingExerciseIDs: existingExerciseIDs) { exercises in
                 addExercises(exercises)
             }
         }
         .sheet(isPresented: $showingEditSheet) { editSheet }
+        .sheet(item: $exerciseBeingEdited) { exercise in
+            ExerciseDetailView(exercise: exercise, isPresentedAsSheet: true)
+        }
         .alert(
             "Delete \(pendingDeleteCount) exercise\(pendingDeleteCount == 1 ? "" : "s")?",
             isPresented: $showingBatchDeleteConfirm
@@ -192,7 +238,7 @@ struct SectionCardView: View {
     // MARK: - Header
 
     /// Name + pencil on row 1 (alongside the section's own actions), description on
-    /// row 2, and the timing settings the gear popover controls summarised on row 3 —
+    /// row 2, and the timing settings the gear panel controls summarised on row 3 —
     /// so what Rounds/Autostart/Repeat are currently set to is readable without
     /// opening anything.
     /// Carries the section name on its own white band. Without a title (the template
@@ -294,8 +340,10 @@ struct SectionCardView: View {
                 // can't do anything else mid-reorder.
                 // Save-as-template is a sibling-level action: a template can't be saved
                 // as another template. It survives the lock — copying a section out
-                // changes nothing about the workout it came from.
-                if let siblings, !inSectionSelectMode {
+                // changes nothing about the workout it came from — but not a record
+                // identity that already has a template, which is the one case where the
+                // copy would be a second section feeding one record.
+                if let siblings, !inSectionSelectMode, !hasRecordTemplate {
                     Button {
                         siblings.onSaveAsTemplate()
                     } label: {
@@ -306,9 +354,11 @@ struct SectionCardView: View {
                 }
 
                 if showsActions {
-                    // The popover has to be attached here rather than on the card —
-                    // SwiftUI anchors a popover to the view carrying the modifier,
-                    // and it should point at the gear that opened it.
+                    // The sheet is still attached to the gear rather than to the card:
+                    // it no longer *has* to be — a sheet has no anchor, where a popover
+                    // pointed at whichever view carried the modifier — but the button and
+                    // what it opens read better together than a modifier hung two levels
+                    // up from the only thing that sets its flag.
                     Button {
                         showingSectionSettings = true
                     } label: {
@@ -316,12 +366,12 @@ struct SectionCardView: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(headerDetailColor)
-                    .popover(isPresented: $showingSectionSettings) {
-                        SectionSettingsPopover(
+                    .sheet(isPresented: $showingSectionSettings) {
+                        SectionSettingsPanel(
                             section: section,
                             context: context,
                             onError: onError,
-                            // Clone and Delete only exist among siblings. The popover
+                            // Clone and Delete only exist among siblings. The panel
                             // hides each action whose handler is nil.
                             onClone: siblings.map { s in {
                                 showingSectionSettings = false
@@ -504,10 +554,10 @@ struct SectionCardView: View {
         let selecting = showsActions && inSelectMode
         let isSelected = selectedItemIDs.contains(item.id)
         // Whatever the row is currently the subject of — ticked, or holding an open
-        // popover — gets the same light-gray backing so it's obvious which row an
+        // panel — gets the same light-gray backing so it's obvious which row an
         // action will apply to.
         let isActive = isSelected
-            || settingsPopoverItemID == item.id
+            || settingsItemID == item.id
             || positionPickerItemID == item.id
 
         return VStack(spacing: 0) {
@@ -546,28 +596,12 @@ struct SectionCardView: View {
                 // would be a second, conflicting tap target.
                 if showsActions, !selecting, let settings = item.settings {
                     Button {
-                        settingsPopoverItemID = item.id
+                        settingsItemID = item.id
                     } label: {
                         Image(systemName: "gearshape.fill")
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(Color.appAccent)
-                    .popover(isPresented: exerciseSettingsBinding(for: item.id)) {
-                        ExerciseSettingsPopover(
-                            target: settings,
-                            context: context,
-                            onClone: {
-                                settingsPopoverItemID = nil
-                                cloneItems([item.id])
-                            },
-                            onDelete: {
-                                settingsPopoverItemID = nil
-                                pendingDeleteItemID = item.id
-                                showingBatchDeleteConfirm = true
-                            },
-                            onAddRest: addRestAction(for: settings)
-                        )
-                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -601,7 +635,7 @@ struct SectionCardView: View {
                 SessionOverviewItem(
                     id: step.id,
                     position: index + 1,
-                    title: overviewTitle(for: step),
+                    title: step.displayTitle,
                     summary: exerciseSettingsSummary(.timeStep(step)),
                     settings: .timeStep(step),
                     // `resolvedColor` already answers this: green for an exercise
@@ -614,7 +648,7 @@ struct SectionCardView: View {
                 SessionOverviewItem(
                     id: entry.id,
                     position: index + 1,
-                    title: entry.exercise?.displayName ?? "Exercise",
+                    title: entry.displayTitle,
                     summary: exerciseSettingsSummary(.repEntry(entry)),
                     settings: .repEntry(entry)
                 )
@@ -624,7 +658,7 @@ struct SectionCardView: View {
                 SessionOverviewItem(
                     id: entry.id,
                     position: index + 1,
-                    title: entry.exercise?.displayName ?? "Exercise",
+                    title: entry.displayTitle,
                     summary: exerciseSettingsSummary(.quickEntry(entry)),
                     settings: .quickEntry(entry)
                 )
@@ -632,11 +666,24 @@ struct SectionCardView: View {
         }
     }
 
-    private func overviewTitle(for step: TimeSectionStep) -> String {
-        switch step.stepType {
-        case .exercise: return step.exercise?.displayName ?? "Exercise"
-        case .rest: return "Rest"
-        case .getReady: return "Get Ready"
+
+
+    /// The exercise behind a row, or nil for a Rest or Get Ready step — which have none,
+    /// so the button is hidden rather than shown dead.
+    ///
+    /// Closes the panel before presenting: the sheet would otherwise be a child of a
+    /// view that is about to disappear, and go with it.
+    private func editExerciseAction(for target: ExerciseSettingsTarget) -> (() -> Void)? {
+        let exercise: Exercise?
+        switch target {
+        case .timeStep(let step): exercise = step.stepType == .exercise ? step.exercise : nil
+        case .repEntry(let entry): exercise = entry.exercise
+        case .quickEntry(let entry): exercise = entry.exercise
+        }
+        guard let exercise else { return nil }
+        return {
+            settingsItemID = nil
+            exerciseBeingEdited = exercise
         }
     }
 
@@ -645,7 +692,7 @@ struct SectionCardView: View {
     private func addRestAction(for target: ExerciseSettingsTarget) -> (() -> Void)? {
         guard case .timeStep(let step) = target, step.stepType == .exercise else { return nil }
         return {
-            settingsPopoverItemID = nil
+            settingsItemID = nil
             addRest(after: step)
         }
     }
@@ -846,13 +893,18 @@ struct SectionCardView: View {
         )
     }
 
-    /// Same reason `.popover(item:)` isn't used: it would try to present on every row on
-    /// screen, so the open row is tracked by id.
-    private func exerciseSettingsBinding(for id: UUID) -> Binding<Bool> {
-        Binding(
-            get: { settingsPopoverItemID == id },
-            set: { if !$0 && settingsPopoverItemID == id { settingsPopoverItemID = nil } }
-        )
+    /// The open row's settings, if any — the card's one exercise panel resolves its
+    /// target from the id rather than each row carrying its own presentation.
+    ///
+    /// As a popover this had to hang off each row's gear, because a popover points at the
+    /// view carrying the modifier and `.popover(item:)` would have tried to present on
+    /// every row on screen at once. A sheet has no anchor, so one is enough.
+    private var openExerciseSettings: IdentifiedExerciseSettings? {
+        guard let id = settingsItemID,
+              let item = overviewItems.first(where: { $0.id == id }),
+              let settings = item.settings
+        else { return nil }
+        return IdentifiedExerciseSettings(id: id, target: settings)
     }
 
     /// Native wheel of every position in the section, current one preselected — pick a

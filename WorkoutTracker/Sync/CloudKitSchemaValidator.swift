@@ -53,9 +53,11 @@ enum CloudKitSchemaValidator {
 
         let types: [any PersistentModel.Type] = [
             MuscleCategory.self, Muscle.self, Equipment.self, WeightCombo.self,
-            ExerciseCategory.self, Exercise.self, Workout.self, WorkoutSection.self,
+            ExerciseCategory.self, ExecutionType.self, Exercise.self,
+            ProgressionGroup.self, ProgressionStep.self,
+            WorkoutTag.self, Workout.self, WorkoutSection.self,
             TimeSectionStep.self, RepSectionExercise.self, SectionExerciseEntry.self,
-            WorkoutSession.self, StepLog.self, SetLog.self, ExerciseSessionNote.self,
+            WorkoutSession.self, StepLog.self, SetLog.self, SectionResultLog.self, ExerciseSessionNote.self,
             PersonalRecord.self, PersonalRecordEntry.self,
             RecurringWorkoutSchedule.self, ScheduledWorkout.self,
             FollowedUser.self,

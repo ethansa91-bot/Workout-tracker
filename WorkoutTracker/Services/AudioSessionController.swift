@@ -25,6 +25,17 @@ enum AudioSessionController {
     /// Bumped on every `endActivity()`; a pending deactivation that no longer matches
     /// has been superseded by a newer cue and does nothing.
     private static var deactivationGeneration = 0
+    /// Bumped by `deactivateNow()`, which zeroes the refcount outright. Claims taken
+    /// before that point are void: their release is still in flight (a beep's deferred
+    /// cleanup, a synthesizer's `didFinish` hop) and would otherwise land afterwards and
+    /// decrement a *newer* cue's claim to zero — deactivating the session under a player
+    /// that is still sounding. Each claim carries the epoch it was taken in.
+    private static var claimEpoch = 0
+
+    /// An opaque receipt for one `beginActivity()`, to be handed back to `endActivity`.
+    struct Claim {
+        fileprivate let epoch: Int
+    }
 
     /// How long to wait after the last cue before releasing the session. Long enough to
     /// span the gap between a warning beep and the spoken cue that follows it, so a
@@ -44,8 +55,10 @@ enum AudioSessionController {
         isConfigured = true
     }
 
-    /// Claims the session for one cue. Balanced by exactly one `endActivity()`.
-    static func beginActivity() {
+    /// Claims the session for one cue. Balanced by exactly one `endActivity(_:)`, passing
+    /// back the returned claim.
+    @discardableResult
+    static func beginActivity() -> Claim {
         activityCount += 1
         // Invalidate any deactivation scheduled while the count was at zero.
         deactivationGeneration += 1
@@ -57,11 +70,14 @@ enum AudioSessionController {
         // expensive part, and that now happens once.
         try? AVAudioSession.sharedInstance().setActive(true)
         isActive = true
+        return Claim(epoch: claimEpoch)
     }
 
     /// Releases one cue's claim. When the last one drops, the session is deactivated
-    /// after a short idle delay.
-    static func endActivity() {
+    /// after a short idle delay. A claim from before a `deactivateNow()` is already
+    /// settled and does nothing.
+    static func endActivity(_ claim: Claim) {
+        guard claim.epoch == claimEpoch else { return }
         guard activityCount > 0 else { return }
         activityCount -= 1
         guard activityCount == 0 else { return }
@@ -79,6 +95,7 @@ enum AudioSessionController {
     static func deactivateNow() {
         activityCount = 0
         deactivationGeneration += 1
+        claimEpoch += 1
         deactivate()
     }
 

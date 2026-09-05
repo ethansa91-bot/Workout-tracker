@@ -18,6 +18,10 @@ import SwiftData
 enum WorkoutRoute: Hashable {
     case workout(Workout)
     case archives
+    /// The Schedule's bulk-cancel screen for occurrences older than the recap window.
+    /// A case for the same reason Archives is one, and it was previously a
+    /// destination-based link — the out-of-band push this comment describes.
+    case olderMissed(cutoff: Date)
 }
 
 private enum WorkoutsPane: String, CaseIterable, Identifiable {
@@ -50,8 +54,12 @@ struct WorkoutListView: View {
     /// original and push the copy in its place.
     @State private var path: [WorkoutRoute] = []
 
+    @State private var tagFilter = WorkoutTagFilter()
+
     private var workouts: [Workout] {
-        allWorkouts.filter { $0.deletedAt == nil && !$0.isArchived }
+        allWorkouts.filter {
+            $0.deletedAt == nil && !$0.isArchived && tagFilter.matches($0.sortedTags)
+        }
     }
 
     var body: some View {
@@ -61,10 +69,15 @@ struct WorkoutListView: View {
                 // there — the band holds that row open instead.
                 PageAccessoryBand(reservesButtonRow: selectedPane == .library) { paneSelector }
                     .animation(nil, value: selectedPane)
+                // Only over the two panes that list taggable things — the Library pane
+                // has its own filters and nothing here to narrow.
+                if selectedPane != .library {
+                    WorkoutTagFilterBar(filter: $tagFilter)
+                }
                 Group {
                     switch selectedPane {
                     case .workouts: workoutsContent
-                    case .templates: SectionTemplatesView()
+                    case .templates: SectionTemplatesView(tagFilter: tagFilter)
                     case .library: LibraryHomeView()
                     }
                 }
@@ -122,6 +135,10 @@ struct WorkoutListView: View {
                     }
                 case .archives:
                     ArchivedWorkoutsView()
+                // Only the Schedule pushes this, but the route type is shared with that
+                // stack and the destination has to be total.
+                case .olderMissed(let cutoff):
+                    MissedWorkoutsView(cutoff: cutoff)
                 }
             }
             .navigationDestination(item: $newTemplateDestination) { section in
@@ -279,6 +296,7 @@ struct WorkoutListView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(workout.name)
                 StatusPill(text: workout.listTypeLabel, tint: .accentColor)
+                RowTagPills(tags: workout.sortedTags)
                 if let notes = workout.notes, !notes.isEmpty {
                     Text(notes)
                         .font(.caption)

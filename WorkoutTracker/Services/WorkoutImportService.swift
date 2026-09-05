@@ -55,9 +55,40 @@ enum WorkoutImportService {
             try context.save()
         }
 
+        let tags = resolveTags(seed.tags, context: context)
+        if !tags.isEmpty {
+            try WorkoutEditingService.setTags(tags, on: workout, context: context)
+        }
+
         for sectionSeed in seed.sections ?? [] {
             try importSection(sectionSeed, into: workout, resolver: resolver, summary: &summary, context: context)
         }
+    }
+
+    /// Maps tag names onto rows, creating what doesn't exist yet.
+    ///
+    /// Case-insensitive so an imported "Push" joins the user's existing "push" instead of
+    /// standing beside it — two spellings of one word would split the filter they exist to
+    /// serve, the same reason the tag sheet dedupes on entry.
+    private static func resolveTags(_ names: [String]?, context: ModelContext) -> [WorkoutTag] {
+        guard let names, !names.isEmpty else { return [] }
+        let existing = (try? context.fetch(FetchDescriptor<WorkoutTag>())) ?? []
+        var live = existing.filter { $0.deletedAt == nil }
+
+        var resolved: [WorkoutTag] = []
+        for raw in names {
+            let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty else { continue }
+            if let match = live.first(where: { $0.name.compare(name, options: .caseInsensitive) == .orderedSame }) {
+                if !resolved.contains(where: { $0.id == match.id }) { resolved.append(match) }
+                continue
+            }
+            let created = WorkoutTag(name: name)
+            context.insert(created)
+            live.append(created)
+            resolved.append(created)
+        }
+        return resolved
     }
 
     private static func importSection(
@@ -85,6 +116,16 @@ enum WorkoutImportService {
         if let repeatCount = seed.repeatCount, repeatCount > 1 {
             try WorkoutEditingService.updateRepeatCount(section, to: repeatCount, context: context)
         }
+        // Unconditional, and `true` when the key is absent: the writer omits this whenever
+        // it is on, so "missing" means on rather than "leave it alone". Left conditional,
+        // a file written with it on would import with it off, because a freshly built
+        // section now starts off.
+        try WorkoutEditingService.updateRepeatsGetReady(
+            section, to: seed.repeatsGetReadyEachPass ?? true, context: context
+        )
+        if let rest = seed.sectionRestSeconds, rest > 0 {
+            try WorkoutEditingService.updateSectionRest(section, to: min(300, rest), context: context)
+        }
 
         switch type {
         case .time:
@@ -92,14 +133,24 @@ enum WorkoutImportService {
         case .rep:
             try importRepExercises(seed.repExercises ?? [], into: section, resolver: resolver, summary: &summary, context: context)
         case .emom:
+            // Before the round count: to-failure hides it, and the setter clamps the
+            // repeat, so applying it second would silently discard a rounds value the
+            // file did supply for a section that later turns out to be fixed.
+            if seed.emomToFailure == true {
+                try WorkoutEditingService.updateEmomToFailure(section, to: true, context: context)
+            }
             if let rounds = seed.emomRoundCount {
                 try WorkoutEditingService.updateEmomRoundCount(section, to: rounds, context: context)
             }
+            try applyGetReady(seed.getReadySeconds, to: section, context: context)
+            try applyTracksRecord(seed.tracksRecord, to: section, context: context)
             try importQuickExercises(seed.quickExercises ?? [], into: section, resolver: resolver, summary: &summary, context: context)
         case .amrap:
             if let seconds = seed.amrapDurationSeconds {
                 try WorkoutEditingService.updateAmrapDuration(section, to: seconds, context: context)
             }
+            try applyGetReady(seed.getReadySeconds, to: section, context: context)
+            try applyTracksRecord(seed.tracksRecord, to: section, context: context)
             try importQuickExercises(seed.quickExercises ?? [], into: section, resolver: resolver, summary: &summary, context: context)
         }
     }
@@ -140,6 +191,29 @@ enum WorkoutImportService {
             // Color isn't an init or service parameter — it's set on the returned step.
             if let color = seed.color.flatMap(PaletteColor.init(rawValue:)) {
                 step.color = color
+                step.markDirty()
+                try context.save()
+            }
+            if let type = executionType(named: seed.executionType, on: step.exercise) {
+                step.executionType = type
+                step.markDirty()
+                try context.save()
+            }
+            if let side = side(named: seed.side, on: step.exercise) {
+                step.side = side
+                step.markDirty()
+                try context.save()
+            }
+            if let name = seed.preferredEquipment,
+               let equipment = step.exercise?.weightedEquipmentOptions.first(where: {
+                   $0.name.compare(name, options: .caseInsensitive) == .orderedSame
+               }) {
+                step.preferredEquipment = equipment
+                step.markDirty()
+                try context.save()
+            }
+            if seed.prefersBodyweight == true, step.exercise?.allowsBodyweightSource == true {
+                step.prefersBodyweight = true
                 step.markDirty()
                 try context.save()
             }
@@ -186,8 +260,53 @@ enum WorkoutImportService {
                 entry.markDirty()
                 try context.save()
             }
+            if let type = executionType(named: seed.executionType, on: exercise) {
+                entry.executionType = type
+                entry.markDirty()
+                try context.save()
+            }
+            if seed.progressionEnabled == false {
+                entry.progressionEnabled = false
+                entry.markDirty()
+                try context.save()
+            }
             summary.repExercises += 1
         }
+    }
+
+    /// Resolved against the exercise's own types, so a name the catalog doesn't have —
+    /// or has but hasn't attached here — is ignored rather than applied. The same rule
+    /// `preferredEquipment` follows, and the reason this format can stay hand-written.
+    private static func executionType(named name: String?, on exercise: Exercise?) -> ExecutionType? {
+        guard let name, let exercise else { return nil }
+        return exercise.executionTypes.first {
+            $0.deletedAt == nil && $0.name.compare(name, options: .caseInsensitive) == .orderedSame
+        }
+    }
+
+    /// A side only applies to an exercise the catalog marks one-sided — the same
+    /// capability rule `tracksSides` follows, so a hand-written file can't pin "Left"
+    /// onto a movement whose own pickers would never offer it.
+    private static func side(named raw: String?, on exercise: Exercise?) -> SetSide? {
+        guard let raw, exercise?.isOneSided == true else { return nil }
+        return SetSide(rawValue: raw.lowercased())
+    }
+
+    /// EMOM and AMRAP hold their get-ready as a plain duration rather than as a step, so
+    /// there is no `addTimeStep` to route through — it is written straight to the section.
+    private static func applyGetReady(_ seconds: Int?, to section: WorkoutSection, context: ModelContext) throws {
+        guard let seconds, seconds > 0 else { return }
+        section.getReadySeconds = min(300, seconds)
+        section.markDirty()
+        try context.save()
+    }
+
+    /// Turns on record tracking when the file asks for it, minting a fresh identity via
+    /// the editing service — the seed format carries the intent, not the publisher's own
+    /// `recordGroupID`, so two people importing the same file each keep their own record.
+    private static func applyTracksRecord(_ tracks: Bool?, to section: WorkoutSection, context: ModelContext) throws {
+        guard tracks == true else { return }
+        try WorkoutEditingService.updateTracksRecord(section, to: true, context: context)
     }
 
     private static func importQuickExercises(
@@ -199,7 +318,24 @@ enum WorkoutImportService {
     ) throws {
         for seed in seeds {
             guard let exercise = resolver.exercise(named: seed.exercise) else { continue }
-            try WorkoutEditingService.addQuickExercise(to: section, exercise: exercise, context: context)
+            let entry = try WorkoutEditingService.addQuickExercise(to: section, exercise: exercise, context: context)
+            // Set on the returned entry rather than passed in, the same way a rep entry's
+            // equipment and a time step's color are.
+            if let type = executionType(named: seed.executionType, on: exercise) {
+                entry.executionType = type
+                entry.markDirty()
+                try context.save()
+            }
+            if let reps = seed.reps, reps > 0 {
+                entry.targetReps = reps
+                entry.markDirty()
+                try context.save()
+            }
+            if let side = side(named: seed.side, on: exercise) {
+                entry.side = side
+                entry.markDirty()
+                try context.save()
+            }
             summary.quickExercises += 1
         }
     }
@@ -258,6 +394,10 @@ enum WorkoutImportService {
         let notes: String?
         let kind: String?
         let isArchived: Bool?
+        /// Tag names. Created on demand and matched case-insensitively, the way a stale
+        /// `executionType` is ignored rather than aborting — a tag is organisational, so
+        /// an unfamiliar one is worth adopting, not worth refusing the whole file over.
+        let tags: [String]?
         let sections: [SectionSeed]?
     }
 
@@ -270,13 +410,34 @@ enum WorkoutImportService {
         /// Absent (or 1) means the section runs once.
         let repeatCount: Int?
         let emomRoundCount: Int?
+        /// EMOM only — absent means a fixed number of rounds.
+        let emomToFailure: Bool?
+        /// EMOM/AMRAP only — absent means the section tracks no record. The identity is
+        /// minted locally on import, so each importer keeps their own history.
+        let tracksRecord: Bool?
         let amrapDurationSeconds: Int?
+        /// EMOM/AMRAP only — absent means no get-ready phase, which is what every file
+        /// written before it existed says by omission.
+        let getReadySeconds: Int?
+        /// Absent means the count-in plays before every pass, the model's own default.
+        let repeatsGetReadyEachPass: Bool?
+        /// Seconds between passes. Absent means none.
+        let sectionRestSeconds: Int?
         let timeSteps: [TimeStepSeed]?
         let repExercises: [RepExerciseSeed]?
         let quickExercises: [QuickExerciseSeed]?
     }
 
     private struct QuickExerciseSeed: Decodable {
+        /// Absent means no target, which is what every file written before reps existed
+        /// says by omission.
+        let reps: Int?
+        /// Name of the execution type, resolved against the exercise's own types and
+        /// ignored when stale — same rule as everywhere else in this format.
+        let executionType: String?
+        /// "left"/"right". Absent means both sides, and it is ignored when the exercise
+        /// isn't one-sided — the same capability rule `tracksSides` follows.
+        let side: String?
         let exercise: String
     }
 
@@ -286,6 +447,17 @@ enum WorkoutImportService {
         /// Only present on `exercise` steps.
         let exercise: String?
         let color: String?
+        /// Name of the execution type this step is performed as. Ignored when the
+        /// exercise doesn't carry it, the same way a stale `preferredEquipment` is.
+        let executionType: String?
+        /// "left"/"right". Absent means both sides, and it is ignored when the exercise
+        /// isn't one-sided — the same capability rule `tracksSides` follows.
+        let side: String?
+        /// Name of the weighted equipment this workout holds the step with. Absent falls
+        /// back to the exercise's own resolution.
+        let preferredEquipment: String?
+        /// The step is performed unloaded, ignoring `preferredEquipment`.
+        let prefersBodyweight: Bool?
 
         var parsedStepType: TimeStepType { TimeStepType(rawValue: stepType) ?? .exercise }
     }
@@ -304,6 +476,11 @@ enum WorkoutImportService {
         let preferredEquipment: String?
         /// Bodyweight is this entry's default load, ignoring `preferredEquipment`.
         let prefersBodyweight: Bool?
+        /// Name of the execution type this workout performs the exercise as.
+        let executionType: String?
+        /// Absent means on, which is the model's own default — an older file predates the
+        /// setting and its entries should follow their ladders like any other.
+        let progressionEnabled: Bool?
     }
 
     // MARK: - Loading

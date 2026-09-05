@@ -233,21 +233,26 @@ extension View {
     }
 }
 
-struct PageTitleBand<Accessory: View>: View {
+struct PageTitleBand<Accessory: View, Trailing: View>: View {
     let title: String
     /// True on a screen with no toolbar button, so the band holds that row open itself
     /// and every tab's header stays the same height.
     var reservesButtonRow: Bool = false
+    /// Controls sitting beside the title, the way `PushedTitleBand`'s do — before the
+    /// `Spacer`, so they hug the title rather than drifting to the far edge.
+    @ViewBuilder var trailing: Trailing
+    /// A full-width control *below* the title.
     @ViewBuilder var accessory: Accessory
 
     private var hasAccessory: Bool { Accessory.self != EmptyView.self }
 
     var body: some View {
         VStack(alignment: .leading, spacing: hasAccessory ? 12 : 0) {
-            HStack {
+            HStack(spacing: 12) {
                 Text(title)
                     .font(.appSerif(.title2))
                     .foregroundStyle(.white)
+                trailing
                 Spacer()
             }
             accessory
@@ -256,9 +261,15 @@ struct PageTitleBand<Accessory: View>: View {
     }
 }
 
-extension PageTitleBand where Accessory == EmptyView {
+extension PageTitleBand where Accessory == EmptyView, Trailing == EmptyView {
     init(title: String, reservesButtonRow: Bool = false) {
-        self.init(title: title, reservesButtonRow: reservesButtonRow, accessory: { EmptyView() })
+        self.init(title: title, reservesButtonRow: reservesButtonRow, trailing: { EmptyView() }, accessory: { EmptyView() })
+    }
+}
+
+extension PageTitleBand where Accessory == EmptyView {
+    init(title: String, reservesButtonRow: Bool = false, @ViewBuilder trailing: () -> Trailing) {
+        self.init(title: title, reservesButtonRow: reservesButtonRow, trailing: trailing, accessory: { EmptyView() })
     }
 }
 
@@ -271,22 +282,31 @@ extension PageTitleBand where Accessory == EmptyView {
 ///
 /// Reaches both screen edges, which only works under `.listStyle(.plain)`: an
 /// inset-grouped section keeps its own side margins whatever the row insets say.
-struct ListBandHeader: View {
+struct ListBandHeader<Trailing: View>: View {
     let title: String
     /// A second, lighter line — what kind of section it is, how long it ran. Omitted
     /// where the title says everything (the Schedule's day bands).
     var subtitle: String? = nil
+    /// A control belonging to the section rather than to a row in it — the exercise
+    /// page's "Allow bodyweight" and "Separate records" toggles. On the band because they
+    /// qualify the whole section, and there is no row they could sit on without inventing
+    /// one.
+    @ViewBuilder var trailing: Trailing
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white)
-            if let subtitle {
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.8))
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.8))
+                }
             }
+            Spacer(minLength: 8)
+            trailing
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
@@ -297,6 +317,51 @@ struct ListBandHeader: View {
         .textCase(nil)
     }
 }
+
+extension ListBandHeader where Trailing == EmptyView {
+    init(title: String, subtitle: String? = nil) {
+        self.init(title: title, subtitle: subtitle, trailing: { EmptyView() })
+    }
+}
+
+/// The caption beside a section-band toggle. Quiet, because it qualifies the band's title
+/// rather than competing with it — and white, because the band is dark.
+struct BandToggleLabel: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.white.opacity(0.8))
+    }
+}
+
+/// A band-level flag you flip by tapping the words, the way `SettingCell` works in the
+/// popovers — same "Label: on" readout, in the two whites a dark band has instead of
+/// `SettingRowLabel`'s ink and rust.
+///
+/// `SettingCell` itself can't serve here: its `appInk` title and `appRust` value are both
+/// unreadable against `appHeaderGray`.
+struct BandToggleButton: View {
+    let text: String
+    let isOn: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                BandToggleLabel(text: "\(text):")
+                Text(isOn ? "on" : "off")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+            }
+            .lineLimit(1)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 
 /// A muted section label on the cream ground, standing in for a grouped list's header
 /// now that `.plain` renders headers unstyled and flush-left.
@@ -363,12 +428,47 @@ extension View {
 /// Carries the screen's identity so the content below it never has to repeat the name:
 /// an optional one-line `subtitle` that expands on tap, and an optional trailing control
 /// (typically the pencil that opens the screen's edit sheet).
+/// A paragraph on a green band, shown one line at a time.
+///
+/// A description is usually a paragraph, and a header that grows to fit one pushes the
+/// whole page down — every time the screen opens, for text that's read once. So the band
+/// shows the first line with a chevron and expanding is a deliberate tap.
+///
+/// The tappable area is the text and the chevron together, which is why a caller with its
+/// own control beside the description (the workout header's pencil) puts that control
+/// *outside* this view: a button nested in a button's label never sees the tap.
+struct ExpandableBandText: View {
+    let text: String
+
+    @State private var isExpanded = false
+
+    var body: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
+        } label: {
+            HStack(alignment: .top, spacing: 6) {
+                Text(text)
+                    .font(.footnote)
+                    .foregroundStyle(.white.opacity(0.85))
+                    .lineLimit(isExpanded ? nil : 1)
+                    .truncationMode(.tail)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 struct PushedTitleBand<Trailing: View>: View {
     let title: String
     var subtitle: String? = nil
     @ViewBuilder var trailing: Trailing
-
-    @State private var subtitleExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -380,27 +480,8 @@ struct PushedTitleBand<Trailing: View>: View {
                 Spacer()
             }
 
-            // One line until tapped: a description is usually a paragraph, and a header
-            // that grows to fit one pushes the whole page down.
             if let subtitle, !subtitle.isEmpty {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { subtitleExpanded.toggle() }
-                } label: {
-                    HStack(alignment: .top, spacing: 6) {
-                        Text(subtitle)
-                            .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.85))
-                            .lineLimit(subtitleExpanded ? nil : 1)
-                            .truncationMode(.tail)
-                            .multilineTextAlignment(.leading)
-                        Spacer(minLength: 0)
-                        Image(systemName: "chevron.right")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.85))
-                            .rotationEffect(.degrees(subtitleExpanded ? 90 : 0))
-                    }
-                }
-                .buttonStyle(.plain)
+                ExpandableBandText(text: subtitle)
             }
         }
         // Same inset as the tab bands — here it clears the back button too.

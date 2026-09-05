@@ -26,6 +26,17 @@ enum SharedWorkoutBuilder {
                 return copy
             }
 
+        // Tags are stripped rather than carried. A tag is one person's filing system —
+        // "travel", "short", "physio" mean nothing in someone else's library, and the
+        // payload has no tag table for the ids to resolve against anyway, so leaving them
+        // would publish dangling references.
+        dto.tagIDs = []
+        dto.sections = dto.sections.map { section in
+            var copy = section
+            copy.tagIDs = []
+            return copy
+        }
+
         let catalog = referencedCatalog(for: workout)
 
         let payload = SharedWorkoutPayload(
@@ -33,10 +44,13 @@ enum SharedWorkoutBuilder {
             workout: dto,
             exercises: catalog.exercises,
             equipment: catalog.equipment,
+            executionTypes: catalog.executionTypes,
             muscles: catalog.muscles,
             muscleCategories: catalog.muscleCategories,
             exerciseCategories: catalog.exerciseCategories,
-            weightCombos: catalog.weightCombos
+            weightCombos: catalog.weightCombos,
+            progressionGroups: catalog.progressionGroups,
+            progressionSteps: catalog.progressionSteps
         )
         return SharedWorkoutBundle(payload: payload, images: catalog.images)
     }
@@ -44,6 +58,9 @@ enum SharedWorkoutBuilder {
     private struct Catalog {
         var exercises: [ArchiveExercise] = []
         var equipment: [ArchiveEquipment] = []
+        var progressionGroups: [ArchiveProgressionGroup] = []
+        var progressionSteps: [ArchiveProgressionStep] = []
+        var executionTypes: [ArchiveExecutionType] = []
         var muscles: [ArchiveMuscle] = []
         var muscleCategories: [ArchiveMuscleCategory] = []
         var exerciseCategories: [ArchiveExerciseCategory] = []
@@ -59,20 +76,47 @@ enum SharedWorkoutBuilder {
     private static func referencedCatalog(for workout: Workout) -> Catalog {
         var exercisesByID: [UUID: Exercise] = [:]
         var equipmentByID: [UUID: Equipment] = [:]
+        var executionTypesByID: [UUID: ExecutionType] = [:]
+        var progressionGroupsByID: [UUID: ProgressionGroup] = [:]
 
         for section in workout.sortedSections {
             for step in section.sortedTimeSteps {
                 if let exercise = step.exercise { exercisesByID[exercise.id] = exercise }
+                // Collected explicitly for the same reason `preferredEquipment` is: the
+                // step's own selection has to resolve even if the exercise no longer
+                // lists it.
+                if let type = step.executionType { executionTypesByID[type.id] = type }
+                if let equipment = step.preferredEquipment { equipmentByID[equipment.id] = equipment }
             }
             for entry in section.sortedRepExercises {
                 if let exercise = entry.exercise { exercisesByID[exercise.id] = exercise }
+                // Only when the entry actually follows its ladder. An entry with
+                // progression switched off runs exactly what it names, so sending the
+                // ladder would add exercises to the recipient's library for nothing.
+                if entry.progressionEnabled,
+                   let group = entry.exercise?.progressionGroup,
+                   group.sortedSteps.count > 1 {
+                    progressionGroupsByID[group.id] = group
+                }
                 // A preferred equipment is normally also in the exercise's own list, but
                 // an entry can outlive that link — collected explicitly so the reference
                 // in the workout always resolves.
                 if let equipment = entry.preferredEquipment { equipmentByID[equipment.id] = equipment }
+                if let type = entry.executionType { executionTypesByID[type.id] = type }
             }
             for entry in section.sortedQuickExercises {
                 if let exercise = entry.exercise { exercisesByID[exercise.id] = exercise }
+                if let type = entry.executionType { executionTypesByID[type.id] = type }
+            }
+        }
+
+        // Every rung of every collected ladder, added here and not later: the walk below
+        // is what gives an exercise its muscles, equipment and categories, and a rung
+        // added after it would arrive as a bare name — the exact v1 bug that walk exists
+        // to fix.
+        for group in progressionGroupsByID.values {
+            for step in group.sortedSteps {
+                if let exercise = step.exercise { exercisesByID[exercise.id] = exercise }
             }
         }
 
@@ -96,11 +140,33 @@ enum SharedWorkoutBuilder {
             for category in exercise.categories where category.deletedAt == nil {
                 exerciseCategoriesByID[category.id] = category
             }
+            for type in exercise.executionTypes where type.deletedAt == nil {
+                executionTypesByID[type.id] = type
+            }
         }
 
         var catalog = Catalog()
         catalog.exercises = exercisesByID.values.sorted { $0.name < $1.name }.map(exerciseOut)
         catalog.equipment = equipmentByID.values.sorted { $0.name < $1.name }.map(equipmentOut)
+        catalog.executionTypes = executionTypesByID.values.sorted { $0.name < $1.name }.map(executionTypeOut)
+        catalog.progressionGroups = progressionGroupsByID.values.map { group in
+            // `reachedLevel: 1` always. How far the publisher has climbed is their
+            // history, and handing it over would open the recipient at a rung they have
+            // never performed — see `ArchiveProgressionGroup`'s own note.
+            ArchiveProgressionGroup(id: group.id, reachedLevel: 1, updatedAt: group.updatedAt, deletedAt: nil)
+        }
+        catalog.progressionSteps = progressionGroupsByID.values.flatMap { group in
+            group.sortedSteps.map { step in
+                ArchiveProgressionStep(
+                    id: step.id,
+                    groupID: group.id,
+                    exerciseID: step.exercise?.id,
+                    level: step.level,
+                    updatedAt: step.updatedAt,
+                    deletedAt: nil
+                )
+            }
+        }
         catalog.muscles = musclesByID.values.sorted { $0.name < $1.name }.map(muscleOut)
         catalog.muscleCategories = muscleCategoriesByID.values
             .sorted { $0.name < $1.name }
@@ -145,7 +211,10 @@ enum SharedWorkoutBuilder {
             allowsBodyweight: exercise.allowsBodyweight,
             isOneSided: exercise.isOneSided,
             defaultEquipmentName: exercise.defaultEquipmentName,
+            defaultsToBodyweight: exercise.defaultsToBodyweight,
             equipmentIDs: exercise.equipmentItems.filter { $0.deletedAt == nil }.map(\.id),
+            executionTypeIDs: exercise.executionTypes.filter { $0.deletedAt == nil }.map(\.id),
+            separateRecordsPerExecutionType: exercise.separateRecordsPerExecutionType,
             muscleIDs: exercise.muscles.filter { $0.deletedAt == nil }.map(\.id),
             categoryIDs: exercise.categories.filter { $0.deletedAt == nil }.map(\.id),
             updatedAt: exercise.updatedAt,
@@ -165,6 +234,16 @@ enum SharedWorkoutBuilder {
             isWeighted: equipment.isWeighted,
             preferredWeightUnit: equipment.preferredWeightUnit,
             updatedAt: equipment.updatedAt,
+            deletedAt: nil
+        )
+    }
+
+    private static func executionTypeOut(_ type: ExecutionType) -> ArchiveExecutionType {
+        ArchiveExecutionType(
+            id: type.id,
+            name: type.name,
+            isCustom: type.isCustom,
+            updatedAt: type.updatedAt,
             deletedAt: nil
         )
     }

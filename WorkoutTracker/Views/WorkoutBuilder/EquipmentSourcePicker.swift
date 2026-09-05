@@ -1,80 +1,121 @@
 import SwiftUI
 import SwiftData
 
-/// The load a rep entry defaults to: one of the exercise's weighted equipment, or
-/// bodyweight. Two settings back it — `preferredEquipment` and `prefersBodyweight` —
-/// but they're one choice to the user, so they're picked as one here rather than as a
-/// menu plus a separate toggle.
+/// The load an entry defaults to: one of the exercise's weighted equipment, or bodyweight.
+/// Two settings back it — `preferredEquipment` and `prefersBodyweight` — but they're one
+/// choice to the user, so they're picked as one here rather than as a menu plus a separate
+/// toggle.
 ///
-/// Shared by the gear popover (`ExerciseSettingsPopover`) and the inline section editor
-/// (`SectionCardView`'s per-exercise gear), which carried byte-identical copies of
-/// this before.
+/// Takes bindings rather than a model, because a rep entry and a Follow Along step both
+/// carry this pair and share no protocol — the same reason `ExecutionTypePicker` does.
+/// The `RepSectionExercise` convenience init below keeps the original call shape.
 struct EquipmentSourcePicker: View {
-    @Bindable var entry: RepSectionExercise
-    let context: ModelContext
-    /// The popover styles its own rows; the section editor uses a plain labeled picker.
-    var showsInlineLabel: Bool = true
+    let exercise: Exercise?
+    @Binding var preferredEquipment: Equipment?
+    @Binding var prefersBodyweight: Bool
+    /// Persistence belongs to the caller: each one already knows what to mark dirty.
+    var onChange: () -> Void
 
     /// Distinguishes "bodyweight" from any equipment id without a second binding.
     private static let bodyweightTag = UUID()
 
-    private var options: [Equipment] { entry.exercise?.weightedEquipmentOptions ?? [] }
-    private var allowsBodyweight: Bool { entry.exercise?.allowsBodyweightSource ?? false }
+    private var options: [Equipment] { exercise?.weightedEquipmentOptions ?? [] }
+    private var allowsBodyweight: Bool { exercise?.allowsBodyweightSource ?? false }
 
-    /// Nothing to ask when there's only one possible answer. Bodyweight counts as a
-    /// real alternative, so a single weighted item plus bodyweight is still a choice.
+    /// Deferred to the catalog so the exercise page's "Default equipment" row and this
+    /// picker are offered under exactly the same condition.
     var hasChoice: Bool {
-        options.count > 1 || (allowsBodyweight && !options.isEmpty)
+        exercise?.hasEquipmentChoice ?? false
     }
 
-    private var selection: Binding<UUID?> {
-        Binding(
-            get: {
-                if entry.prefersBodyweight { return Self.bodyweightTag }
-                // Falls back to the catalog's own resolution rather than the
-                // alphabetically first item, so the builder shows the same default the
-                // runner will actually use.
-                return entry.preferredEquipment?.id ?? entry.exercise?.weightedEquipment?.id
-            },
-            set: { newID in
-                if newID == Self.bodyweightTag {
-                    entry.prefersBodyweight = true
-                    entry.preferredEquipment = nil
-                } else {
-                    entry.prefersBodyweight = false
-                    entry.preferredEquipment = options.first { $0.id == newID }
+    private var selectedName: String {
+        Self.resolvedSourceName(
+            exercise: exercise,
+            preferredEquipment: preferredEquipment,
+            prefersBodyweight: prefersBodyweight
+        )
+    }
+
+    /// What this entry will actually be loaded with — the entry's own choice, else the
+    /// catalog's resolution, else bodyweight.
+    ///
+    /// Static and shared with `exerciseSettingsSummary`, which names the same thing on the
+    /// row outside this picker. The precedence mirrors `RepSessionRunnerView.weightSource`,
+    /// which is the authority; a fourth copy of it would be a fourth chance for the
+    /// builder to disagree with what the runner loads.
+    static func resolvedSourceName(
+        exercise: Exercise?,
+        preferredEquipment: Equipment?,
+        prefersBodyweight: Bool
+    ) -> String {
+        if prefersBodyweight { return "Bodyweight" }
+        let options = exercise?.weightedEquipmentOptions ?? []
+        let id = preferredEquipment?.id ?? exercise?.defaultWeightedEquipment?.id
+        return options.first { $0.id == id }?.name ?? "Bodyweight"
+    }
+
+    var body: some View {
+        if hasChoice {
+            SettingMenu(title: "Equipment", value: selectedName) {
+                ForEach(options) { item in
+                    Button(item.name) { select(item.id) }
                 }
+                if allowsBodyweight {
+                    Button("Bodyweight") { select(Self.bodyweightTag) }
+                }
+            }
+        }
+    }
+
+    private func select(_ id: UUID) {
+        if id == Self.bodyweightTag {
+            prefersBodyweight = true
+            preferredEquipment = nil
+        } else {
+            prefersBodyweight = false
+            preferredEquipment = options.first { $0.id == id }
+        }
+        onChange()
+    }
+}
+
+extension EquipmentSourcePicker {
+    /// The original call shape, kept so the rep popover reads as it did.
+    init(entry: RepSectionExercise, context: ModelContext) {
+        self.init(
+            exercise: entry.exercise,
+            preferredEquipment: Binding(
+                get: { entry.preferredEquipment },
+                set: { entry.preferredEquipment = $0 }
+            ),
+            prefersBodyweight: Binding(
+                get: { entry.prefersBodyweight },
+                set: { entry.prefersBodyweight = $0 }
+            ),
+            onChange: {
                 entry.markDirty()
                 try? context.save()
             }
         )
     }
 
-    var body: some View {
-        if hasChoice {
-            if showsInlineLabel {
-                HStack {
-                    Text("Equipment:")
-                        .font(.subheadline)
-                    Spacer()
-                    picker
-                        .labelsHidden()
-                        .tint(Color.appRust)
-                }
-            } else {
-                picker
+    /// A Follow Along step holds the same pair, for the same reason: a weighted plank is
+    /// still a weighted plank when it's held for a duration instead of counted in sets.
+    init(step: TimeSectionStep, context: ModelContext) {
+        self.init(
+            exercise: step.exercise,
+            preferredEquipment: Binding(
+                get: { step.preferredEquipment },
+                set: { step.preferredEquipment = $0 }
+            ),
+            prefersBodyweight: Binding(
+                get: { step.prefersBodyweight },
+                set: { step.prefersBodyweight = $0 }
+            ),
+            onChange: {
+                step.markDirty()
+                try? context.save()
             }
-        }
-    }
-
-    private var picker: some View {
-        Picker("Equipment", selection: selection) {
-            ForEach(options) { item in
-                Text(item.name).tag(Optional(item.id))
-            }
-            if allowsBodyweight {
-                Text("Bodyweight").tag(Optional(Self.bodyweightTag))
-            }
-        }
+        )
     }
 }

@@ -20,16 +20,31 @@ struct SharedWorkoutPayload: Codable {
     /// All equipment attached to those exercises — not merely the one reachable through
     /// `RepSectionExercise.preferredEquipment`, which is what v1 sent.
     var equipment: [ArchiveEquipment]
+    /// Every execution type the workout's steps and entries select, plus the ones its
+    /// exercises offer. Defaulted like the rest of the catalog closure.
+    var executionTypes: [ArchiveExecutionType] = []
     /// Defaulted, so a v1 payload written before the catalog travelled still decodes.
     var muscles: [ArchiveMuscle] = []
     var muscleCategories: [ArchiveMuscleCategory] = []
     var exerciseCategories: [ArchiveExerciseCategory] = []
     /// Only ever applied to equipment the import creates — see `CatalogMerge`.
     var weightCombos: [ArchiveWeightCombo] = []
+    /// The progression ladders behind any rep entry whose `progressionEnabled` is on, plus
+    /// every exercise on them — which is why `exercises` can carry rows the workout itself
+    /// never references. `reachedLevel` is always written as 1: the publisher's progress
+    /// is theirs, not the recipient's.
+    var progressionGroups: [ArchiveProgressionGroup] = []
+    var progressionSteps: [ArchiveProgressionStep] = []
 
     /// v2 added the catalog closure and exercise photos. A v1 app meeting a v2 payload
     /// takes the existing `unsupportedVersion` path and is told to update, which is the
     /// correct outcome — it genuinely cannot represent what's inside.
+    ///
+    /// Execution types deliberately did **not** bump this. Every field they added is
+    /// optional or defaulted, and a workout downloaded without them is still the workout —
+    /// the exercises, sets and rests are all intact, only the "performed explosively"
+    /// annotation is missing. Refusing the whole download over that would be worse for the
+    /// recipient than silently dropping it, which is the test the v2 bump actually met.
     static let currentVersion = 2
 }
 
@@ -44,6 +59,14 @@ struct SharedWorkoutBundle {
     var payload: SharedWorkoutPayload
     /// JPEG bytes, keyed by filename. Empty for a v1 payload.
     var images: [String: Data] = [:]
+    /// Who this was downloaded from, and what their record's `updatedAt` read at
+    /// download time — stamped by `SharingService.download(_:)` from the
+    /// `SharedWorkoutSummary` it was fetched against. `SharedWorkoutImporter` carries
+    /// both onto the resulting `Workout` (`sourceOwnerRecordName`/`sourceUpdatedAt`),
+    /// which is what lets a later foreground sweep notice the publisher has moved on
+    /// without this device having to guess who to ask.
+    var ownerRecordName: String = ""
+    var sourceUpdatedAt: Date = .distantPast
 }
 
 /// A published workout as it appears in a list, without fetching its payload.

@@ -8,7 +8,7 @@ import SwiftUI
 /// at the same time doesn't make sense.
 struct RestTimerView: View {
     let totalSeconds: Int
-    let soundProfile: TimerSoundProfile
+    let cues: TimerCueSettings
     /// `session.status == .inProgress` — the timer freezes while the overall
     /// workout is paused, same as the step countdown in `TimeSessionRunnerView`.
     let isSessionActive: Bool
@@ -36,9 +36,9 @@ struct RestTimerView: View {
     /// resuming the workout resumes the rest too rather than leaving it stopped.
     @State private var resumeWithSession = false
 
-    init(totalSeconds: Int, soundProfile: TimerSoundProfile, isSessionActive: Bool, startSignal: Binding<Int>, stopSignal: Binding<Int>, onAccent: Bool = false, height: CGFloat = RestTimerView.defaultHeight) {
+    init(totalSeconds: Int, cues: TimerCueSettings, isSessionActive: Bool, startSignal: Binding<Int>, stopSignal: Binding<Int>, onAccent: Bool = false, height: CGFloat = RestTimerView.defaultHeight) {
         self.totalSeconds = totalSeconds
-        self.soundProfile = soundProfile
+        self.cues = cues
         self.isSessionActive = isSessionActive
         _startSignal = startSignal
         _stopSignal = stopSignal
@@ -198,7 +198,7 @@ struct RestTimerView: View {
         if current <= 0 {
             remainingSeconds = 0
             stop()
-            SoundPlayer.playTimerComplete()
+            SoundPlayer.playTimerCompleteIfNeeded(cues: cues)
             return
         }
 
@@ -208,7 +208,7 @@ struct RestTimerView: View {
         // countdown jumps, and a warning beep for a threshold that passed while the
         // screen was off would land late and mean nothing.
         guard previous - current == 1 else { return }
-        SoundPlayer.playWarningIfNeeded(remainingSeconds: current, profile: soundProfile)
+        SoundPlayer.playWarningIfNeeded(remainingSeconds: current, cues: cues)
     }
 
     private func start() {

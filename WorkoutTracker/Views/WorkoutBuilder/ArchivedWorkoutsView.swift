@@ -7,8 +7,12 @@ struct ArchivedWorkoutsView: View {
 
     @State private var pendingDelete: Workout?
 
+    @State private var tagFilter = WorkoutTagFilter()
+
     private var archivedWorkouts: [Workout] {
-        allWorkouts.filter { $0.deletedAt == nil && $0.isArchived }
+        allWorkouts.filter {
+            $0.deletedAt == nil && $0.isArchived && tagFilter.matches($0.sortedTags)
+        }
     }
 
     var body: some View {
@@ -81,7 +85,12 @@ struct ArchivedWorkoutsView: View {
             }
         }
         .background(Color.appBackground)
-        .safeAreaInset(edge: .top, spacing: 0) { PushedTitleBand(title: "Archives") }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            VStack(spacing: 0) {
+                PushedTitleBand(title: "Archives")
+                WorkoutTagFilterBar(filter: $tagFilter)
+            }
+        }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -92,6 +101,7 @@ struct ArchivedWorkoutsView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(workout.name)
                 StatusPill(text: workout.listTypeLabel, tint: .accentColor)
+                RowTagPills(tags: workout.sortedTags)
             }
             Spacer()
             if workout.isLocked {

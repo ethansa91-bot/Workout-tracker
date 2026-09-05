@@ -51,6 +51,13 @@ final class WorkoutSession: SyncableModel {
         set { setLogsStorage = newValue }
     }
 
+    @Relationship(deleteRule: .cascade, inverse: \SectionResultLog.session)
+    var sectionResultLogsStorage: [SectionResultLog]?
+    var sectionResultLogs: [SectionResultLog] {
+        get { sectionResultLogsStorage ?? [] }
+        set { sectionResultLogsStorage = newValue }
+    }
+
     @Relationship(deleteRule: .cascade, inverse: \ExerciseSessionNote.session)
     var exerciseNotesStorage: [ExerciseSessionNote]?
     var exerciseNotes: [ExerciseSessionNote] {

@@ -47,7 +47,40 @@ enum CatalogReconciliation {
         removed += dedupe(Equipment.self, context: context) { $0.id } merging: { survivor, duplicate in
             survivor.weightCombos = union(survivor.weightCombos, duplicate.weightCombos)
             survivor.exercisesStorage = union(survivor.exercisesStorage ?? [], duplicate.exercisesStorage ?? [])
+            // These four were missing, and `dedupe` hard-deletes the loser — so SwiftData
+            // nullified every one of them. That is how a perfectly good record lost its
+            // equipment and reappeared as a phantom "No equipment" copy beside the new one
+            // the runner then created under the surviving row. The `ExecutionType` and
+            // `Exercise` passes below already do this; `Equipment` was the gap.
+            for log in duplicate.setLogs ?? [] { log.equipment = survivor }
+            for record in duplicate.personalRecords ?? [] { record.equipment = survivor }
+            for entry in duplicate.personalRecordEntries ?? [] { entry.equipment = survivor }
+            for item in duplicate.repSectionExercises ?? [] { item.preferredEquipment = survivor }
+            for item in duplicate.timeSectionSteps ?? [] { item.preferredEquipment = survivor }
         }
+        removed += dedupe(ExecutionType.self, context: context) { $0.id } merging: { survivor, duplicate in
+            survivor.exercisesStorage = union(survivor.exercisesStorage ?? [], duplicate.exercisesStorage ?? [])
+            // Back-references from user data, for the same reason `Exercise` carries them
+            // below: a logged set or a record pointing at the losing copy would otherwise
+            // lose its execution type when that copy is deleted.
+            for item in duplicate.repSectionExercises ?? [] { item.executionType = survivor }
+            for item in duplicate.timeSectionSteps ?? [] { item.executionType = survivor }
+            for item in duplicate.sectionExerciseEntries ?? [] { item.executionType = survivor }
+            for item in duplicate.setLogs ?? [] { item.executionType = survivor }
+            for item in duplicate.stepLogs ?? [] { item.executionType = survivor }
+            for item in duplicate.personalRecords ?? [] { item.executionType = survivor }
+            for item in duplicate.personalRecordEntries ?? [] { item.executionType = survivor }
+        }
+        removed += dedupe(WorkoutTag.self, context: context) { $0.id } merging: { survivor, duplicate in
+            survivor.workoutsStorage = union(survivor.workoutsStorage ?? [], duplicate.workoutsStorage ?? [])
+            survivor.sectionsStorage = union(survivor.sectionsStorage ?? [], duplicate.sectionsStorage ?? [])
+        }
+        removed += dedupe(ProgressionGroup.self, context: context) { $0.id } merging: { survivor, duplicate in
+            survivor.stepsStorage = union(survivor.stepsStorage ?? [], duplicate.stepsStorage ?? [])
+            // The higher of the two: a level reached on either copy was still reached.
+            survivor.reachedLevel = max(survivor.reachedLevel, duplicate.reachedLevel)
+        }
+        removed += dedupe(ProgressionStep.self, context: context) { $0.id } merging: { _, _ in }
         removed += dedupe(WeightCombo.self, context: context) { $0.id } merging: { _, _ in }
         removed += dedupe(Exercise.self, context: context) { $0.id } merging: { survivor, duplicate in
             survivor.equipmentItems = union(survivor.equipmentItems, duplicate.equipmentItems)
@@ -62,6 +95,11 @@ enum CatalogReconciliation {
             for log in duplicate.setLogs ?? [] { log.exercise = survivor }
             for step in duplicate.timeSectionSteps ?? [] { step.exercise = survivor }
             for note in duplicate.exerciseSessionNotes ?? [] { note.exercise = survivor }
+            // Both were missing. `dedupe` hard-deletes the loser, so SwiftData nullifies
+            // these inverses — leaving a progression rung pointing at nothing, which is
+            // precisely the orphan state that used to block deleting an exercise forever.
+            for entry in duplicate.personalRecordEntries ?? [] { entry.exercise = survivor }
+            for step in duplicate.progressionSteps ?? [] { step.exercise = survivor }
         }
 
         guard removed > 0 else { return }

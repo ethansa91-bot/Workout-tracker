@@ -5,7 +5,7 @@ struct EquipmentDetailView: View {
     @Bindable var equipment: Equipment
     @Environment(\.modelContext) private var context
     @State private var newWeightText = ""
-    @State private var expandedLevelID: UUID?
+    @State private var expandedOptionID: UUID?
     @State private var showingDeleteConfirm = false
     @State private var deleteErrorMessage: String?
     @Environment(\.dismiss) private var dismiss
@@ -34,7 +34,7 @@ struct EquipmentDetailView: View {
             }
 
             if equipment.isWeighted {
-                Section("Weight Unit") {
+                Section {
                     Picker("Weight unit", selection: Binding(
                         get: { equipment.effectiveWeightUnit },
                         set: { newValue in
@@ -45,35 +45,37 @@ struct EquipmentDetailView: View {
                     )) {
                         Text("kg").tag("kg")
                         Text("lb").tag("lb")
-                        Text("Level").tag(Equipment.levelUnit)
+                        Text("Option").tag(Equipment.optionUnit)
                     }
                     .pickerStyle(.segmented)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .fullBleedRow()
+                } header: {
+                    ListBandHeader(title: "Weight Unit")
                 }
 
-                if equipment.isLevelBased {
+                if equipment.usesOptions {
                     Section {
                         ForEach(equipment.sortedWeightCombos) { combo in
-                            levelRow(combo)
+                            optionRow(combo)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 10)
                                 .fullBleedRow(isLast: false)
                         }
                         .onDelete(perform: deleteWeightCombos)
 
-                        Button("Add Level") { addLevel() }
+                        Button("Add Option") { addOption() }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
                             .fullBleedRow()
                     } header: {
-                        Text("Levels")
+                        ListBandHeader(title: "Options")
                     } footer: {
-                        Text("Levels number automatically. Tap one to give it an optional name and color.")
+                        FormSectionFooter("Options number automatically. Tap one to give it an optional name and color.")
                     }
                 } else {
-                    Section("Available weights") {
+                    Section {
                         ForEach(equipment.sortedWeightCombos) { combo in
                             Text(formatted(combo.value))
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -92,6 +94,8 @@ struct EquipmentDetailView: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
                         .fullBleedRow()
+                    } header: {
+                        ListBandHeader(title: "Available weights")
                     }
                 }
             } else {
@@ -187,6 +191,17 @@ struct EquipmentDetailView: View {
 
     private func addWeightCombo() {
         guard let value = Double(newWeightText) else { return }
+        // A second entry with the same value makes the ± stepper look stuck: it finds
+        // the first by value, so stepping lands on the same number again. The field is
+        // still cleared, so re-entering a weight that's already there reads as accepted
+        // rather than broken. Tolerance rather than `==`, on a `Double` that came from
+        // parsed text.
+        guard !equipment.sortedWeightCombos.contains(where: { abs($0.value - value) < 0.0001 }) else {
+            newWeightText = ""
+            return
+        }
+        // Position comes from the value now (see `sortedWeightCombos`); this only keeps
+        // the stored field coherent for the archive round-trip.
         let nextOrder = (equipment.weightCombos.map(\.sortOrder).max() ?? -1) + 1
         let combo = WeightCombo(equipment: equipment, value: value, sortOrder: nextOrder)
         context.insert(combo)
@@ -206,14 +221,14 @@ struct EquipmentDetailView: View {
 
     /// Tap to expand in place — same accordion idea used elsewhere in this app
     /// (e.g. follow-along step rows) — revealing an optional label + color editor.
-    private func levelRow(_ combo: WeightCombo) -> some View {
-        let isExpanded = expandedLevelID == combo.id
+    private func optionRow(_ combo: WeightCombo) -> some View {
+        let isExpanded = expandedOptionID == combo.id
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 if let color = combo.color {
                     Circle().fill(color.color).frame(width: 12, height: 12)
                 }
-                Text(combo.levelDisplayName)
+                Text(combo.optionDisplayName)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
@@ -222,44 +237,44 @@ struct EquipmentDetailView: View {
             }
             .contentShape(Rectangle())
             .onTapGesture {
-                withAnimation { expandedLevelID = isExpanded ? nil : combo.id }
+                withAnimation { expandedOptionID = isExpanded ? nil : combo.id }
             }
 
             if isExpanded {
-                levelEditor(combo)
+                optionEditor(combo)
                     .padding(.top, 10)
             }
         }
         .padding(.vertical, 2)
     }
 
-    private func levelEditor(_ combo: WeightCombo) -> some View {
+    private func optionEditor(_ combo: WeightCombo) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             TextField("Optional name", text: Binding(
                 get: { combo.label ?? "" },
                 set: { newValue in
                     combo.label = newValue.trimmingCharacters(in: .whitespaces).isEmpty ? nil : newValue
-                    saveLevel(combo)
+                    saveOption(combo)
                 }
             ))
             .textFieldStyle(.roundedBorder)
 
             PaletteColorPicker(selection: Binding(
                 get: { combo.color },
-                set: { combo.color = $0; saveLevel(combo) }
+                set: { combo.color = $0; saveOption(combo) }
             ), swatchSize: 24)
         }
         .padding(.leading, 20)
     }
 
-    private func saveLevel(_ combo: WeightCombo) {
+    private func saveOption(_ combo: WeightCombo) {
         combo.markDirty()
         try? context.save()
     }
 
-    private func addLevel() {
+    private func addOption() {
         let nextOrder = (equipment.weightCombos.map(\.sortOrder).max() ?? -1) + 1
-        let combo = WeightCombo(equipment: equipment, value: equipment.nextLevelValue, sortOrder: nextOrder)
+        let combo = WeightCombo(equipment: equipment, value: equipment.nextOptionValue, sortOrder: nextOrder)
         context.insert(combo)
         equipment.markDirty()
         try? context.save()

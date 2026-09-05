@@ -10,7 +10,9 @@ struct SessionRecapView: View {
 
     @State private var activeSession: WorkoutSession?
     @State private var showingSupersedeConfirm = false
-    @State private var sessionSoundProfile: TimerSoundProfile?
+    /// Set only when this session's sounds have been muted from the control below. nil
+    /// means "follow Settings", so a later change there still applies.
+    @State private var isSessionMuted = false
     /// Supplied by the parent that pushed this screen, which owns the navigation path —
     /// cloning a locked workout puts the copy in this screen's place rather than
     /// stacking it on top of a workout the user was just told they can't edit.
@@ -61,9 +63,12 @@ struct SessionRecapView: View {
     @State private var scrollTargetSectionID: UUID?
     @State private var sectionPendingClone: WorkoutSection?
     @State private var cloneNameText = ""
+    @State private var showingTagSheet = false
 
-    private var activeSoundProfile: TimerSoundProfile {
-        sessionSoundProfile ?? AppSettings.timerSoundProfile
+    /// Read fresh rather than captured: Settings can change between opening this screen
+    /// and starting, and the runner should hear the current values either way.
+    private var activeCues: TimerCueSettings {
+        isSessionMuted ? .silent : .fromSettings
     }
 
     private var isLocked: Bool { workout.isLocked }
@@ -101,7 +106,17 @@ struct SessionRecapView: View {
             startControls
         }
         .navigationDestination(item: $activeSession) { session in
-            SessionRunnerView(session: session, soundProfile: activeSoundProfile)
+            SessionRunnerView(session: session, cues: activeCues)
+        }
+        .sheet(isPresented: $showingTagSheet) {
+            WorkoutTagSheet(
+                selection: Binding(
+                    get: { workout.sortedTags },
+                    set: { try? WorkoutEditingService.setTags($0, on: workout, context: context) }
+                ),
+                subjectName: "Workout",
+                subjectID: workout.id
+            )
         }
         .sheet(isPresented: $showingScheduleSheet) {
             AddScheduledWorkoutView(preselectedWorkout: workout)
@@ -141,7 +156,7 @@ struct SessionRecapView: View {
             }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("This workout has already been used in a session, so its sections can't be changed — that would alter what the history means. Its name and description can still be edited. Clone it to get a fully editable copy.")
+            Text("This workout has already been used in a session, so its sections can't be changed — that would alter what the history means. Its name, description and tags can still be edited. Clone it to get a fully editable copy.")
         }
         .alert("Clone & Edit", isPresented: $showingClonePrompt) {
             TextField("Name", text: $cloneWorkoutNameText)
@@ -244,7 +259,7 @@ struct SessionRecapView: View {
     private var startControls: some View {
         if let pausedSession {
             VStack(spacing: 8) {
-                soundProfilePicker
+                soundToggle
                 Button {
                     resumeSession(pausedSession)
                 } label: {
@@ -265,7 +280,7 @@ struct SessionRecapView: View {
             .background(Color.appSurface)
         } else if allSectionsReady {
             VStack(spacing: 8) {
-                soundProfilePicker
+                soundToggle
                 Button {
                     startNewSession()
                 } label: {
@@ -285,28 +300,28 @@ struct SessionRecapView: View {
         }
     }
 
-    private var soundProfilePicker: some View {
-        Menu {
-            ForEach(TimerSoundProfile.allCases) { profile in
-                Button {
-                    sessionSoundProfile = profile
-                } label: {
-                    if profile == activeSoundProfile {
-                        Label(profile.label, systemImage: "checkmark")
-                    } else {
-                        Text(profile.label)
-                    }
-                }
-            }
+    /// Mute this one workout, without touching the settings.
+    ///
+    /// Was a three-way picker over `TimerSoundProfile`. The cues are four independent
+    /// settings now, and reproducing all of them here would be the Sounds & Voice screen
+    /// in a menu — the thing worth deciding on the way into a workout is whether it makes
+    /// any noise at all, so that is what this asks.
+    private var soundToggle: some View {
+        Button {
+            isSessionMuted.toggle()
         } label: {
             HStack {
-                Label("Timer sound", systemImage: "speaker.wave.2")
+                Label(
+                    "Timer sound",
+                    systemImage: isSessionMuted ? "speaker.slash" : "speaker.wave.2"
+                )
                 Spacer()
-                Text(activeSoundProfile.label)
+                Text(isSessionMuted ? "Muted for this workout" : activeCues.summary)
                     .foregroundStyle(Color.appInkMuted)
             }
             .font(.footnote)
         }
+        .buttonStyle(.plain)
     }
 
     /// The same full-width accent band the runners open with, pinned above the section
@@ -315,6 +330,18 @@ struct SessionRecapView: View {
     private var heroCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
+                // Ahead of the name: filing a workout is about finding it later, so the
+                // tag reads as a property of the whole thing rather than one more action
+                // in the row of them after the title. Unconditional, locked or not — a tag
+                // carries no execution meaning, and the workouts most worth filing are the
+                // ones already used.
+                Button {
+                    showingTagSheet = true
+                } label: {
+                    Image(systemName: "tag")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white.opacity(0.85))
                 Text(workout.name)
                     .font(.appSerif(.title2))
                     .foregroundStyle(.white)
@@ -356,6 +383,8 @@ struct SessionRecapView: View {
                 .font(.subheadline)
                 .foregroundStyle(.white.opacity(0.85))
 
+            HeaderTagPills(tags: workout.sortedTags)
+
             descriptionRow
         }
         .headerBandStyle()
@@ -365,9 +394,10 @@ struct SessionRecapView: View {
     private var descriptionRow: some View {
         if let notes = workout.notes, !notes.isEmpty {
             HStack(alignment: .top, spacing: 8) {
-                Text(notes)
-                    .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.85))
+                // One line until tapped — the band is pinned above the section list, so a
+                // long description would cost that height on every screenful.
+                ExpandableBandText(text: notes)
+                // Outside the expander, not inside it: a nested button never gets the tap.
                 // Lock-agnostic, like the name: a description is commentary on the
                 // workout, not part of what a past session ran.
                 Button {
@@ -402,7 +432,10 @@ struct SessionRecapView: View {
         // Omitted rather than shown as "~0 min" on a workout with nothing in it yet.
         let estimate = estimatedWorkoutSeconds(workout)
         if estimate > 0 {
-            line += " · \(formattedEstimate(estimate))"
+            // A workout containing an open-ended section can only be given a floor —
+            // that section contributes just its count-in to the sum above.
+            let suffix = hasOpenEndedSection(workout) ? "+" : ""
+            line += " · \(formattedEstimate(estimate))\(suffix)"
         }
         return line
     }
@@ -675,15 +708,15 @@ struct SessionRecapView: View {
             if inSectionSelectMode {
                 HStack(spacing: 0) {
                     Spacer()
-                    sectionSelectAction("chevron.up", count: count, tint: Color.appAccent, disabled: isSectionSelectionAtStart) {
+                    sectionSelectAction("chevron.up", count: count, tint: Color.appInk, disabled: isSectionSelectionAtStart) {
                         moveSectionSelection(by: -1)
                     }
                     Spacer()
-                    sectionSelectAction("chevron.down", count: count, tint: Color.appAccent, disabled: isSectionSelectionAtEnd) {
+                    sectionSelectAction("chevron.down", count: count, tint: Color.appInk, disabled: isSectionSelectionAtEnd) {
                         moveSectionSelection(by: 1)
                     }
                     Spacer()
-                    sectionSelectAction("doc.on.doc", count: count, tint: Color.appAccent) {
+                    sectionSelectAction("doc.on.doc", count: count, tint: Color.appInk) {
                         cloneSelectedSections()
                     }
                     Spacer()
@@ -702,7 +735,7 @@ struct SessionRecapView: View {
                 } label: {
                     Text("New Section")
                         .font(.subheadline)
-                        .foregroundStyle(Color.appAccent)
+                        .foregroundStyle(Color.appInk)
                 }
             }
 
@@ -713,7 +746,7 @@ struct SessionRecapView: View {
                     }
                     .buttonStyle(.plain)
                     .font(.subheadline)
-                    .foregroundStyle(Color.appAccent)
+                    .foregroundStyle(Color.appInk)
                 }
 
                 Spacer()
@@ -763,11 +796,15 @@ struct SessionRecapView: View {
     /// Height of `sectionListControls`, fixed so the row is identical in both modes.
     private static let controlRowHeight: CGFloat = 44
 
-    /// A short green rule flanking the centered menu — the cue that the label between
-    /// them is its own tappable thing.
+    /// A short rule either side of the collapse chevron — the cue that the glyph
+    /// between them is its own tappable thing.
+    ///
+    /// Ink, like everything else on this row: black is what separates the workout-level
+    /// controls from the green section-level Select / Add Exercise row that docks
+    /// directly beneath them. Two greens stacked read as one set of controls.
     private var controlDivider: some View {
         Rectangle()
-            .fill(Color.appAccent)
+            .fill(Color.appInk)
             .frame(width: 1, height: 18)
     }
 
@@ -775,7 +812,7 @@ struct SessionRecapView: View {
         Button(action: action) {
             Image(systemName: systemImage)
                 .font(.subheadline)
-                .foregroundStyle(Color.appAccent)
+                .foregroundStyle(Color.appInk)
                 .frame(width: 32, height: Self.controlRowHeight)
                 .contentShape(Rectangle())
         }

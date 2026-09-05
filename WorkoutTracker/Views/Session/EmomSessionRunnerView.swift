@@ -5,10 +5,16 @@ import SwiftData
 /// once — usually just a couple, meant to be done fast — behind a simple countdown
 /// that repeats once per round. One round is always 60 seconds;
 /// `section.emomRoundCount` rounds total.
+///
+/// A section set to `emomToFailure` instead runs open-ended: the rounds keep coming
+/// until the user can't finish one inside the minute and taps the counter to stop. The
+/// right half of the header becomes that control — the rounds *completed* over "tap to
+/// finish" — mirroring AMRAP's tappable counter, so the two grid runners still read the
+/// same way round.
 struct EmomSessionRunnerView: View {
     @Bindable var session: WorkoutSession
     let section: WorkoutSection
-    let soundProfile: TimerSoundProfile
+    let cues: TimerCueSettings
     let onSectionComplete: () -> Void
 
     @Environment(\.modelContext) private var context
@@ -16,20 +22,75 @@ struct EmomSessionRunnerView: View {
 
     @State private var remainingSeconds: Int = 60
 
-    /// Seeded from `section.autostart` — see `TimeSessionRunnerView` for why this is
-    /// only gated once, at section entry, not every round.
+    /// Counts down before the first round, when the section asks for one. `0` means the
+    /// phase is over — or never existed, which is every section with `getReadySeconds == 0`.
+    ///
+    /// Local `@State` rather than a session field: `SessionRunnerView` keys this runner on
+    /// the section *and its repeat*, so a repeated section re-seeds this and plays Get
+    /// Ready before each pass — which is what a Follow Along section's real Get Ready step
+    /// already does.
+    @State private var getReadyRemaining: Int = 0
+
+    private var isGettingReady: Bool { getReadyRemaining > 0 }
+
+    /// Counting down the breather before the next pass. The rounds are all finished; only
+    /// the clock is still running.
+    @State private var sectionRestRemaining: Int = 0
+
+    private var isSectionResting: Bool { sectionRestRemaining > 0 }
+
+    private var currentRepeat: Int { session.currentSectionRepeat ?? 0 }
+
+    /// Seeded from `WorkoutSessionService.autostartsRunning` — see `TimeSessionRunnerView`
+    /// for why this is only gated once, at the section's first pass, not every round.
     @State private var isRunning: Bool
 
-    init(session: WorkoutSession, section: WorkoutSection, soundProfile: TimerSoundProfile, onSectionComplete: @escaping () -> Void) {
-        self.session = session
-        self.section = section
-        self.soundProfile = soundProfile
-        self.onSectionComplete = onSectionComplete
-        _isRunning = State(initialValue: section.autostart)
+
+    /// The standing record, read once on arrival rather than per render: it can't change
+    /// while the section is running, and this view redraws every second.
+    @State private var recordToBeat: Int?
+
+    /// The record line under the counter. Absent until there is something to chase —
+    /// a section that has never been done has no target, and "no record yet" under a
+    /// live counter is noise.
+    @ViewBuilder
+    private func recordCaption(_ value: Int) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "trophy.fill")
+            Text(PersonalRecordFormatting.sectionSummary(value))
+        }
+        .font(.caption2)
+        .foregroundStyle(.white.opacity(0.85))
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
     }
 
+    private func loadRecordToBeat() {
+        guard section.tracksRecord, let groupID = section.recordGroupID else { return }
+        recordToBeat = PersonalRecordQueries.sectionRecord(groupID: groupID, context: context)?.reps
+    }
+
+    /// Raised by tapping the round counter in a to-failure section. A confirmation, not
+    /// an immediate stop: the counter occupies half a large header band, so a stray tap
+    /// would otherwise end the section outright.
+    @State private var showingFinishConfirm = false
+
+    init(session: WorkoutSession, section: WorkoutSection, cues: TimerCueSettings, onSectionComplete: @escaping () -> Void) {
+        self.session = session
+        self.section = section
+        self.cues = cues
+        self.onSectionComplete = onSectionComplete
+        _isRunning = State(initialValue: WorkoutSessionService.autostartsRunning(session, section: section))
+    }
+
+    /// 0-based, so it reads directly as *rounds completed*: during round 8 it is 7, which
+    /// is exactly the number a to-failure section records when round 8 is the one missed.
     private var currentRound: Int { session.currentStepIndex ?? 0 }
     private var totalRounds: Int { section.emomRoundCount }
+
+    /// A to-failure section has no round count to reach, so it never completes on its
+    /// own — only the counter tap ends it.
+    private var hasRunOutOfRounds: Bool { !section.emomToFailure && currentRound >= totalRounds }
     private var exercises: [SectionExerciseEntry] { section.sortedQuickExercises }
 
     /// 3 columns on iPad, 2 on iPhone — as many exercises visible at once without
@@ -51,7 +112,7 @@ struct EmomSessionRunnerView: View {
     private var timerHeightFraction: CGFloat { horizontalSizeClass == .regular ? 0.45 : 0.24 }
 
     var body: some View {
-        if currentRound < totalRounds {
+        if !hasRunOutOfRounds {
             GeometryReader { geometry in
                 VStack(spacing: 0) {
                     header
@@ -63,11 +124,24 @@ struct EmomSessionRunnerView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.appBackground)
-            .onAppear { remainingSeconds = 60 }
+            .onAppear {
+                remainingSeconds = 60
+                // Only on the way in. The per-round reset below must not restart it.
+                if currentRound == 0 { getReadyRemaining = section.countInSeconds(pass: currentRepeat) }
+                loadRecordToBeat()
+            }
             .onChange(of: currentRound) { _, _ in remainingSeconds = 60 }
             // Stops outright while the round or the workout is paused, rather than
             // ticking and discarding it inside the handler.
             .secondTicker(isActive: isRunning && session.status == .inProgress) { tick() }
+            .confirmationDialog(
+                "End EMOM at \(currentRound) round\(currentRound == 1 ? "" : "s")?",
+                isPresented: $showingFinishConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("End Section") { finishToFailure() }
+                Button("Keep Going", role: .cancel) {}
+            }
         } else {
             Color.clear.onAppear { onSectionComplete() }
         }
@@ -89,7 +163,7 @@ struct EmomSessionRunnerView: View {
             HStack(spacing: 0) {
                 VStack(spacing: 4) {
                     if isRunning {
-                        Text(timeString(remainingSeconds))
+                        Text(timeString(isSectionResting ? sectionRestRemaining : (isGettingReady ? getReadyRemaining : remainingSeconds)))
                             .font(.system(size: glyphSize, weight: .bold, design: .rounded).monospacedDigit())
                             .minimumScaleFactor(0.3)
                             .lineLimit(1)
@@ -116,12 +190,35 @@ struct EmomSessionRunnerView: View {
                     .frame(width: 1)
                     .frame(maxHeight: .infinity)
 
-                Text("Round \(currentRound + 1) of \(totalRounds)")
-                    .font(.system(size: glyphSize * 0.5, weight: .bold, design: .rounded))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.5)
-                    .multilineTextAlignment(.center)
+                if canFinishToFailure {
+                    // Deliberately the same shape as AMRAP's counter half: a big tally
+                    // over a caption naming the tap. The number is rounds *completed*,
+                    // which is what gets recorded — not the round in progress.
+                    VStack(spacing: 4) {
+                        Text("\(currentRound)")
+                            .font(.system(size: glyphSize, weight: .bold, design: .rounded).monospacedDigit())
+                            .minimumScaleFactor(0.3)
+                            .lineLimit(1)
+                        Text("rounds — tap to finish")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.85))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        if let recordToBeat {
+                            recordCaption(recordToBeat)
+                        }
+                    }
                     .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                    .onTapGesture { showingFinishConfirm = true }
+                } else {
+                    Text(headerCaption)
+                        .font(.system(size: glyphSize * 0.5, weight: .bold, design: .rounded))
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.5)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // White throughout — the solid accent fill matches Follow Along's timer
@@ -166,7 +263,7 @@ struct EmomSessionRunnerView: View {
 
     private func exerciseCell(_ entry: SectionExerciseEntry, mediaHeight: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: Self.cellSpacing) {
-            Text(entry.exercise?.displayName ?? "Exercise")
+            Text(entry.displayTitle)
                 .font(.subheadline.weight(.semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -183,18 +280,77 @@ struct EmomSessionRunnerView: View {
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
+    /// What the right half of the header says: the phase, when one is running, and the
+    /// round tally the rest of the time.
+    private var headerCaption: String {
+        if isSectionResting { return "Rest" }
+        if isGettingReady { return "Get Ready" }
+        // Reached only by a fixed-round section: a to-failure one shows the tappable
+        // counter in this half instead, and has no total to count towards.
+        return "Round \(currentRound + 1) of \(totalRounds)"
+    }
+
+    /// Whether the header's right half is the stop control. The phases own that half
+    /// while they run — there is nothing to bank mid count-in, and a section resting has
+    /// already finished its rounds.
+    private var canFinishToFailure: Bool {
+        section.emomToFailure && !isSectionResting && !isGettingReady
+    }
+
+    /// Ends an open-ended section at the rounds completed so far. The result is filed
+    /// *before* handing back control: `advanceSection` resets `currentStepIndex`, so the
+    /// count is gone by the time the next section is on screen.
+    private func finishToFailure() {
+        SectionResultService.record(
+            session: session,
+            section: section,
+            value: currentRound,
+            repeatIndex: currentRepeat,
+            context: context
+        )
+        onSectionComplete()
+    }
+
     private func tick() {
+        // The get-ready phase owns the clock until it's spent; the round timer is still
+        // sitting at a full 60 and only starts counting once this returns to 0.
+        if getReadyRemaining > 0 {
+            getReadyRemaining -= 1
+            SoundPlayer.playWarningIfNeeded(remainingSeconds: getReadyRemaining, cues: cues)
+            if getReadyRemaining == 0 {
+                SoundPlayer.playTimerCompleteIfNeeded(cues: cues)
+            }
+            return
+        }
+        // Then the between-passes rest, which likewise owns the clock until it's spent.
+        if sectionRestRemaining > 0 {
+            sectionRestRemaining -= 1
+            SoundPlayer.playWarningIfNeeded(remainingSeconds: sectionRestRemaining, cues: cues)
+            if sectionRestRemaining == 0 {
+                SoundPlayer.playTimerCompleteIfNeeded(cues: cues)
+                onSectionComplete()
+            }
+            return
+        }
         if remainingSeconds > 0 {
             remainingSeconds -= 1
-            SoundPlayer.playWarningIfNeeded(remainingSeconds: remainingSeconds, profile: soundProfile)
+            SoundPlayer.playWarningIfNeeded(remainingSeconds: remainingSeconds, cues: cues)
         } else {
-            SoundPlayer.playTimerComplete()
+            SoundPlayer.playTimerCompleteIfNeeded(cues: cues)
             advance()
         }
     }
 
     private func advance() {
         let next = currentRound + 1
+        // Open-ended: there is no last round to fall off the end of, so the counter just
+        // keeps climbing until the user stops it.
+        if section.emomToFailure {
+            session.currentStepIndex = next
+            session.markDirty()
+            try? context.save()
+            return
+        }
         if next < totalRounds {
             session.currentStepIndex = next
             session.markDirty()
@@ -202,7 +358,14 @@ struct EmomSessionRunnerView: View {
         } else {
             session.markDirty()
             try? context.save()
-            onSectionComplete()
+            // At the tail of this pass, not the head of the next: the runner is rebuilt
+            // per pass, so there is no next instance to run it in yet.
+            let rest = section.sectionRest(after: currentRepeat)
+            guard rest > 0 else {
+                onSectionComplete()
+                return
+            }
+            sectionRestRemaining = rest
         }
     }
 

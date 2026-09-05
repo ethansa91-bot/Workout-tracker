@@ -19,6 +19,14 @@ final class SharingRouter {
     /// notice is dismissed or undone.
     var newMutualFollows: [FollowedUser] = []
 
+    /// Downloaded workouts whose publisher has since re-published, from the last
+    /// `FollowService.syncWorkoutUpdates` sweep. Cleared when the "updated" notice is
+    /// dismissed — unlike `newMutualFollows` there's nothing to undo, and nothing to
+    /// separately mark seen: a workout drops off this list the moment its own
+    /// `sourceUpdatedAt` catches up, whether that happens by being merged or by the
+    /// follower just not acting on it before it's superseded again.
+    var updatedFollowedWorkouts: [Workout] = []
+
     /// Why the last reciprocation sweep couldn't run, if it couldn't.
     ///
     /// Kept rather than shown: the sweep is unprompted, so this surfaces quietly in the

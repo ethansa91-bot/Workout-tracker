@@ -17,7 +17,11 @@ struct WorkoutTrackerApp: App {
             Equipment.self,
             WeightCombo.self,
             ExerciseCategory.self,
+            ExecutionType.self,
             Exercise.self,
+            ProgressionGroup.self,
+            ProgressionStep.self,
+            WorkoutTag.self,
             Workout.self,
             WorkoutSection.self,
             TimeSectionStep.self,
@@ -26,6 +30,7 @@ struct WorkoutTrackerApp: App {
             WorkoutSession.self,
             StepLog.self,
             SetLog.self,
+            SectionResultLog.self,
             ExerciseSessionNote.self,
             PersonalRecord.self,
             PersonalRecordEntry.self,
@@ -114,9 +119,15 @@ struct WorkoutTrackerApp: App {
 
         GetReadyStepMigration.migrateIfNeeded(context: context)
 
+        // Outside the branch above on purpose: execution types postdate the seed loader,
+        // so a device that seeded its catalog before they existed needs them too.
+        ExecutionTypeSeed.seedIfNeeded(context: context)
+
         // Outside the fresh-install branch: a device that already picked "lb" needs the
         // switch too, not just brand-new installs.
         WeightUnitKgMigration.migrateIfNeeded()
+        SoundSettingsMigration.migrateIfNeeded()
+        RecordEquipmentBackfill.migrateIfNeeded(context: context)
 
         // Seeding above runs before CloudKit's first import can land, so a second device
         // seeds its own catalog and then receives the first device's. This cleans up the

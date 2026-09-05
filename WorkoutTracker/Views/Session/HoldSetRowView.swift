@@ -90,14 +90,11 @@ struct HoldSetRowView: View {
     /// Load and time on one line, in the order `SetRowView` puts weight and reps — a
     /// weighted plank reads "22.5 kg × 60s", the same way its record does.
     ///
-    /// An unloaded hold has no left column, so it keeps the plain centred stopwatch it has
-    /// always had — the `×` has to go with the weight or it's left dangling.
+    /// The load and the time, side by side. Every hold has a load — body weight is one —
+    /// so the left column is always there and the `×` always has something to join.
     @ViewBuilder
     private var valueColumns: some View {
-        if weightMode == .bodyweight {
-            content
-                .frame(maxWidth: .infinity, alignment: isProminent ? .center : .leading)
-        } else if isLogged || phase == .stopped {
+        if isLogged || phase == .stopped {
             HStack(spacing: 8) {
                 weightRow
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -124,47 +121,61 @@ struct HoldSetRowView: View {
         }
     }
 
-    /// Only for a loaded hold: an unloaded one has nothing to show, so the row keeps the
-    /// plain stopwatch layout it has always had.
+    /// The load, always shown — a hold done at body weight is still done at *some* load,
+    /// and rendering nothing made an unloaded hold look like it had lost a control. Reads
+    /// exactly like `SetRowView`'s weight column, which is the row this one sits beside.
+    ///
+    /// No `scalemass` icon: `SetRowView` has none, and on the prominent stopped layout
+    /// every point of width counts — see `weightFieldWidth`.
     @ViewBuilder
     private var weightRow: some View {
-        if weightMode != .bodyweight {
-            HStack(spacing: isProminent ? 12 : 4) {
-                Image(systemName: "scalemass")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        HStack(spacing: isProminent ? 8 : 4) {
+            switch weightMode {
+            case .bodyweight:
+                Text("Bodyweight")
+                    .font(valueFont)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .frame(minWidth: weightFieldWidth, maxWidth: .infinity, alignment: .leading)
+            case .stepper:
                 if isLogged {
                     Text(weightLabel)
                         .font(valueFont)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .frame(minWidth: weightFieldWidth, alignment: .center)
                 } else {
-                    switch weightMode {
-                    case .stepper:
-                        Button {
-                            step(-1)
-                        } label: {
-                            Image(systemName: "minus.circle")
-                        }
+                    Button {
+                        step(-1)
+                    } label: {
+                        Image(systemName: "minus.circle")
+                    }
+                    // −/+ walk the equipment's ladder; the value opens the wheel, for
+                    // a weight it has no preset for. The set still belongs to the
+                    // chosen equipment either way. Option-based equipment has no weight
+                    // to type — same plain label `SetRowView` shows.
+                    if usesOptions {
                         Text(weightLabel)
                             .font(valueFont)
-                            .frame(minWidth: isProminent ? 92 : 60)
-                        Button {
-                            step(1)
-                        } label: {
-                            Image(systemName: "plus.circle")
-                        }
-                    case .manual:
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                            .frame(minWidth: weightFieldWidth)
+                    } else {
                         Button {
                             showingWheel = true
                         } label: {
                             HStack(spacing: 4) {
                                 Text(weightLabel)
                                     .font(valueFont)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.6)
                                 Image(systemName: "chevron.up.chevron.down")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
+                            .frame(minWidth: weightFieldWidth)
                             .padding(.vertical, isProminent ? 6 : 2)
-                            .padding(.horizontal, 8)
+                            .padding(.horizontal, 6)
                             .background(Color.appBackground, in: RoundedRectangle(cornerRadius: 8))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
@@ -172,20 +183,44 @@ struct HoldSetRowView: View {
                             )
                         }
                         .buttonStyle(.plain)
-                    case .bodyweight:
-                        EmptyView()
+                    }
+                    Button {
+                        step(1)
+                    } label: {
+                        Image(systemName: "plus.circle")
                     }
                 }
             }
-            .sheet(isPresented: $showingWheel) {
-                weightWheelSheet
-            }
+        }
+        .sheet(isPresented: $showingWheel) {
+            weightWheelSheet
         }
     }
 
+    /// A floor, not a reservation — the same value and the same reasoning as
+    /// `SetRowView.weightFieldWidth`, which this row was 20pt wider than.
+    ///
+    /// That extra width was a hard minimum propagated up through the card, and `.padding`
+    /// doesn't clamp: on the prominent stopped layout the whole card, Save button
+    /// included, was pushed off the right edge of an iPhone. The label scales down to meet
+    /// this floor instead.
+    ///
+    /// Below `SetRowView`'s 72 because this row carries *two* three-part steppers either
+    /// side of a `×`, where that one carries a stepper and a rep count. The budget on a
+    /// 375pt screen is 311 — the screen less `compactBody`'s padding and the card's — and
+    /// 72 here overran it by about 13.
+    private var weightFieldWidth: CGFloat { isProminent ? 56 : 60 }
+
     private var weightLabel: String {
-        isBodyweight.wrappedValue ? "Bodyweight" : formattedSetWeight(weight.wrappedValue, unit: weightUnit)
+        if isBodyweight.wrappedValue { return "Bodyweight" }
+        // Same readout `SetRowView` uses — a loaded hold steps the same ladder, so it
+        // should name the option in the same words.
+        return usesOptions
+            ? formattedSetOption(weight.wrappedValue, options: weightOptions)
+            : formattedSetWeight(weight.wrappedValue, unit: weightUnit)
     }
+
+    private var usesOptions: Bool { weightUnit == Equipment.optionUnit }
 
     private func step(_ delta: Int) {
         let stepped = steppedSetWeight(
@@ -263,7 +298,7 @@ struct HoldSetRowView: View {
     }
 
     private var stoppedStepper: some View {
-        HStack(spacing: isProminent ? 12 : 4) {
+        HStack(spacing: isProminent ? 8 : 4) {
             Button {
                 if recordedSeconds > 0 { recordedSeconds -= 1 }
             } label: {
@@ -276,7 +311,9 @@ struct HoldSetRowView: View {
             } label: {
                 Text("\(recordedSeconds)s")
                     .font(valueFont)
-                    .frame(minWidth: isProminent ? 72 : 40)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .frame(minWidth: isProminent ? 56 : 40)
             }
             .buttonStyle(.plain)
             .popover(isPresented: $showingTimeWheel) {

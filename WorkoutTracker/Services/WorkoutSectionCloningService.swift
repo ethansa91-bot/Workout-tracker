@@ -6,13 +6,15 @@ import SwiftData
 /// of the section.
 enum WorkoutSectionCloningService {
     static func cloneTimeSteps(in section: WorkoutSection, range: Range<Int>, context: ModelContext) throws {
-        let workout = try requireUnlockedParent(of: section)
+        let workout = try requireUnlockedParent(of: section, context: context)
         var steps = section.sortedTimeSteps
         guard range.lowerBound >= 0, range.upperBound <= steps.count, !range.isEmpty else { return }
 
         let clones = steps[range].map { original -> TimeSectionStep in
             let clone = TimeSectionStep(section: section, sortOrder: 0, stepType: original.stepType, exercise: original.exercise, durationSeconds: original.durationSeconds)
             clone.color = original.color
+            clone.executionType = original.executionType
+            clone.sideRaw = original.sideRaw
             return clone
         }
         clones.forEach { context.insert($0) }
@@ -24,12 +26,12 @@ enum WorkoutSectionCloningService {
     }
 
     static func cloneRepExercises(in section: WorkoutSection, range: Range<Int>, context: ModelContext) throws {
-        let workout = try requireUnlockedParent(of: section)
+        let workout = try requireUnlockedParent(of: section, context: context)
         var entries = section.sortedRepExercises
         guard range.lowerBound >= 0, range.upperBound <= entries.count, !range.isEmpty else { return }
 
         let clones = entries[range].map { original in
-            RepSectionExercise(section: section, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds, allowsBodyweight: original.allowsBodyweight, tracksSides: original.tracksSides, preferredEquipment: original.preferredEquipment, prefersBodyweight: original.prefersBodyweight)
+            RepSectionExercise(section: section, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds, allowsBodyweight: original.allowsBodyweight, tracksSides: original.tracksSides, preferredEquipment: original.preferredEquipment, prefersBodyweight: original.prefersBodyweight, executionType: original.executionType, progressionEnabled: original.progressionEnabled)
         }
         clones.forEach { context.insert($0) }
         entries.insert(contentsOf: clones, at: entries.count)
@@ -55,11 +57,13 @@ enum WorkoutSectionCloningService {
     // the copies right after the last row they came from rather than at the end.
 
     static func cloneTimeSteps(in section: WorkoutSection, ids: Set<UUID>, context: ModelContext) throws {
-        let workout = try requireUnlockedParent(of: section)
+        let workout = try requireUnlockedParent(of: section, context: context)
         var steps = section.sortedTimeSteps
         let clones = steps.filter { ids.contains($0.id) }.map { original -> TimeSectionStep in
             let clone = TimeSectionStep(section: section, sortOrder: 0, stepType: original.stepType, exercise: original.exercise, durationSeconds: original.durationSeconds)
             clone.color = original.color
+            clone.executionType = original.executionType
+            clone.sideRaw = original.sideRaw
             return clone
         }
         guard !clones.isEmpty else { return }
@@ -76,10 +80,10 @@ enum WorkoutSectionCloningService {
     /// service copies it, so the copy falls back to the exercise's default the same way
     /// a range-clone or an imported template does.
     static func cloneRepExercises(in section: WorkoutSection, ids: Set<UUID>, context: ModelContext) throws {
-        let workout = try requireUnlockedParent(of: section)
+        let workout = try requireUnlockedParent(of: section, context: context)
         var entries = section.sortedRepExercises
         let clones = entries.filter { ids.contains($0.id) }.map { original in
-            RepSectionExercise(section: section, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds, allowsBodyweight: original.allowsBodyweight, tracksSides: original.tracksSides, preferredEquipment: original.preferredEquipment, prefersBodyweight: original.prefersBodyweight)
+            RepSectionExercise(section: section, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds, allowsBodyweight: original.allowsBodyweight, tracksSides: original.tracksSides, preferredEquipment: original.preferredEquipment, prefersBodyweight: original.prefersBodyweight, executionType: original.executionType, progressionEnabled: original.progressionEnabled)
         }
         guard !clones.isEmpty else { return }
 
@@ -92,10 +96,12 @@ enum WorkoutSectionCloningService {
     }
 
     static func cloneQuickExercises(in section: WorkoutSection, ids: Set<UUID>, context: ModelContext) throws {
-        let workout = try requireUnlockedParent(of: section)
+        let workout = try requireUnlockedParent(of: section, context: context)
         var entries = section.sortedQuickExercises
-        let clones = entries.filter { ids.contains($0.id) }.map { original in
-            SectionExerciseEntry(section: section, sortOrder: 0, exercise: original.exercise)
+        let clones = entries.filter { ids.contains($0.id) }.map { original -> SectionExerciseEntry in
+            let clone = SectionExerciseEntry(section: section, sortOrder: 0, exercise: original.exercise, executionType: original.executionType, targetReps: original.targetReps)
+            clone.sideRaw = original.sideRaw
+            return clone
         }
         guard !clones.isEmpty else { return }
 
@@ -111,7 +117,7 @@ enum WorkoutSectionCloningService {
     /// immediately after the original in the workout's section order.
     @discardableResult
     static func cloneSection(_ section: WorkoutSection, context: ModelContext) throws -> WorkoutSection {
-        let workout = try requireUnlockedParent(of: section)
+        let workout = try requireUnlockedParent(of: section, context: context)
         guard let workout else { return section }
         var sections = workout.sortedSections
         guard let originalIndex = sections.firstIndex(where: { $0.id == section.id }) else { return section }
@@ -128,11 +134,26 @@ enum WorkoutSectionCloningService {
     }
 
     /// Deep-copies `section` into a brand new orphan template (`workout == nil`),
-    /// reusable from any other workout via `importTemplate`. No lock guard: copying a
-    /// locked workout's section into a template is read-only, mirroring how
-    /// `WorkoutCloningService.clone` already bypasses the source's lock.
+    /// reusable from any other workout via `importTemplate`.
+    ///
+    /// Still no *lock* guard — copying a locked workout's section into a template is
+    /// read-only, mirroring how `WorkoutCloningService.clone` bypasses the source's lock.
+    /// But a record-tracking section is refused once its identity already has a template:
+    /// `makeSectionCopy` copies `recordGroupID` verbatim, so a second one would be another
+    /// live section feeding the same record and another row in the template list claiming
+    /// to be the same benchmark.
+    ///
+    /// Guarded on "a template already exists" rather than on the lock so
+    /// `SectionRecordCard`'s promotion still works: that is the call that *creates* the one
+    /// template, and it only makes it when there isn't one.
     @discardableResult
     static func saveAsTemplate(_ section: WorkoutSection, name: String, context: ModelContext) throws -> WorkoutSection {
+        if section.tracksRecord, let groupID = section.recordGroupID {
+            let shared = SectionResultService.sectionsSharing(groupID: groupID, context: context)
+            if shared.contains(where: { $0.isTemplate && $0.id != section.id }) {
+                throw WorkoutEditingError.recordLocked
+            }
+        }
         let template = makeSectionCopy(of: section, workout: nil, sortOrder: 0, name: name)
         context.insert(template)
         copySteps(from: section, into: template, context: context)
@@ -161,8 +182,19 @@ enum WorkoutSectionCloningService {
         let copy = WorkoutSection(workout: workout, sortOrder: sortOrder, sectionType: source.sectionType, name: name, description: source.sectionDescription)
         copy.emomRoundCount = source.emomRoundCount
         copy.amrapDurationSeconds = source.amrapDurationSeconds
+        copy.getReadySeconds = source.getReadySeconds
+        copy.repeatsGetReadyEachPass = source.repeatsGetReadyEachPass
+        copy.sectionRestSeconds = source.sectionRestSeconds
         copy.autostart = source.autostart
         copy.repeatCount = source.repeatCount
+        copy.emomToFailure = source.emomToFailure
+        // The record identity is copied, not re-minted like `id` is: every copy of a
+        // tracked section feeds the one record, which is what makes a benchmark used in
+        // three workouts show a single history. `recordLockedAt` rides along with it so a
+        // copy of an already-locked section arrives locked.
+        copy.tracksRecord = source.tracksRecord
+        copy.recordGroupID = source.recordGroupID
+        copy.recordLockedAt = source.recordLockedAt
         return copy
     }
 
@@ -176,6 +208,8 @@ enum WorkoutSectionCloningService {
                 durationSeconds: step.durationSeconds
             )
             stepCopy.color = step.color
+            stepCopy.executionType = step.executionType
+            stepCopy.sideRaw = step.sideRaw
             context.insert(stepCopy)
         }
         for entry in source.sortedRepExercises {
@@ -190,19 +224,24 @@ enum WorkoutSectionCloningService {
                 allowsBodyweight: entry.allowsBodyweight,
                 tracksSides: entry.tracksSides,
                 preferredEquipment: entry.preferredEquipment,
-                prefersBodyweight: entry.prefersBodyweight
+                prefersBodyweight: entry.prefersBodyweight,
+                executionType: entry.executionType,
+                    progressionEnabled: entry.progressionEnabled
             )
             context.insert(entryCopy)
         }
         for entry in source.sortedQuickExercises {
-            let entryCopy = SectionExerciseEntry(section: destination, sortOrder: entry.sortOrder, exercise: entry.exercise)
+            let entryCopy = SectionExerciseEntry(section: destination, sortOrder: entry.sortOrder, exercise: entry.exercise, executionType: entry.executionType, targetReps: entry.targetReps)
+            entryCopy.sideRaw = entry.sideRaw
             context.insert(entryCopy)
         }
     }
 
+    /// Delegates rather than restating the rule: the guard now consults live records as
+    /// well as the section's own flags, and a second copy of it here would quietly fall
+    /// behind.
     @discardableResult
-    private static func requireUnlockedParent(of section: WorkoutSection) throws -> Workout? {
-        guard !section.isLocked else { throw WorkoutEditingError.locked }
-        return section.workout
+    private static func requireUnlockedParent(of section: WorkoutSection, context: ModelContext) throws -> Workout? {
+        try WorkoutEditingService.requireUnlockedParent(of: section, context: context)
     }
 }

@@ -86,10 +86,26 @@ struct PublishWorkoutSheet: View {
         defer { isLoading = false }
         do {
             publishedIDs = try await SharingService.myPublishedWorkoutIDs()
+            // Self-heals `isPublished` for anything published before that field
+            // existed — without this, a workout published in an earlier version of
+            // the app would never trigger `SharePublishScheduler` until someone
+            // happened to open this sheet and toggle it off and back on.
+            reconcileIsPublished()
         } catch {
             errorMessage = (error as? SharingError)?.errorDescription
                 ?? CloudKitErrorFormatter.describe(error)
         }
+    }
+
+    private func reconcileIsPublished() {
+        var changed = false
+        for workout in workouts {
+            let shouldBePublished = publishedIDs.contains(workout.id)
+            guard workout.isPublished != shouldBePublished else { continue }
+            workout.isPublished = shouldBePublished
+            changed = true
+        }
+        if changed { try? context.save() }
     }
 
     private func toggle(_ workout: Workout) async {
@@ -99,12 +115,20 @@ struct PublishWorkoutSheet: View {
             if publishedIDs.contains(workout.id) {
                 try await SharingService.unpublish(workoutID: workout.id)
                 publishedIDs.remove(workout.id)
+                // Not `markDirty()` — flipping this off is what stops
+                // `SharePublishScheduler` from re-publishing behind the user's back
+                // the next time this workout is edited, so it shouldn't itself queue
+                // one more publish on the way out.
+                workout.isPublished = false
+                try? context.save()
             } else {
                 // Built on the main actor from live model objects, then handed to the
                 // network call as a value — the bundle must not hold model references.
                 let bundle = SharedWorkoutBuilder.makeBundle(for: workout)
                 try await SharingService.publish(bundle)
                 publishedIDs.insert(workout.id)
+                workout.isPublished = true
+                try? context.save()
             }
         } catch {
             errorMessage = (error as? SharingError)?.errorDescription

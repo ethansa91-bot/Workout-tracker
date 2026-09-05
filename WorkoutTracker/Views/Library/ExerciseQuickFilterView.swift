@@ -8,6 +8,11 @@ import SwiftData
 /// same `ExerciseFilter` used to filter the list.
 struct ExerciseQuickFilterView: View {
     @Binding var filter: ExerciseFilter
+    /// The list screens hoist the star into their green header, where it stays reachable
+    /// while the chips are hidden. The exercise pickers have no header to hoist it into
+    /// and start `favoritedOnly`, so for them it is the only way back to the full
+    /// catalogue — hence a parameter rather than an outright removal.
+    var showsFavoriteToggle: Bool = true
 
     @Query(sort: \ExerciseCategory.name) private var exerciseCategories: [ExerciseCategory]
     @Query(sort: \MuscleCategory.name) private var muscleCategories: [MuscleCategory]
@@ -21,20 +26,12 @@ struct ExerciseQuickFilterView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Button {
-                    filter.favoritedOnly.toggle()
-                } label: {
-                    Image(systemName: filter.favoritedOnly ? "star.fill" : "star")
-                        .foregroundStyle(filter.favoritedOnly ? Color.yellow : Color.secondary)
-                        .font(.body)
-                        .frame(width: 32, height: 32)
-                        .background(Color.appSurface, in: Circle())
-                        .overlay(Circle().stroke(filter.favoritedOnly ? Color.clear : Color.appHairline, lineWidth: 1))
+                if showsFavoriteToggle {
+                    ExerciseFavoriteFilterButton(filter: $filter)
+                        .padding(.leading)
                 }
-                .buttonStyle(.plain)
-                .padding(.leading)
 
-                chipRow(exerciseCategories, applyLeadingPadding: false) { category in
+                chipRow(exerciseCategories, applyLeadingPadding: !showsFavoriteToggle) { category in
                     chip(
                         title: category.name.capitalized,
                         isSelected: filter.exerciseCategoryNames.contains(category.name),
@@ -67,7 +64,10 @@ struct ExerciseQuickFilterView: View {
                 }
             }
         }
-        .padding(.top, 8)
+        // Symmetric, so the last chip row isn't squeezed against the hairline the host
+        // draws under this strip — the same `.padding(.vertical, 8)` `EquipmentListView`
+        // already uses for its filter row.
+        .padding(.vertical, 8)
         .animation(.default, value: filter.muscleCategoryName)
     }
 
@@ -122,5 +122,26 @@ struct ExerciseQuickFilterView: View {
 
     private func selectMuscle(_ id: UUID) {
         filter.muscleID = (filter.muscleID == id) ? nil : id
+    }
+}
+
+
+/// The favourite filter as a standalone control, so a screen can put it in its header
+/// while the rest of the chips hide behind a toggle.
+struct ExerciseFavoriteFilterButton: View {
+    @Binding var filter: ExerciseFilter
+
+    var body: some View {
+        Button {
+            filter.favoritedOnly.toggle()
+        } label: {
+            Image(systemName: filter.favoritedOnly ? "star.fill" : "star")
+                .font(.body)
+                .foregroundStyle(filter.favoritedOnly ? .yellow : .secondary)
+                .frame(width: 32, height: 32)
+                .background(Color.appSurface, in: Circle())
+                .overlay(Circle().stroke(filter.favoritedOnly ? .clear : Color.appHairline, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 }

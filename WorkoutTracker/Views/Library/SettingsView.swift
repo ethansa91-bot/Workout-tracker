@@ -1,4 +1,3 @@
-import AVFoundation
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
@@ -6,9 +5,9 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     @AppStorage("settings.defaultRestSeconds") private var defaultRestSeconds = 90
     @AppStorage("settings.weightUnit") private var weightUnit = "lb"
-    @AppStorage("settings.timerSoundProfile") private var timerSoundProfile = TimerSoundProfile.endOnly
+    /// Read-only here — the Sounds & Voice screen owns every audio setting. Kept so the
+    /// row can say whether the voice is on without pushing into it.
     @AppStorage("settings.speechEnabled") private var speechEnabled = false
-    @AppStorage("settings.speechVoiceIdentifier") private var speechVoiceIdentifier = ""
     @AppStorage("settings.workoutVideoAutoplay") private var workoutVideoAutoplay = true
 
     @Environment(\.modelContext) private var context
@@ -53,19 +52,22 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    // Inline expands into one row per case, so the band and separators
-                    // go on each generated row rather than on the picker as a whole.
-                    Picker("Timer sound", selection: $timerSoundProfile) {
-                        ForEach(TimerSoundProfile.allCases) { profile in
-                            Text(profile.label)
-                                .settingsRowPadding()
-                                .tag(profile)
+                    NavigationLink {
+                        SoundVoiceSettingsView()
+                    } label: {
+                        HStack {
+                            Text("Sounds & Voice")
+                            Spacer()
+                            Text(speechEnabled ? "Sounds, voice on" : "Sounds only")
+                                .foregroundStyle(.secondary)
                         }
+                        .settingsRowPadding()
                     }
-                    .pickerStyle(.inline)
-                    .labelsHidden()
+                    .fullBleedRow()
                 } header: {
-                    sectionHeader("Timer sound")
+                    sectionHeader("Sounds & Voice")
+                } footer: {
+                    sectionFooter("Timer beeps and spoken announcements, each with its own switch and timing.")
                 }
 
                 Section {
@@ -77,8 +79,6 @@ struct SettingsView: View {
                 } footer: {
                     sectionFooter("Plays the exercise's video automatically during a Follow Along step. Turning this off shows a tappable still instead, which uses noticeably less battery and data over a long workout.")
                 }
-
-                speechSection
 
                 Section {
                     NavigationLink {
@@ -188,17 +188,9 @@ struct SettingsView: View {
             }
             .fullBleedList()
             }
-            // Speech exists only where it can be used: here, for the preview button, and
-            // in the Follow Along runner. Outside those two, `SpeechAnnouncer` has no
-            // synthesizer and no claim on the audio session.
-            .onAppear {
-                SpeechAnnouncer.prepare()
-                SpeechAnnouncer.beginVoiceObservation()
-            }
-            .onDisappear {
-                SpeechAnnouncer.teardown()
-                SpeechAnnouncer.endVoiceObservation()
-            }
+            // No speech lifecycle here any more — `SoundVoiceSettingsView` owns it. A
+            // push fires this view's `onDisappear`, so keeping it would have torn the
+            // synthesizer down underneath the screen that needs it.
             .background(Color.appBackground)
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
@@ -265,91 +257,6 @@ struct SettingsView: View {
                 Text(importMessage ?? "")
             }
         }
-    }
-
-    /// Voice and pace only appear once announcements are on — they're meaningless
-    /// otherwise, and an always-visible pair of dead controls invites fiddling with
-    /// settings that do nothing.
-    @ViewBuilder
-    private var speechSection: some View {
-        Section {
-            Toggle("Speak exercise names", isOn: $speechEnabled)
-                .tint(Color.appAccent)
-                .settingsRow(isLast: !speechEnabled)
-
-            if speechEnabled {
-                Picker("Voice", selection: $speechVoiceIdentifier) {
-                    ForEach(SpeechAnnouncer.selectableVoices, id: \.identifier) { voice in
-                        Text(SpeechAnnouncer.displayName(voice)).tag(voice.identifier)
-                    }
-                }
-                // Explicit, not `.automatic`: a Form resolved that to a menu, but in a
-                // plain List it expands into one row per installed voice — dozens of
-                // them.
-                .pickerStyle(.navigationLink)
-                // Stored as "" until something is picked, which matches no tag and
-                // leaves the row blank — show the voice that will actually be used.
-                .onAppear {
-                    if speechVoiceIdentifier.isEmpty,
-                       let resolved = SpeechAnnouncer.selectedVoice {
-                        speechVoiceIdentifier = resolved.identifier
-                    }
-                }
-                .settingsRow(isLast: false)
-
-                Button("Preview") { SpeechAnnouncer.preview() }
-                    .foregroundStyle(Color.appAccent)
-                    .settingsRow(isLast: false)
-
-                voiceQualityGuidance
-            }
-        } header: {
-            sectionHeader("Announcements")
-        } footer: {
-            sectionFooter("During a Follow Along workout, says each exercise as it starts and gives a ten-second warning with what's coming next.")
-        }
-    }
-
-    /// Always shown, because the good voices are a download away and nothing in the
-    /// app can fetch them — highlighted when the device has only the robotic built-ins,
-    /// so an unexpectedly poor voice explains itself instead of looking like a bug.
-    @ViewBuilder
-    private var voiceQualityGuidance: some View {
-        let needsDownload = SpeechAnnouncer.hasOnlyDefaultVoices
-
-        VStack(alignment: .leading, spacing: 8) {
-            if needsDownload {
-                Label("No natural voice installed", systemImage: "exclamationmark.triangle.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.appRust)
-            }
-
-            Text(needsDownload
-                 ? "Only the basic built-in voice is available, which sounds robotic. For a natural voice, download an Enhanced or Premium one:"
-                 : "More natural voices can be downloaded any time:")
-                .font(.footnote)
-                .foregroundStyle(Color.appInkMuted)
-
-            Text("Settings › Accessibility › Spoken Content › Voices › English")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Color.appInk)
-
-            // iOS only lets an app open its own Settings page; the path above covers
-            // the rest of the journey. A private deep link into Accessibility would
-            // risk App Store rejection and break between releases.
-            Button("Open Settings") {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            }
-            .foregroundStyle(Color.appAccent)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .settingsRowPadding()
-        // The tint goes on the content, not via `listRowBackground` — `fullBleedRow`
-        // sets that to clear and paints the surface itself.
-        .background(needsDownload ? Color.appRust.opacity(0.08) : Color.clear)
-        .fullBleedRow()
     }
 
     // MARK: - Row styling

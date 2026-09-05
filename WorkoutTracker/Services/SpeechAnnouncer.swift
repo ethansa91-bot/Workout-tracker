@@ -15,19 +15,39 @@ import UIKit
 private final class SpeechEngine: NSObject, AVSpeechSynthesizerDelegate {
     let synthesizer = AVSpeechSynthesizer()
 
+    /// Each utterance's audio-session claim, keyed by the utterance itself rather than
+    /// held in a queue: an interrupt puts two in flight at once (the cancelled one and
+    /// its replacement), and the delegate reports them in no guaranteed order.
+    private var claims: [ObjectIdentifier: AudioSessionController.Claim] = [:]
+
     override init() {
         super.init()
         synthesizer.delegate = self
     }
 
+    func register(_ claim: AudioSessionController.Claim, for utterance: AVSpeechUtterance) {
+        claims[ObjectIdentifier(utterance)] = claim
+    }
+
+    /// Drops every outstanding claim without releasing it — for `teardown`, which has
+    /// already dropped the session wholesale and voided them all.
+    func discardClaims() {
+        claims.removeAll()
+    }
+
+    private func release(_ utterance: AVSpeechUtterance) {
+        guard let claim = claims.removeValue(forKey: ObjectIdentifier(utterance)) else { return }
+        AudioSessionController.endActivity(claim)
+    }
+
     // `nonisolated` with an explicit hop: AVFoundation makes no promise about which queue
     // delivers these.
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        Task { @MainActor in AudioSessionController.endActivity() }
+        Task { @MainActor in self.release(utterance) }
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        Task { @MainActor in AudioSessionController.endActivity() }
+        Task { @MainActor in self.release(utterance) }
     }
 }
 
@@ -55,15 +75,22 @@ enum SpeechAnnouncer {
         engine = SpeechEngine()
     }
 
-    /// Stops anything in flight, releases the synthesizer, and drops the audio session.
-    /// After this, `speak` and `preview` do nothing until `prepare()` is called again.
+    /// Stops anything in flight and drops the audio session.
+    ///
+    /// The synthesizer itself is deliberately kept. Releasing it here deallocated an
+    /// `AVSpeechSynthesizer` that could still be unwinding the utterance just interrupted
+    /// — a crash of its own — and, because `prepare()` is guarded on `engine == nil` and
+    /// only called from `TimeSessionRunnerView`, a teardown between sections left speech
+    /// silently dead until the next Follow Along section rebuilt it. An idle synthesizer
+    /// costs nothing to keep.
     static func teardown() {
         engine?.synthesizer.stopSpeaking(at: .immediate)
-        engine = nil
         // Unconditional rather than leaning on the delegate's `didCancel`: if an utterance
         // never reported back, the refcount would be stuck above zero and the session
         // would stay active for the rest of the process — the exact leak this replaced.
         AudioSessionController.deactivateNow()
+        // Everything outstanding was just voided along with the session.
+        engine?.discardClaims()
     }
 
     // MARK: - Voice list
@@ -200,8 +227,27 @@ enum SpeechAnnouncer {
     }
 
     /// Ignores the enabled flag so the Settings preview works before you turn it on.
+    ///
+    /// Composed from the live settings rather than a fixed string: the cues are
+    /// independently switchable now, and a preview that says something the workout won't
+    /// is worse than no preview.
     static func preview() {
-        utter("Ten seconds left. Next: Push Up")
+        var parts: [String] = []
+        if AppSettings.voiceAnnounceStartEnabled { parts.append("Push Up") }
+        if AppSettings.voiceAnnounceNextEnabled {
+            // Same order the runner speaks it in.
+            if AppSettings.voiceTimeLeftEnabled {
+                let mark = AppSettings.voiceAnnounceNextSeconds
+                parts.append("\(mark) second\(mark == 1 ? "" : "s") left")
+            }
+            parts.append("Next: Push Up, Explosive")
+        }
+        if AppSettings.voiceCountdownEnabled {
+            parts.append(contentsOf: stride(from: AppSettings.voiceCountdownFromSeconds, through: 1, by: -1).map(String.init))
+        }
+        // Everything off still says something — silence is indistinguishable from a
+        // broken button, and the voice being audible at all is what's being previewed.
+        utter(parts.isEmpty ? "Push Up" : parts.joined(separator: ". "))
     }
 
     private static func utter(_ text: String) {
@@ -212,12 +258,14 @@ enum SpeechAnnouncer {
         // Claimed before the interrupt so the count can't dip to zero between the two and
         // deactivate the session out from under the utterance we're about to start. The
         // cancelled one balances itself through `didCancel`.
-        AudioSessionController.beginActivity()
+        let claim = AudioSessionController.beginActivity()
+        let utterance = AVSpeechUtterance(string: text)
+        engine.register(claim, for: utterance)
+
         if engine.synthesizer.isSpeaking {
             engine.synthesizer.stopSpeaking(at: .immediate)
         }
 
-        let utterance = AVSpeechUtterance(string: text)
         utterance.voice = selectedVoice
         engine.synthesizer.speak(utterance)
     }

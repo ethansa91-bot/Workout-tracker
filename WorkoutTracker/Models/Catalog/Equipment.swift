@@ -54,6 +54,9 @@ final class Equipment: SyncableModel {
     @Relationship(inverse: \RepSectionExercise.preferredEquipment)
     var repSectionExercises: [RepSectionExercise]?
 
+    @Relationship(inverse: \TimeSectionStep.preferredEquipment)
+    var timeSectionSteps: [TimeSectionStep]?
+
     @Relationship(inverse: \PersonalRecord.equipment)
     var personalRecords: [PersonalRecord]?
     @Relationship(inverse: \PersonalRecordEntry.equipment)
@@ -82,30 +85,45 @@ final class Equipment: SyncableModel {
         self.deletedAt = nil
     }
 
+    /// By weight, not by the order the rows happened to be created in. Nothing in the
+    /// app lets these be arranged by hand, and everything that reads them — the ±
+    /// stepper above all, which treats the list as a ladder from lightest to heaviest —
+    /// assumes ascending. Deriving the order from the value also repairs a ladder that
+    /// an earlier append or an import already left out of order.
+    ///
+    /// `sortOrder` survives as the tiebreak, so two entries with the same value keep a
+    /// stable order, and so an exported archive still round-trips it.
     var sortedWeightCombos: [WeightCombo] {
         weightCombos
             .filter { $0.deletedAt == nil }
-            .sorted { $0.sortOrder < $1.sortOrder }
+            .sorted { ($0.value, $0.sortOrder) < ($1.value, $1.sortOrder) }
     }
 
     var effectiveWeightUnit: String {
         preferredWeightUnit ?? AppSettings.weightUnit
     }
 
-    /// Value of `preferredWeightUnit` that marks this equipment as level-based (an
+    /// Value of `preferredWeightUnit` that marks this equipment as option-based (an
     /// auto-incrementing number with an optional label/color) rather than kg/lb —
-    /// unlike kg/lb, "level" is always an explicit per-equipment choice, never the
-    /// global default, so it's only ever read from `preferredWeightUnit` directly.
-    static let levelUnit = "level"
+    /// unlike kg/lb, this is always an explicit per-equipment choice, never the global
+    /// default, so it's only ever read from `preferredWeightUnit` directly.
+    ///
+    /// **The raw value stays `"level"` and must not change.** It is the string already
+    /// written into `preferredWeightUnit` on every option-based equipment in every
+    /// existing store and iCloud record; renaming it would orphan all of them. It is a
+    /// storage token, never a label — the user-facing word is "Option", and nothing
+    /// should print this string. "Level" belongs to exercise progressions, and a
+    /// band-assisted pull-up would otherwise show both meanings in one card.
+    static let optionUnit = "level"
 
-    var isLevelBased: Bool {
-        preferredWeightUnit == Equipment.levelUnit
+    var usesOptions: Bool {
+        preferredWeightUnit == Equipment.optionUnit
     }
 
-    /// The next auto-incremented level number for this equipment — current highest
-    /// level value + 1 (or 1 if there are none yet). Same "current max + 1" convention
-    /// used for `sortOrder` throughout this codebase.
-    var nextLevelValue: Double {
+    /// The next auto-incremented option number for this equipment — current highest
+    /// value + 1 (or 1 if there are none yet). Same "current max + 1" convention used
+    /// for `sortOrder` throughout this codebase.
+    var nextOptionValue: Double {
         (sortedWeightCombos.map(\.value).max() ?? 0) + 1
     }
 }

@@ -15,6 +15,11 @@ final class StepLog: SyncableModel {
     var timeSectionStep: TimeSectionStep?
     /// Display resilience if the underlying step is later edited/removed on a clone.
     var stepExerciseNameSnapshot: String?
+    /// How the step was performed. Stamped here rather than read back through
+    /// `timeSectionStep`, for the same reason `SetLog` stamps its own: the plan can be
+    /// edited or deleted after the fact, and history should keep saying what happened.
+    /// Symmetric with `SetLog.executionType`, which the rep side already carries.
+    var executionType: ExecutionType?
     var plannedDurationSeconds: Int = 0
     var actualDurationSeconds: Int = 0
     var outcomeRaw: String = StepOutcome.completed.rawValue
@@ -32,11 +37,25 @@ final class StepLog: SyncableModel {
         set { outcomeRaw = newValue.rawValue }
     }
 
+    /// What this log is called in history. Prefers the live step — so a renamed exercise
+    /// reads correctly — and falls back to the snapshot when the step is gone, which is
+    /// the case the snapshot exists for.
+    var displayTitle: String {
+        if let step = timeSectionStep {
+            // The step's own title already handles Rest and Get Ready, which have no
+            // exercise and no type.
+            guard step.stepType == .exercise else { return step.displayTitle }
+            return ExerciseNaming.title(step.exercise, executionType: executionType ?? step.executionType)
+        }
+        return ExerciseNaming.title(stepExerciseNameSnapshot ?? "Rest", executionType: executionType)
+    }
+
     init(
         id: UUID = UUID(),
         session: WorkoutSession? = nil,
         timeSectionStep: TimeSectionStep? = nil,
         stepExerciseNameSnapshot: String? = nil,
+        executionType: ExecutionType? = nil,
         plannedDurationSeconds: Int,
         actualDurationSeconds: Int,
         outcome: StepOutcome,
@@ -47,6 +66,7 @@ final class StepLog: SyncableModel {
         self.session = session
         self.timeSectionStep = timeSectionStep
         self.stepExerciseNameSnapshot = stepExerciseNameSnapshot
+        self.executionType = executionType
         self.plannedDurationSeconds = plannedDurationSeconds
         self.actualDurationSeconds = actualDurationSeconds
         self.outcomeRaw = outcome.rawValue

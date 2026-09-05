@@ -18,6 +18,11 @@ struct ContentView: View {
     /// Sharing so they work whichever tab the user is on.
     @State private var router = SharingRouter.shared
 
+    /// Which of `router.updatedFollowedWorkouts` the review sheet is currently open for —
+    /// separate from the router array itself so dismissing the sheet can remove exactly
+    /// this one without racing a sweep that runs while it's open.
+    @State private var reviewingWorkout: Workout?
+
     private enum Tab {
         case schedule, overview, records, history, settings
     }
@@ -59,23 +64,50 @@ struct ContentView: View {
             FollowByLinkSheet(code: pending.code)
         }
         .overlay(alignment: .top) {
+            // Mutual-follow takes priority when both would show at once — it's the rarer,
+            // more time-sensitive event; an updated workout keeps showing on the next
+            // foreground regardless.
             if !router.newMutualFollows.isEmpty {
                 MutualFollowBanner(
                     users: router.newMutualFollows,
                     onUndo: undoMutualFollow,
                     onDismiss: dismissMutualFollowNotice
                 )
+            } else if !router.updatedFollowedWorkouts.isEmpty {
+                UpdatedWorkoutBanner(
+                    workouts: router.updatedFollowedWorkouts,
+                    onReview: { reviewingWorkout = router.updatedFollowedWorkouts.first },
+                    onDismiss: { router.updatedFollowedWorkouts = [] }
+                )
             }
         }
         .animation(.snappy, value: router.newMutualFollows.map(\.id))
+        .animation(.snappy, value: router.updatedFollowedWorkouts.map(\.id))
+        .sheet(item: $reviewingWorkout) { workout in
+            WorkoutUpdateReviewView(workout: workout) {
+                router.updatedFollowedWorkouts.removeAll { $0.id == workout.id }
+            }
+        }
         .task { await syncMutualFollows() }
+        .task { await syncWorkoutUpdates() }
         .onChange(of: scenePhase) { _, phase in
             // Polling on foreground rather than a CKQuerySubscription: the app has no
             // notification registration and no app delegate, so push would be new
             // plumbing for a latency win nobody would notice on a follower list.
             guard phase == .active else { return }
             Task { await syncMutualFollows() }
+            Task { await syncWorkoutUpdates() }
         }
+    }
+
+    // MARK: - Followed workout updates
+
+    private func syncWorkoutUpdates() async {
+        let result = await FollowService.syncWorkoutUpdates(context: context)
+        guard !result.updated.isEmpty else { return }
+        // Later sweeps replace rather than accumulate: a workout already in the list that
+        // got superseded again is still represented once, by its latest state.
+        router.updatedFollowedWorkouts = result.updated
     }
 
     // MARK: - Mutual follows

@@ -43,6 +43,10 @@ struct CatalogLinkPickerView: View {
                             }
                         }
                         .buttonStyle(.plain)
+                        // Matches the Library list's own row — this had none at all,
+                        // making it the shortest, hardest-to-tap row in the app.
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
                         .fullBleedRow(isLast: index == matches.count - 1)
                     }
                 }

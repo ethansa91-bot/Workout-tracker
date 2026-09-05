@@ -33,8 +33,22 @@ final class RepSectionExercise: SyncableModel, Orderable {
     /// while this is true. Non-optional with a `false` default so entries written
     /// before it existed decode correctly — every one of them was weighted.
     var prefersBodyweight: Bool = false
+    /// How this workout performs the exercise — explosive, slow, held. nil is a real
+    /// value, not a missing one: "unspecified" stays a choice however many types the
+    /// exercise carries, and it is what an entry created before this existed reads as.
+    /// The runner can override it in the moment; this is the default it starts from.
+    var executionType: ExecutionType?
+    /// Whether this entry follows its exercise's progression ladder.
+    ///
+    /// On by default — a ladder is set up deliberately, so a workout using that exercise
+    /// should follow it. Off pins the entry to exactly the exercise written: no Level
+    /// line, and `resolvedExercise` stops substituting the reached rung.
+    var progressionEnabled: Bool = true
     var updatedAt: Date = Date.now
     var deletedAt: Date?
+    /// The publisher's `ArchiveRepExercise.id`, for the same reason `WorkoutSection`
+    /// carries `sourceSectionId` one level up — see that field's doc comment.
+    var sourceRepExerciseId: UUID?
 
     /// Exists only to satisfy CloudKit's "every relationship needs an inverse" rule for
     /// `SetLog.repSectionExercise` — nothing in the app reads or writes this back-reference.
@@ -53,7 +67,9 @@ final class RepSectionExercise: SyncableModel, Orderable {
         allowsBodyweight: Bool = false,
         tracksSides: Bool = false,
         preferredEquipment: Equipment? = nil,
-        prefersBodyweight: Bool = false
+        prefersBodyweight: Bool = false,
+        executionType: ExecutionType? = nil,
+        progressionEnabled: Bool = true
     ) {
         self.id = id
         self.section = section
@@ -67,6 +83,8 @@ final class RepSectionExercise: SyncableModel, Orderable {
         self.tracksSides = tracksSides
         self.preferredEquipment = preferredEquipment
         self.prefersBodyweight = prefersBodyweight
+        self.executionType = executionType
+        self.progressionEnabled = progressionEnabled
         self.updatedAt = .now
         self.deletedAt = nil
     }
@@ -74,6 +92,13 @@ final class RepSectionExercise: SyncableModel, Orderable {
     var trackingMode: RepExerciseTrackingMode {
         get { RepExerciseTrackingMode(rawValue: trackingModeRaw) ?? .repsWeight }
         set { trackingModeRaw = newValue.rawValue }
+    }
+
+    /// What this entry is called wherever it's listed. The *plan's* type — a runner that
+    /// lets the type be overridden mid-workout composes its own heading from the live
+    /// choice instead, since that is what the sets it logs will carry.
+    var displayTitle: String {
+        ExerciseNaming.title(exercise, executionType: executionType)
     }
 
     /// Sides are only meaningful for reps/weight tracking — a max-hold set has no

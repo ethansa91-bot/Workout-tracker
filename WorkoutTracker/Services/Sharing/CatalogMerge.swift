@@ -19,6 +19,7 @@ enum CatalogMerge {
     struct Resolved {
         var exercises: [UUID: Exercise] = [:]
         var equipment: [UUID: Equipment] = [:]
+        var executionTypes: [UUID: ExecutionType] = [:]
         var muscles: [UUID: Muscle] = [:]
         var muscleCategories: [UUID: MuscleCategory] = [:]
         var exerciseCategories: [UUID: ExerciseCategory] = [:]
@@ -128,6 +129,28 @@ enum CatalogMerge {
             resolved.equipment[dto.id] = model
         }
 
+        let localExecutionTypes = try index(ExecutionType.self, context: context)
+        for decision in plan.executionTypes {
+            let dto = decision.incoming
+            guard let model = resolve(
+                decision,
+                local: localExecutionTypes,
+                create: {
+                    // `isCustom: true` regardless of what the publisher had it as — on
+                    // this device it is a type the user added, not one the app seeded,
+                    // which is the same call `Equipment` and `Exercise` make above.
+                    let created = ExecutionType(name: dto.name, isCustom: true)
+                    context.insert(created)
+                    return created
+                },
+                overwrite: { $0.name = dto.name },
+                // Nothing but a name to fill in, so there is no gap a merge could close
+                // that `keepMine` doesn't already handle.
+                merge: { _ in }
+            ) else { continue }
+            resolved.executionTypes[dto.id] = model
+        }
+
         let localExerciseCategories = try index(ExerciseCategory.self, context: context)
         for decision in plan.exerciseCategories {
             guard let model = resolve(
@@ -148,6 +171,7 @@ enum CatalogMerge {
         for decision in plan.exercises {
             let dto = decision.incoming
             let equipment = dto.equipmentIDs.compactMap { resolved.equipment[$0] }
+            let executionTypes = dto.executionTypeIDs.compactMap { resolved.executionTypes[$0] }
             let muscles = dto.muscleIDs.compactMap { resolved.muscles[$0] }
             let categories = dto.categoryIDs.compactMap { resolved.exerciseCategories[$0] }
 
@@ -168,7 +192,10 @@ enum CatalogMerge {
                         defaultEquipmentName: dto.defaultEquipmentName
                     )
                     context.insert(created)
+                    created.defaultsToBodyweight = dto.defaultsToBodyweight ?? false
                     created.equipmentItems = equipment
+                    created.executionTypes = executionTypes
+                    created.separateRecordsPerExecutionType = dto.separateRecordsPerExecutionType
                     created.muscles = muscles
                     created.categories = categories
                     adoptPhoto(dto, images: images, into: created, force: true)
@@ -184,16 +211,22 @@ enum CatalogMerge {
                     $0.allowsBodyweight = dto.allowsBodyweight
                     $0.isOneSided = dto.isOneSided
                     $0.defaultEquipmentName = dto.defaultEquipmentName
+                    $0.defaultsToBodyweight = dto.defaultsToBodyweight ?? false
                     // Relationships are unioned even here. Dropping a muscle or a piece
                     // of equipment the local exercise has would change what the user's
                     // existing filters and pickers show for a row they never edited.
                     $0.equipmentItems = union($0.equipmentItems, equipment)
+                    $0.executionTypes = union($0.executionTypes, executionTypes)
+                    // Not overwritten: whether the user keeps records apart is a decision
+                    // about *their* history, and a publisher has no standing to reverse it.
+                    // Union above can only add types, so an existing split stays valid.
                     $0.muscles = union($0.muscles, muscles)
                     $0.categories = union($0.categories, categories)
                     adoptPhoto(dto, images: images, into: $0, force: true)
                 },
                 merge: {
                     $0.equipmentItems = union($0.equipmentItems, equipment)
+                    $0.executionTypes = union($0.executionTypes, executionTypes)
                     $0.muscles = union($0.muscles, muscles)
                     $0.categories = union($0.categories, categories)
                     if $0.iconSymbolName.isEmpty { $0.iconSymbolName = dto.iconSymbolName }

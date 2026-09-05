@@ -44,6 +44,12 @@ enum CatalogDeletionService {
         if !live(exercise.personalRecords).isEmpty || !live(exercise.personalRecordEntries).isEmpty {
             return "This exercise has a personal record. Delete the record first."
         }
+        // A ladder link is a reference like any other, and deleting here is a tombstone
+        // that repoints nothing — a removed rung would leave the progression with a hole
+        // that still resolves to a soft-deleted exercise.
+        if exercise.progressionStep != nil {
+            return "This exercise is part of a progression. Remove it from the progression first."
+        }
         return nil
     }
 
@@ -96,6 +102,41 @@ enum CatalogDeletionService {
         if let reason = deletionBlockReason(for: equipment) { throw CatalogDeletionError.inUse(reason) }
         // `weightCombos` cascade, so they need no separate pass.
         SyncDeletion.delete(equipment, context: context)
+        try context.save()
+    }
+
+    // MARK: - Workout tags
+
+    /// Why this tag can't be removed, or nil.
+    ///
+    /// `subjectID` is whatever is being tagged right now — its own use of the tag doesn't
+    /// count, since the sheet offering the delete is where that use is being edited. Every
+    /// *other* workout or template does: the tag is about to stop existing for them too,
+    /// and they have no way to know.
+    ///
+    /// An archived workout counts. `isArchived` is a separate flag from `deletedAt` — an
+    /// archived workout is put away, not gone, and un-archiving one to find its tags
+    /// silently dropped would be the same surprise as any other live workout losing them.
+    static func deletionBlockReason(for tag: WorkoutTag, excluding subjectID: UUID? = nil) -> String? {
+        let workouts = live(tag.workoutsStorage).filter { $0.id != subjectID }
+        let sections = live(tag.sectionsStorage).filter { $0.id != subjectID }
+
+        var parts: [String] = []
+        if !workouts.isEmpty { parts.append(count(workouts.count, "workout")) }
+        if !sections.isEmpty { parts.append(count(sections.count, "section template")) }
+        guard parts.isEmpty else {
+            return "Used by \(parts.joined(separator: " and ")). Remove it there first."
+        }
+        return nil
+    }
+
+    static func delete(_ tag: WorkoutTag, excluding subjectID: UUID? = nil, context: ModelContext) throws {
+        // Re-checked rather than trusted, like every other delete here: the menu was drawn
+        // before it was tapped.
+        if let reason = deletionBlockReason(for: tag, excluding: subjectID) {
+            throw CatalogDeletionError.inUse(reason)
+        }
+        SyncDeletion.delete(tag, context: context)
         try context.save()
     }
 

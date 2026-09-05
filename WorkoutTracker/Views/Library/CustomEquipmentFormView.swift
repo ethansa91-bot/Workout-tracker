@@ -7,8 +7,8 @@ struct CustomEquipmentFormView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
-    /// A not-yet-persisted level — number is implied by its position in `levels`.
-    private struct DraftLevel: Identifiable {
+    /// A not-yet-persisted option — its number is implied by its position in `options`.
+    private struct DraftOption: Identifiable {
         let id = UUID()
         var label: String?
         var color: PaletteColor?
@@ -19,10 +19,10 @@ struct CustomEquipmentFormView: View {
     @State private var weightUnit = AppSettings.weightUnit
     @State private var weightValues: [Double] = []
     @State private var newWeightText = ""
-    @State private var levels: [DraftLevel] = []
-    @State private var expandedLevelID: UUID?
+    @State private var options: [DraftOption] = []
+    @State private var expandedOptionID: UUID?
 
-    private var isLevelBased: Bool { weightUnit == Equipment.levelUnit }
+    private var usesOptions: Bool { weightUnit == Equipment.optionUnit }
 
     var body: some View {
         NavigationStack {
@@ -42,24 +42,24 @@ struct CustomEquipmentFormView: View {
                         Picker("Weight unit", selection: $weightUnit) {
                             Text("kg").tag("kg")
                             Text("lb").tag("lb")
-                            Text("Level").tag(Equipment.levelUnit)
+                            Text("Option").tag(Equipment.optionUnit)
                         }
                         .pickerStyle(.segmented)
                     }
-                    if isLevelBased {
+                    if usesOptions {
                         Section {
-                            ForEach(levels) { level in
-                                levelRow(level)
+                            ForEach(options) { option in
+                                optionRow(option)
                             }
-                            .onDelete { levels.remove(atOffsets: $0) }
+                            .onDelete { options.remove(atOffsets: $0) }
 
-                            Button("Add Level") {
-                                levels.append(DraftLevel())
+                            Button("Add Option") {
+                                options.append(DraftOption())
                             }
                         } header: {
-                            Text("Levels")
+                            Text("Options")
                         } footer: {
-                            Text("Levels number automatically. Tap one to give it an optional name and color.")
+                            Text("Options number automatically. Tap one to give it an optional name and color.")
                         }
                     } else {
                         Section("Available weights") {
@@ -103,13 +103,13 @@ struct CustomEquipmentFormView: View {
             : "\(value) \(weightUnit)"
     }
 
-    private func levelRow(_ level: DraftLevel) -> some View {
-        let isExpanded = expandedLevelID == level.id
-        let number = (levels.firstIndex(where: { $0.id == level.id }) ?? 0) + 1
-        let displayName = level.label?.isEmpty == false ? level.label! : "Level \(number)"
+    private func optionRow(_ option: DraftOption) -> some View {
+        let isExpanded = expandedOptionID == option.id
+        let number = (options.firstIndex(where: { $0.id == option.id }) ?? 0) + 1
+        let displayName = option.label?.isEmpty == false ? "\(number). \(option.label!)" : WeightCombo.optionDisplayName(for: Double(number))
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                if let color = level.color {
+                if let color = option.color {
                     Circle().fill(color.color).frame(width: 12, height: 12)
                 }
                 Text(displayName)
@@ -121,33 +121,33 @@ struct CustomEquipmentFormView: View {
             }
             .contentShape(Rectangle())
             .onTapGesture {
-                withAnimation { expandedLevelID = isExpanded ? nil : level.id }
+                withAnimation { expandedOptionID = isExpanded ? nil : option.id }
             }
 
             if isExpanded {
-                levelEditor(level)
+                optionEditor(option)
                     .padding(.top, 10)
             }
         }
         .padding(.vertical, 2)
     }
 
-    private func levelEditor(_ level: DraftLevel) -> some View {
+    private func optionEditor(_ option: DraftOption) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             TextField("Optional name", text: Binding(
-                get: { level.label ?? "" },
+                get: { option.label ?? "" },
                 set: { newValue in
-                    guard let index = levels.firstIndex(where: { $0.id == level.id }) else { return }
-                    levels[index].label = newValue.trimmingCharacters(in: .whitespaces).isEmpty ? nil : newValue
+                    guard let index = options.firstIndex(where: { $0.id == option.id }) else { return }
+                    options[index].label = newValue.trimmingCharacters(in: .whitespaces).isEmpty ? nil : newValue
                 }
             ))
             .textFieldStyle(.roundedBorder)
 
             PaletteColorPicker(selection: Binding(
-                get: { level.color },
+                get: { option.color },
                 set: { newValue in
-                    guard let index = levels.firstIndex(where: { $0.id == level.id }) else { return }
-                    levels[index].color = newValue
+                    guard let index = options.firstIndex(where: { $0.id == option.id }) else { return }
+                    options[index].color = newValue
                 }
             ), swatchSize: 24)
         }
@@ -165,9 +165,9 @@ struct CustomEquipmentFormView: View {
         )
         context.insert(equipment)
         if isWeighted {
-            if isLevelBased {
-                for (index, level) in levels.enumerated() {
-                    let combo = WeightCombo(equipment: equipment, value: Double(index + 1), sortOrder: index, label: level.label, color: level.color)
+            if usesOptions {
+                for (index, option) in options.enumerated() {
+                    let combo = WeightCombo(equipment: equipment, value: Double(index + 1), sortOrder: index, label: option.label, color: option.color)
                     context.insert(combo)
                 }
             } else {

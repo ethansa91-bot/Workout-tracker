@@ -159,7 +159,11 @@ struct SessionExerciseListView: View {
                 id: section.id,
                 title: section.displayName,
                 subtitle: subtitle(for: section),
-                rows: rows(for: section, activeIndex: activeIndex),
+                rows: rows(
+                    for: section,
+                    activeIndex: activeIndex,
+                    pass: isCurrentSection ? (session.currentSectionRepeat ?? 0) : 0
+                ),
                 isCurrent: isCurrentSection
             )
         }
@@ -170,20 +174,22 @@ struct SessionExerciseListView: View {
         if section.effectiveRepeatCount > 1 {
             parts.append("×\(section.effectiveRepeatCount)")
         }
-        parts.append(formattedEstimate(estimatedSectionSeconds(section)))
+        parts.append(formattedSectionEstimate(section))
         return parts.joined(separator: " · ")
     }
 
     /// Get Ready and Rest steps are included, unlike the editing list: the runner plays
     /// them, so leaving them out would make the list disagree with what actually happens.
-    private func rows(for section: WorkoutSection, activeIndex: Int?) -> [Row] {
+    /// By the same rule a Get Ready the runner *skips* is left out — hence the pass, which
+    /// decides whether a non-repeating count-in is part of this round.
+    private func rows(for section: WorkoutSection, activeIndex: Int?, pass: Int) -> [Row] {
         switch section.sectionType {
         case .time:
-            return section.sortedTimeSteps.enumerated().map { index, step in
+            return section.runnableTimeSteps(pass: pass).enumerated().map { index, step in
                 Row(
                     id: step.id,
                     position: index + 1,
-                    title: stepTitle(step),
+                    title: step.displayTitle,
                     detail: "\(step.durationSeconds)s",
                     tint: step.resolvedColor.color,
                     isCurrent: index == activeIndex
@@ -194,7 +200,7 @@ struct SessionExerciseListView: View {
                 Row(
                     id: entry.id,
                     position: index + 1,
-                    title: entry.exercise?.displayName ?? "Exercise",
+                    title: entry.displayTitle,
                     detail: repDetail(entry),
                     isCurrent: index == activeIndex
                 )
@@ -206,7 +212,7 @@ struct SessionExerciseListView: View {
                 Row(
                     id: entry.id,
                     position: index + 1,
-                    title: entry.exercise?.displayName ?? "Exercise",
+                    title: entry.displayTitle,
                     detail: nil,
                     isCurrent: false
                 )
@@ -214,13 +220,7 @@ struct SessionExerciseListView: View {
         }
     }
 
-    private func stepTitle(_ step: TimeSectionStep) -> String {
-        switch step.stepType {
-        case .exercise: return step.exercise?.displayName ?? "Exercise"
-        case .rest: return "Rest"
-        case .getReady: return "Get Ready"
-        }
-    }
+
 
     private func repDetail(_ entry: RepSectionExercise) -> String {
         var parts = ["\(entry.targetSets) set\(entry.targetSets == 1 ? "" : "s")"]

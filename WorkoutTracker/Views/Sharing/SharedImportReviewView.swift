@@ -21,6 +21,7 @@ struct SharedImportReviewView: View {
 
     @Query private var allExercises: [Exercise]
     @Query private var allEquipment: [Equipment]
+    @Query private var allExecutionTypes: [ExecutionType]
     @Query private var allMuscles: [Muscle]
     @Query private var allExerciseCategories: [ExerciseCategory]
     @Query private var allMuscleCategories: [MuscleCategory]
@@ -51,6 +52,12 @@ struct SharedImportReviewView: View {
                 candidates: candidates(allEquipment, name: \.name)
             )
             decisionSection(
+                title: "Execution Types",
+                decisions: $plan.catalog.executionTypes,
+                icon: "bolt",
+                candidates: candidates(allExecutionTypes, name: \.name)
+            )
+            decisionSection(
                 title: "Muscles",
                 decisions: $plan.catalog.muscles,
                 icon: "figure.arms.open",
@@ -68,6 +75,8 @@ struct SharedImportReviewView: View {
                 icon: "tag",
                 candidates: candidates(allMuscleCategories, name: \.name)
             )
+
+            progressionSection
 
             automaticMatchSection
         }
@@ -108,6 +117,88 @@ struct SharedImportReviewView: View {
         }
     }
 
+    // MARK: - Progressions
+
+    /// Their ladders beside yours, with the three ways out of a clash.
+    ///
+    /// Its own section rather than rows mixed into Exercises: a ladder brings exercises
+    /// the workout never mentions, and seeing those listed among the workout's own with no
+    /// explanation is how you end up vetoing something the import needs.
+    @ViewBuilder
+    private var progressionSection: some View {
+        if !plan.catalog.progressions.isEmpty {
+            Section {
+                ForEach(Array($plan.catalog.progressions.decisions.enumerated()), id: \.element.id) { _, $decision in
+                    progressionRow($decision)
+                }
+            } header: {
+                ListBandHeader(
+                    title: "Progressions",
+                    subtitle: plan.catalog.progressions.conflictCount > 0
+                        ? "One of these overlaps a progression you already have. An exercise can only be on one."
+                        : "Exercise ladders this workout follows."
+                )
+            }
+        }
+    }
+
+    private func progressionRow(_ decision: Binding<ProgressionDecision>) -> some View {
+        let value = decision.wrappedValue
+        return VStack(alignment: .leading, spacing: 10) {
+            ladderColumn("Theirs", rungs: value.incomingRungs, highlightsClashes: value.hasConflict)
+
+            ForEach(value.conflicts) { local in
+                ladderColumn("Yours", rungs: local.rungs, highlightsClashes: false)
+            }
+
+            if !value.addedExerciseNames.isEmpty {
+                Text("Adds to your library: \(value.addedExerciseNames.joined(separator: ", "))")
+                    .font(.caption)
+                    .foregroundStyle(Color.appInkMuted)
+            }
+
+            Picker("", selection: decision.resolution) {
+                Text("Use theirs").tag(ProgressionDecision.Resolution.useTheirs)
+                if value.hasConflict {
+                    Text("Keep mine").tag(ProgressionDecision.Resolution.keepMine)
+                    Text("Only new").tag(ProgressionDecision.Resolution.nonConflictingOnly)
+                } else {
+                    Text("Skip").tag(ProgressionDecision.Resolution.keepMine)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .fullBleedRow(isLast: value.id == plan.catalog.progressions.decisions.last?.id)
+    }
+
+    private func ladderColumn(_ title: String, rungs: [ProgressionDecision.Rung], highlightsClashes: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.appInkMuted)
+            ForEach(rungs) { rung in
+                HStack(spacing: 6) {
+                    Text("\(rung.level)")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Color.appInkMuted)
+                        .frame(width: 14, alignment: .trailing)
+                    Text(rung.name)
+                        .font(.subheadline)
+                        .lineLimit(1)
+                    // The rung that can't be in both places at once.
+                    if highlightsClashes && rung.clashes {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(Color.appRust)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Sections
 
     @ViewBuilder
@@ -125,7 +216,9 @@ struct SharedImportReviewView: View {
         } header: {
             ListBandHeader(
                 title: "Summary",
-                subtitle: "Nothing already in your library is deleted or duplicated, whatever you choose."
+                subtitle: plan.catalog.progressions.isEmpty
+                    ? "Nothing already in your library is deleted or duplicated, whatever you choose."
+                    : "No exercise, workout or record is deleted or duplicated. Progressions are the one thing you can choose to replace — see below."
             )
         }
     }

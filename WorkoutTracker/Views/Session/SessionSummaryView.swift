@@ -10,6 +10,10 @@ struct SessionSummaryView: View {
 
     @Environment(\.modelContext) private var context
     @State private var noteTexts: [UUID: String] = [:]
+    /// Owned here rather than by `SectionRecordCard`, so the corrected values it edits
+    /// are still readable when Done is tapped — that's the moment they're actually
+    /// filed. See `SectionResultService.commitCorrectedResult`.
+    @State private var sectionRoundDrafts: [UUID: Int] = [:]
 
     var body: some View {
         NavigationStack {
@@ -37,6 +41,10 @@ struct SessionSummaryView: View {
                                 .padding(12)
                         }
                         .cardStyle(cornerRadius: 14)
+
+                        FollowAlongRecordCard(session: session, context: context)
+
+                        SectionRecordCard(session: session, context: context, drafts: $sectionRoundDrafts)
 
                         if !distinctExercises.isEmpty {
                             notesCard
@@ -132,6 +140,14 @@ struct SessionSummaryView: View {
             let note = ExerciseSessionNote.findOrCreate(session: session, exercise: exercise, context: context)
             note.text = text
             note.updatedAt = .now
+        }
+        // The one commit for every EMOM/AMRAP candidate `SectionRecordCard` let the user
+        // review — using whatever they corrected it to, or the logged value if they
+        // never touched it. This is genuinely "finishing" the workout from here, not the
+        // session-status change that happened before this screen ever appeared.
+        for candidate in SectionResultService.bestResults(in: session) {
+            let value = candidate.recordGroupID.flatMap { sectionRoundDrafts[$0] } ?? candidate.value
+            SectionResultService.commitCorrectedResult(candidate, value: value, context: context)
         }
         try? context.save()
         onDone()

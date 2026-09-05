@@ -19,6 +19,19 @@ enum SetSide: String, Codable, CaseIterable {
         case .right: return "R"
         }
     }
+
+    /// For a name this qualifies — "Split Squat, Left side". Bare "Left" after an exercise
+    /// name reads as a variant of the exercise rather than as which side you're working.
+    ///
+    /// `label` stays the compact form for a control or a set row, where the exercise name
+    /// directly above has already said which exercise it is and only the side is in
+    /// question — and where the rep runner has 48pt of gutter to spend on it.
+    var longLabel: String {
+        switch self {
+        case .left: return "Left side"
+        case .right: return "Right side"
+        }
+    }
 }
 
 /// One logged set in a rep section. "Stop sets" isn't a stored flag — an exercise
@@ -59,6 +72,10 @@ final class SetLog: SyncableModel {
     /// `true` when the weight was typed in rather than picked from an equipment's
     /// preset combos. nil = an ordinary equipment-backed set.
     var isManualWeight: Bool?
+    /// How the set was performed. Stamped on every set so history can be split by type
+    /// later even for an exercise that wasn't splitting records when the set was logged —
+    /// deriving it after the fact would be impossible. nil = performed without naming one.
+    var executionType: ExecutionType?
     var loggedAt: Date = Date.now
     /// Edit/cancel support: a cancelled set is excluded from progress counts and from
     /// best/max computations; logging again fills the slot.
@@ -82,6 +99,7 @@ final class SetLog: SyncableModel {
         repeatIndex: Int = 0,
         equipment: Equipment? = nil,
         isManualWeight: Bool? = nil,
+        executionType: ExecutionType? = nil,
         isCancelled: Bool = false
     ) {
         self.id = id
@@ -99,6 +117,7 @@ final class SetLog: SyncableModel {
         self.repeatIndex = repeatIndex
         self.equipment = equipment
         self.isManualWeight = isManualWeight
+        self.executionType = executionType
         self.loggedAt = .now
         self.isCancelled = isCancelled
         self.updatedAt = .now
@@ -108,5 +127,12 @@ final class SetLog: SyncableModel {
     var side: SetSide? {
         get { sideRaw.flatMap(SetSide.init(rawValue:)) }
         set { sideRaw = newValue?.rawValue }
+    }
+
+    /// What this set is called in history. Prefers the live exercise so a rename reads
+    /// correctly, falling back to the snapshot when the exercise is gone — which is the
+    /// case the snapshot exists for.
+    var displayTitle: String {
+        ExerciseNaming.title(exercise?.displayName ?? exerciseNameSnapshot ?? "Exercise", executionType: executionType)
     }
 }

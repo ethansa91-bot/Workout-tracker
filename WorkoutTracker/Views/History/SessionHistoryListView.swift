@@ -26,9 +26,17 @@ private struct SessionHistoryListContent: View {
     @Query(sort: \WorkoutSession.startedAt, order: .reverse) private var allSessions: [WorkoutSession]
 
     @State private var pendingDelete: WorkoutSession?
+    @State private var tagFilter = WorkoutTagFilter()
 
     private var sessions: [WorkoutSession] {
-        allSessions.filter { $0.deletedAt == nil }
+        allSessions.filter {
+            guard $0.deletedAt == nil else { return false }
+            guard !tagFilter.isEmpty else { return true }
+            // A session whose workout was deleted has no tags to match, so it drops out
+            // under any filter — but stays visible when there isn't one, which is what
+            // keeps orphaned history reachable.
+            return tagFilter.matches($0.workout?.sortedTags ?? [])
+        }
     }
 
     var body: some View {
@@ -40,6 +48,8 @@ private struct SessionHistoryListContent: View {
         NavigationStack {
             VStack(spacing: 0) {
                 PageTitleBand(title: "History", reservesButtonRow: true)
+
+                WorkoutTagFilterBar(filter: $tagFilter)
 
                 Group {
                     if sessions.isEmpty {
@@ -126,6 +136,7 @@ private struct SessionHistoryListContent: View {
                 Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                RowTagPills(tags: session.workout?.sortedTags ?? [])
             }
             Spacer()
             StatusPill(text: info.0, tint: info.2)

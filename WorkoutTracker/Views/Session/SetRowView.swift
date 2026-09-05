@@ -40,7 +40,7 @@ struct SetRowView: View {
 
     @State private var showingWheel = false
 
-    private var isLevelBased: Bool { weightUnit == Equipment.levelUnit }
+    private var usesOptions: Bool { weightUnit == Equipment.optionUnit }
 
     private static let actionButtonCornerRadius: CGFloat = 12
     /// Gutter reserved for "Left"/"Right" in the prominent card.
@@ -162,8 +162,22 @@ struct SetRowView: View {
                     } label: {
                         Image(systemName: "minus.circle")
                     }
-                    weightDisplay
-                        .frame(minWidth: weightFieldWidth, maxWidth: .infinity, alignment: .center)
+                    // −/+ walk the equipment's ladder; the value itself opens the wheel,
+                    // for a weight the equipment doesn't have a preset for. Same sheet
+                    // the old standalone "manual entry" source used — the difference is
+                    // that the set still belongs to the chosen equipment.
+                    //
+                    // Except on option-based equipment, where the ladder *is* the set of
+                    // values: there is no weight to type, so the readout is a plain label
+                    // between the ± keys rather than a way into the wheel.
+                    Group {
+                        if usesOptions {
+                            weightDisplay
+                        } else {
+                            typedWeightButton
+                        }
+                    }
+                    .frame(minWidth: weightFieldWidth, maxWidth: .infinity, alignment: .center)
                     Button {
                         stepWeight(delta: 1)
                     } label: {
@@ -171,8 +185,6 @@ struct SetRowView: View {
                     }
                 }
             }
-        case .manual:
-            manualWeightControl
         case .bodyweight:
             Text("Bodyweight")
                 .font(valueFont)
@@ -182,40 +194,33 @@ struct SetRowView: View {
         }
     }
 
-    /// Tapping the value opens a scrolling wheel. Logged sets show it plainly — a
-    /// recorded set isn't editable in place.
-    @ViewBuilder
-    private var manualWeightControl: some View {
-        if isLogged {
-            Text(formattedWeight(weight))
-                .font(valueFont)
-                .frame(minWidth: weightFieldWidth)
-        } else {
-            Button {
-                showingWheel = true
-            } label: {
-                HStack(spacing: 4) {
-                    Text(formattedWeight(weight))
-                        .font(valueFont)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(minWidth: weightFieldWidth)
-                .padding(.vertical, isProminent ? 6 : 2)
-                .padding(.horizontal, 8)
-                .background(Color.appBackground, in: RoundedRectangle(cornerRadius: 8))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.appHairline, lineWidth: 1)
-                )
+    /// The weight as a tappable value: the border and chevron are what say it can be
+    /// typed rather than only stepped.
+    private var typedWeightButton: some View {
+        Button {
+            showingWheel = true
+        } label: {
+            HStack(spacing: 4) {
+                Text(formattedWeight(weight))
+                    .font(valueFont)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
-            .buttonStyle(.plain)
-            .sheet(isPresented: $showingWheel) {
-                weightWheelSheet
-            }
+            .frame(minWidth: weightFieldWidth)
+            .padding(.vertical, isProminent ? 6 : 2)
+            .padding(.horizontal, 8)
+            .background(Color.appBackground, in: RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.appHairline, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showingWheel) {
+            weightWheelSheet
         }
     }
 
@@ -251,9 +256,12 @@ struct SetRowView: View {
         return sideLabel != nil ? 60 : 72
     }
 
-    /// Level-based equipment shows the matching combo's color dot + label (falling
-    /// back to "Level N"); everything else shows the plain numeric "value unit" text
-    /// as before.
+    /// Option-based equipment shows the option — "3. Red", or "opt. 3" unnamed — and
+    /// everything else the plain numeric "value unit" text.
+    ///
+    /// The number leads and the colour dot is gone: mid-set what's wanted is which rung
+    /// of the ladder this is, and a swatch says nothing about that. Records and history,
+    /// where an option is being compared rather than stepped, keep the dot.
     @ViewBuilder
     private var weightDisplay: some View {
         if isBodyweight {
@@ -261,16 +269,11 @@ struct SetRowView: View {
                 .font(valueFont)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-        } else if isLevelBased, let combo = weightOptions.first(where: { $0.value == weight }) {
-            HStack(spacing: 4) {
-                if let color = combo.color {
-                    Circle().fill(color.color).frame(width: 8, height: 8)
-                }
-                Text(combo.levelDisplayName)
-                    .font(valueFont)
-                    .lineLimit(1)
-            }
-            .minimumScaleFactor(0.7)
+        } else if usesOptions {
+            Text(formattedSetOption(weight, options: weightOptions))
+                .font(valueFont)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         } else {
             // Scales as a pair so the number and its unit shrink together and stay on
             // one baseline — at large Dynamic Type the row has no width left to give.
@@ -355,7 +358,12 @@ struct SetRowView: View {
         isBodyweight = stepped.isBodyweight
     }
 
+    /// Option-based equipment names its option, matching `weightDisplay` — without this
+    /// the live set showed `formattedSetWeight`'s "3 level", since `Equipment.optionUnit`
+    /// is a storage token that happens to read as a word.
     private func formattedWeight(_ value: Double) -> String {
-        formattedSetWeight(value, unit: weightUnit)
+        usesOptions
+            ? formattedSetOption(value, options: weightOptions)
+            : formattedSetWeight(value, unit: weightUnit)
     }
 }
