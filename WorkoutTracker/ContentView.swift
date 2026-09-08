@@ -24,29 +24,28 @@ struct ContentView: View {
     @State private var reviewingWorkout: Workout?
 
     private enum Tab {
-        case schedule, overview, records, history, settings
+        case schedule, workouts, resources, records, settings
     }
 
     var body: some View {
         // iOS only collapses tabs into an automatic "More" tab once there are more
-        // than 5 — five items (Library folded into Overview as a horizontal
-        // pane selector instead of its own tab) all show directly, no "More".
+        // than 5 — these five all show directly, no "More".
         TabView(selection: $selectedTab) {
             ScheduleListView()
                 .tabItem { Label("Schedule", systemImage: "calendar") }
                 .tag(Tab.schedule)
 
             WorkoutListView()
-                .tabItem { Label("Overview", systemImage: "list.bullet.rectangle") }
-                .tag(Tab.overview)
+                .tabItem { Label("Workouts", systemImage: "list.bullet.rectangle") }
+                .tag(Tab.workouts)
+
+            ResourcesView()
+                .tabItem { Label("Resources", systemImage: "books.vertical") }
+                .tag(Tab.resources)
 
             RecordsListView(isSelected: selectedTab == .records)
                 .tabItem { Label("Records", systemImage: "trophy.fill") }
                 .tag(Tab.records)
-
-            SessionHistoryListView(isSelected: selectedTab == .history)
-                .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
-                .tag(Tab.history)
 
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape") }
@@ -55,9 +54,9 @@ struct ContentView: View {
         .tint(Color.appAccent)
         .onAppear {
             // Schedule is the default landing tab, but if there's nothing scheduled
-            // for today it has nothing useful to show — land on Overview instead.
+            // for today it has nothing useful to show — land on Workouts instead.
             if !hasWorkoutScheduledToday() {
-                selectedTab = .overview
+                selectedTab = .workouts
             }
         }
         .sheet(item: $router.pendingFollow) { pending in

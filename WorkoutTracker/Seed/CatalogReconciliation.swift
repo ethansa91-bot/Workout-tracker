@@ -26,6 +26,7 @@ enum CatalogReconciliation {
             guard !hasRun else { return }
             hasRun = true
             run(context: container.mainContext)
+            GetReadyStepReconciliation.run(context: container.mainContext)
         }
     }
 

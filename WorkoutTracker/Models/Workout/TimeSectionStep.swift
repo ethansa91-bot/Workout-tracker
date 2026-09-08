@@ -63,6 +63,13 @@ final class TimeSectionStep: SyncableModel, Orderable {
     /// This step is performed unloaded, ignoring `preferredEquipment`. Non-optional with a
     /// `false` default so steps written before this existed decode correctly.
     var prefersBodyweight: Bool = false
+    /// The weight this step's post-session record card
+    /// (`FollowAlongRecordCard.prefill`) prefills at when there's no personal record yet
+    /// for the exercise on this equipment — the Follow Along counterpart to
+    /// `RepSectionExercise.startingWeight`. No reps counterpart: a held step has none to
+    /// seed. nil falls back to the equipment's lightest preset, exactly as before this
+    /// existed.
+    var startingWeight: Double?
     var updatedAt: Date = Date.now
     var deletedAt: Date?
     /// The publisher's `ArchiveTimeStep.id`, for the same reason `WorkoutSection` carries

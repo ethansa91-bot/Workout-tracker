@@ -126,7 +126,10 @@ struct SettingsPanelSheet<Content: View>: View {
     /// The content's measured size. A binding rather than internal state because the
     /// content itself needs the width to lay its paired rows out.
     @Binding var contentSize: CGSize
-    @ViewBuilder var content: Content
+    /// Takes the `ScrollViewProxy` rather than a bare `Content`, so the panel can
+    /// `scrollTo` a row it just revealed (the Setting Info glossary, say) instead of
+    /// leaving it below the fold for the sheet's max height to hide.
+    @ViewBuilder var content: (ScrollViewProxy) -> Content
 
     private var fittedHeight: CGFloat {
         let measured = contentSize.height + SettingMetrics.panelPadding * 2
@@ -135,11 +138,13 @@ struct SettingsPanelSheet<Content: View>: View {
     }
 
     var body: some View {
-        ScrollView {
-            content
-                .onGeometryChange(for: CGSize.self) { $0.size } action: { contentSize = $0 }
-                .padding(SettingMetrics.panelPadding)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        ScrollViewReader { proxy in
+            ScrollView {
+                content(proxy)
+                    .onGeometryChange(for: CGSize.self) { $0.size } action: { contentSize = $0 }
+                    .padding(SettingMetrics.panelPadding)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         // No `selection:`, so the sheet always opens at the fitted height and follows it
         // when a row appears — binding a selection would pin it to a stale height the
@@ -163,9 +168,9 @@ struct SettingInfoEntry: Identifiable {
     }
 }
 
-/// A quiet way in to "what does this do", below everything else in the panel and
-/// collapsed until tapped — so it never competes with the settings themselves, and
-/// someone who already knows what Autostart does never has to look at it.
+/// "What does this do" — a settings panel's own glossary, shown when the panel's
+/// gray Info icon (in `actionsRow`, beside Clone/Delete) is toggled on; the panel owns
+/// that expansion state itself now, so this view is just the entry list.
 ///
 /// `entries` is built by the panel from the exact same conditions that choose which rows
 /// to show, so the glossary only ever explains what's actually on screen right now — not
@@ -173,38 +178,16 @@ struct SettingInfoEntry: Identifiable {
 struct SettingInfoDisclosure: View {
     let entries: [SettingInfoEntry]
 
-    @State private var isExpanded = false
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Button {
-                isExpanded.toggle()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "info.circle")
-                    Text("Setting info")
-                    Image(systemName: "chevron.right")
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                    Spacer(minLength: 0)
-                }
-                .font(.caption)
-                .foregroundStyle(Color.appInkMuted)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            if isExpanded {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(entries) { entry in
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(entry.name)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color.appInk)
-                            Text(entry.explanation)
-                                .font(.caption2)
-                                .foregroundStyle(Color.appInkMuted)
-                        }
-                    }
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(entries) { entry in
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(entry.name)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.appInk)
+                    Text(entry.explanation)
+                        .font(.caption2)
+                        .foregroundStyle(Color.appInkMuted)
                 }
             }
         }
@@ -436,12 +419,15 @@ struct SectionSettingsPanel: View {
 
     /// Measured by `SettingsPanelSheet`; `getReadyPairRow` splits the width.
     @State private var contentSize: CGSize = .zero
+    /// Toggled by the gray Info icon in `actionsRow` — `SettingInfoDisclosure` is just
+    /// the entry list now, so the panel owns showing/hiding it itself.
+    @State private var showingSettingInfo = false
 
     var body: some View {
-        SettingsPanelSheet(contentSize: $contentSize) { panelContent }
+        SettingsPanelSheet(contentSize: $contentSize) { proxy in panelContent(proxy: proxy) }
     }
 
-    private var panelContent: some View {
+    private func panelContent(proxy: ScrollViewProxy) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             titleRow
             Divider()
@@ -494,14 +480,30 @@ struct SectionSettingsPanel: View {
 
             actionsRow
 
-            SettingInfoDisclosure(entries: infoEntries)
+            if showingSettingInfo {
+                SettingInfoDisclosure(entries: infoEntries)
+                    .id(Self.settingInfoID)
+            }
         }
         // A settings panel changes; it doesn't perform. A row that stops applying — Section
         // rest once the repeat count drops back to 1, Rounds once an EMOM goes open-ended —
         // is simply not there next time you look, rather than sliding or fading away. This
         // also holds the sheet's own height still while the content behind it changes.
         .transaction { $0.animation = nil }
+        // Scrolled into view the moment it appears, rather than left for the user to
+        // find below the fold — the panel can already be near its max height before
+        // Setting Info even opens. Posted to the next runloop tick: the row has to
+        // exist (this `if` has to have already re-rendered) before `scrollTo` can find
+        // its id.
+        .onChange(of: showingSettingInfo) { _, isShowing in
+            guard isShowing else { return }
+            DispatchQueue.main.async {
+                withAnimation { proxy.scrollTo(Self.settingInfoID, anchor: .bottom) }
+            }
+        }
     }
+
+    private static let settingInfoID = "settingInfo"
 
     /// Mirrors exactly the conditions `panelContent`'s switch uses to choose its rows, so
     /// the glossary below never names a setting that isn't actually showing above it.
@@ -587,6 +589,12 @@ struct SectionSettingsPanel: View {
         if onClone != nil || onDelete != nil {
             Divider()
             HStack(spacing: 28) {
+                // Gray, to the left of Clone — same icon+caption shape as Clone/Delete,
+                // just a quiet color rather than accent/danger, since it opens a
+                // glossary rather than acting on the section.
+                actionButton("info.circle", "Setting Info", tint: Color.appInkMuted) {
+                    showingSettingInfo.toggle()
+                }
                 if let onClone {
                     actionButton("doc.on.doc", "Clone", tint: Color.appAccent, action: onClone)
                 }

@@ -171,7 +171,7 @@ struct RecordValueEditor: View {
     /// Option-based equipment has no typed entry at all — its ladder *is* the set of
     /// values, so there is nothing to type that the ± keys can't reach. A record already
     /// holding an off-ladder value still displays (as "opt. N") and still steps: the
-    /// first ± snaps it onto the ladder.
+    /// first ± snaps it onto the nearest rung in that direction.
     @ViewBuilder
     private func weightControl(isLast: Bool) -> some View {
         let usesOptions = equipment?.usesOptions == true
@@ -184,15 +184,16 @@ struct RecordValueEditor: View {
 
     /// `allowsBodyweight: false` on purpose — bodyweight is an explicit choice on the
     /// caller's own equipment selector, so the ladder must not slide off its bottom into
-    /// it behind that selector's back.
+    /// it behind that selector's back. `.offerBodyweight` can never come back here.
     private func step(_ delta: Int, options: [WeightCombo]) {
-        weight = steppedSetWeight(
+        guard case .weight(let value, _) = steppedSetWeight(
             delta: delta,
             weight: weight,
             isBodyweight: false,
             options: options,
             allowsBodyweight: false
-        ).weight
+        ) else { return }
+        weight = value
     }
 
     /// Option-based equipment shows the matching option's colour dot and name — the dot

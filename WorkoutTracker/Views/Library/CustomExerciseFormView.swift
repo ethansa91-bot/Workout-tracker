@@ -71,8 +71,20 @@ struct CustomExerciseFormView: View {
                     chipGrid(allEquipment.filter { !$0.isWeighted }, tint: .appStepBrown, title: \.name, isSelected: { selectedEquipmentIDs.contains($0.id) }, toggle: toggleEquipment)
                 }
 
-                Section("Weighted Equipment") {
+                Section {
                     chipGrid(allEquipment.filter { $0.isWeighted }, tint: .appStepBlue, title: \.name, isSelected: { selectedEquipmentIDs.contains($0.id) }, toggle: toggleEquipment)
+                } header: {
+                    HStack(spacing: 8) {
+                        Text("Weighted Equipment")
+                        Spacer(minLength: 8)
+                        if hasWeightedEquipment {
+                            PlainHeaderToggle(title: "Allow bodyweight", isOn: allowsBodyweight) {
+                                allowsBodyweight.toggle()
+                            }
+                        }
+                    }
+                } footer: {
+                    Text("\"Allow bodyweight\" lets a workout offer this exercise unloaded.")
                 }
 
                 Section("Categories") {
@@ -84,16 +96,12 @@ struct CustomExerciseFormView: View {
                     toggle: toggleExecutionType,
                     onCreate: toggleExecutionType,
                     selectedCount: selectedExecutionTypeIDs.count,
-                    separateRecords: $separateRecordsPerExecutionType
+                    separateRecords: $separateRecordsPerExecutionType,
+                    usesPlainHeader: true
                 )
 
                 Section {
                     FlowLayout(spacing: 8, rowSpacing: 8) {
-                        if hasWeightedEquipment {
-                            SelectableChip(icon: "figure.strengthtraining.functional", title: "Allow bodyweight", isSelected: allowsBodyweight, tint: .appStepBlue) {
-                                allowsBodyweight.toggle()
-                            }
-                        }
                         SelectableChip(icon: "arrow.left.and.right", title: "One-sided", isSelected: isOneSided, tint: .appStepBrown) {
                             isOneSided.toggle()
                         }
@@ -102,7 +110,7 @@ struct CustomExerciseFormView: View {
                 } header: {
                     Text("Options")
                 } footer: {
-                    Text("\"Allow bodyweight\" lets a workout offer this exercise unloaded. \"One-sided\" lets a workout log left and right separately.")
+                    Text("\"One-sided\" lets a workout log left and right separately.")
                 }
 
                 Section("Notes") {

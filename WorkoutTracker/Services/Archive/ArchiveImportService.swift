@@ -690,6 +690,8 @@ enum ArchiveImportService {
             workout.kindRaw = dto.kindRaw
             workout.isArchived = dto.isArchived
             workout.tags = dto.tagIDs.compactMap { refs.workoutTags[$0] }
+            workout.versionGroupID = dto.versionGroupID
+            workout.isSupersededVersion = dto.isSupersededVersion ?? false
             workout.updatedAt = dto.updatedAt
             workout.deletedAt = dto.deletedAt
 
@@ -791,6 +793,7 @@ enum ArchiveImportService {
             // equipment the catalog exercise doesn't carry as a weighted option.
             step.preferredEquipment = resolvedPreferredEquipment(dto.preferredEquipmentID, for: step.exercise, refs: refs)
             step.prefersBodyweight = (dto.prefersBodyweight ?? false) && (step.exercise?.allowsBodyweightSource ?? false)
+            step.startingWeight = dto.startingWeight
             step.updatedAt = dto.updatedAt
             step.deletedAt = dto.deletedAt
         }
@@ -837,6 +840,8 @@ enum ArchiveImportService {
             entry.prefersBodyweight = dto.prefersBodyweight && (exercise?.allowsBodyweightSource ?? false)
             entry.executionType = resolvedExecutionType(dto.executionTypeID, for: exercise, refs: refs)
             entry.progressionEnabled = dto.progressionEnabled
+            entry.startingWeight = dto.startingWeight
+            entry.startingReps = dto.startingReps
             entry.updatedAt = dto.updatedAt
             entry.deletedAt = dto.deletedAt
         }
@@ -991,6 +996,7 @@ enum ArchiveImportService {
             session.currentExerciseIndex = dto.currentExerciseIndex
             session.currentSetIndex = dto.currentSetIndex
             session.currentSectionRepeat = dto.currentSectionRepeat
+            session.isSectionResting = dto.isSectionResting ?? false
             session.supersededBySessionId = dto.supersededBySessionId
             session.updatedAt = dto.updatedAt
             session.deletedAt = dto.deletedAt

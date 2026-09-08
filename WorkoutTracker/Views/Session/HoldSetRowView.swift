@@ -21,6 +21,9 @@ struct HoldSetRowView: View {
     var weight: Binding<Double> = .constant(0)
     var isBodyweight: Binding<Bool> = .constant(true)
     var allowsBodyweight: Bool = false
+    /// See `SetRowView.onOfferBodyweight` — called instead of stepping into Bodyweight
+    /// when a step at the bottom of the ladder would cross into it.
+    var onOfferBodyweight: (() -> Void)? = nil
     let isLogged: Bool
     /// See `SetRowView.isProminent` — the focused form for the set in progress.
     var isProminent: Bool = false
@@ -223,15 +226,19 @@ struct HoldSetRowView: View {
     private var usesOptions: Bool { weightUnit == Equipment.optionUnit }
 
     private func step(_ delta: Int) {
-        let stepped = steppedSetWeight(
+        switch steppedSetWeight(
             delta: delta,
             weight: weight.wrappedValue,
             isBodyweight: isBodyweight.wrappedValue,
             options: weightOptions,
             allowsBodyweight: allowsBodyweight
-        )
-        weight.wrappedValue = stepped.weight
-        isBodyweight.wrappedValue = stepped.isBodyweight
+        ) {
+        case .weight(let value, let isBodyweightValue):
+            weight.wrappedValue = value
+            isBodyweight.wrappedValue = isBodyweightValue
+        case .offerBodyweight:
+            onOfferBodyweight?()
+        }
     }
 
     private var weightWheelSheet: some View {

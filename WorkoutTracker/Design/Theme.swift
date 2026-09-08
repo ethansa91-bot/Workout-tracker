@@ -362,6 +362,34 @@ struct BandToggleButton: View {
     }
 }
 
+/// `BandToggleButton`'s counterpart for a plain (unbanded) section header — same
+/// "Label: on/off" tap target, colored for a light header instead of a dark band. The
+/// title beside it is left to render as an ordinary header `Text`, which is what keeps
+/// it matching the rest of a plain `Form`'s auto-styled section headers; only this
+/// control opts out of that ambient styling, the same way `BandToggleButton` does.
+struct PlainHeaderToggle: View {
+    let title: String
+    let isOn: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Text("\(title):")
+                    .foregroundStyle(Color.appInkMuted)
+                Text(isOn ? "on" : "off")
+                    .fontWeight(.semibold)
+                    .foregroundStyle(isOn ? Color.appAccent : Color.appInkMuted)
+            }
+            .font(.footnote)
+            .textCase(nil)
+            .lineLimit(1)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 
 /// A muted section label on the cream ground, standing in for a grouped list's header
 /// now that `.plain` renders headers unstyled and flush-left.
@@ -529,15 +557,3 @@ struct InlineSearchField: View {
     }
 }
 
-/// A band carrying only a control — no title row at all, so the accessory sits close
-/// under the toolbar. An empty title string wouldn't do: `Text("")` still reserves a
-/// line's height.
-struct PageAccessoryBand<Accessory: View>: View {
-    var reservesButtonRow: Bool = false
-    @ViewBuilder var accessory: Accessory
-
-    var body: some View {
-        accessory
-            .headerBandStyle(reservesButtonRow: reservesButtonRow)
-    }
-}

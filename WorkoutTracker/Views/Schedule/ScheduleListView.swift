@@ -190,10 +190,11 @@ struct ScheduleListView: View {
                 switch route {
                 case .workout(let workout):
                     SessionRecapView(workout: workout) { clone in
-                        // Replace, not stack: backing out of the copy should reach the
-                        // schedule, not the locked workout it was cloned from.
-                        path.removeLast()
-                        path.append(.workout(clone))
+                        // Reset, not stack: backing out of the copy should reach the
+                        // schedule, not the locked workout it was cloned from — nor,
+                        // if reached several pushes deep (a past version opened from
+                        // version history), any of the screens in between.
+                        path = [.workout(clone)]
                     }
                 // Nothing here pushes Archives, but the route type is shared with the
                 // Workouts stack and the destination has to be total.

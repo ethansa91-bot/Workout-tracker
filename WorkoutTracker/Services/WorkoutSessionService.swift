@@ -99,6 +99,7 @@ enum WorkoutSessionService {
     }
 
     static func setPositionForCurrentSection(_ session: WorkoutSession, workout: Workout) {
+        session.isSectionResting = false
         let sections = workout.sortedSections
         guard session.currentSectionIndex < sections.count else { return }
         let section = sections[session.currentSectionIndex]

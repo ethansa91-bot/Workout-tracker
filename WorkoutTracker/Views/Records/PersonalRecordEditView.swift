@@ -36,6 +36,9 @@ struct PersonalRecordEditView: View {
     /// `pendingDeleteEntry` since there's no `PersonalRecordEntry` to point at for the
     /// current value, only the record itself. See `deleteCurrentValue`.
     @State private var pendingDeleteCurrent: RecordVariant?
+    /// Which tracking mode's records are showing — only meaningful, and only shown as
+    /// a picker at all, when the exercise actually has both kinds.
+    @State private var selectedTrackingMode: RepExerciseTrackingMode = .repsWeight
 
     var body: some View {
         Group {
@@ -47,19 +50,46 @@ struct PersonalRecordEditView: View {
                 )
             } else {
                 List {
-                    ForEach(sortedVariants) { variant in
+                    if let promotedVariant {
                         Group {
-                            headerRow(variant)
-                            if expandedHistoryKey == variant.key {
-                                historyRows(for: variant)
+                            headerRow(promotedVariant, label: promotedVariant.headerLabel)
+                            if expandedHistoryKey == promotedVariant.key {
+                                historyRows(for: promotedVariant)
                             }
-                            // A boundary after every variant's own content, whatever that
-                            // content happens to be — collapsed header or an open history.
-                            // `headerRow`/`historyRows` only ever decide separators
-                            // *within* a variant (header vs. its own expanded history);
-                            // without this, two collapsed variants sat back to back with
-                            // no line between them at all.
-                            variantDivider(isLast: variant.id == sortedVariants.last?.id)
+                            variantDivider(isLast: trailingVariants.isEmpty)
+                        }
+                    }
+                    if hasMultipleGroups {
+                        ForEach(groupedByExecutionType, id: \.id) { group in
+                            Section {
+                                ForEach(group.variants) { variant in
+                                    Group {
+                                        headerRow(variant, label: equipmentOnlyLabel(variant))
+                                        if expandedHistoryKey == variant.key {
+                                            historyRows(for: variant)
+                                        }
+                                        variantDivider(isLast: variant.id == trailingVariants.last?.id)
+                                    }
+                                }
+                            } header: {
+                                Text(group.name)
+                            }
+                        }
+                    } else {
+                        ForEach(trailingVariants) { variant in
+                            Group {
+                                headerRow(variant, label: variant.headerLabel)
+                                if expandedHistoryKey == variant.key {
+                                    historyRows(for: variant)
+                                }
+                                // A boundary after every variant's own content, whatever
+                                // that content happens to be — collapsed header or an
+                                // open history. `headerRow`/`historyRows` only ever
+                                // decide separators *within* a variant (header vs. its
+                                // own expanded history); without this, two collapsed
+                                // variants sat back to back with no line between them.
+                                variantDivider(isLast: variant.id == trailingVariants.last?.id)
+                            }
                         }
                     }
                 }
@@ -67,7 +97,23 @@ struct PersonalRecordEditView: View {
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            PushedTitleBand(title: exercise.displayName)
+            VStack(spacing: 0) {
+                PushedTitleBand(title: exercise.displayName)
+                if showsTrackingModeTabs {
+                    Picker("Record Type", selection: $selectedTrackingMode) {
+                        Text("Reps").tag(RepExerciseTrackingMode.repsWeight)
+                        Text("Max Hold").tag(RepExerciseTrackingMode.maxHoldTime)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.appSurface)
+                    .overlay(alignment: .bottom) {
+                        Rectangle().fill(Color.appHairline).frame(height: 0.5)
+                    }
+                }
+            }
         }
         .safeAreaInset(edge: .bottom) {
             // Hidden while the edit popup is up: it opens at a fitted, partial height
@@ -166,39 +212,93 @@ struct PersonalRecordEditView: View {
         .padding()
     }
 
-    // MARK: - Ordering and the absolute record
+    // MARK: - Tabs, grouping and the absolute record
 
-    /// The absolute-record variant(s) lead, each still in its own natural place among
-    /// the rest — not duplicated, just promoted and, in the row itself, highlighted.
-    private var sortedVariants: [RecordVariant] {
-        let absoluteIDs = Set(absoluteRecordVariants.map(\.id))
-        guard !absoluteIDs.isEmpty else { return variants }
-        let promoted = variants.filter { absoluteIDs.contains($0.id) }
-        let rest = variants.filter { !absoluteIDs.contains($0.id) }
-        return promoted + rest
+    /// Reps first, then Max Hold — whichever this exercise actually has records for.
+    private var availableTrackingModes: [RepExerciseTrackingMode] {
+        [RepExerciseTrackingMode.repsWeight, .maxHoldTime].filter { mode in
+            variants.contains { $0.trackingMode == mode }
+        }
     }
 
-    /// The single highest real weight this exercise has ever moved, separately for
-    /// reps and for max time — unit-converted so a kg record and an lb record can be
+    /// Only when both kinds exist is there anything to switch between — with just one,
+    /// a picker would offer a choice that doesn't exist.
+    private var showsTrackingModeTabs: Bool {
+        availableTrackingModes.count > 1
+    }
+
+    /// The variants belonging to whichever tab is active — every variant when there's
+    /// only one tracking mode to show at all, so this always carries at most one
+    /// tracking mode either way.
+    private var activeVariants: [RecordVariant] {
+        guard showsTrackingModeTabs else { return variants }
+        return variants.filter { $0.trackingMode == selectedTrackingMode }
+    }
+
+    /// The single highest real weight this exercise has ever moved, for the active
+    /// tab's tracking mode — unit-converted so a kg record and an lb record can be
     /// compared at all. Bodyweight, option-based equipment and Follow Along records are
     /// excluded by `RecordVariant.absoluteComparisonWeightInKg` itself: "options are
     /// separate, not used for absolute records," bodyweight has no load to compare, and
     /// a carried Follow Along load isn't a performance to rank the same way a rep or
-    /// hold record is.
-    private var absoluteRecordVariants: [RecordVariant] {
-        [RepExerciseTrackingMode.repsWeight, .maxHoldTime].compactMap { mode in
-            variants
-                .filter { $0.trackingMode == mode }
-                .compactMap { variant in variant.absoluteComparisonWeightInKg.map { (variant, $0) } }
-                .max { $0.1 < $1.1 }
-                .map(\.0)
+    /// hold record is. Promoted above any grouping below, not duplicated inside it.
+    private var promotedVariant: RecordVariant? {
+        activeVariants
+            .compactMap { variant in variant.absoluteComparisonWeightInKg.map { (variant, $0) } }
+            .max { $0.1 < $1.1 }
+            .map(\.0)
+    }
+
+    /// The active tab's variants grouped by execution type, promoted variant excluded
+    /// — real types first (alphabetical), then the untyped group last, headed with the
+    /// exercise's own name rather than left blank.
+    private var groupedByExecutionType: [(id: UUID?, name: String, variants: [RecordVariant])] {
+        let remaining = activeVariants.filter { $0.id != promotedVariant?.id }
+        var byType: [UUID?: [RecordVariant]] = [:]
+        for variant in remaining {
+            byType[variant.executionType?.id, default: []].append(variant)
         }
+        let types = byType.keys.compactMap { $0 }
+            .compactMap { id in remaining.first { $0.executionType?.id == id }?.executionType }
+            .sorted { $0.name < $1.name }
+        var groups = types.map { type in (id: type.id as UUID?, name: type.name, variants: byType[type.id] ?? []) }
+        if let untyped = byType[nil] {
+            groups.append((id: nil, name: exercise.displayName, variants: untyped))
+        }
+        return groups
+    }
+
+    /// Headers only appear once there's an actual split to explain — a single group
+    /// (most commonly every record untyped) reads flat, exactly as before tabs and
+    /// grouping existed.
+    private var hasMultipleGroups: Bool {
+        groupedByExecutionType.count > 1
+    }
+
+    /// Every non-promoted variant in the active tab, in the order they're actually
+    /// rendered — used to find the true last row for `variantDivider`, whichever of
+    /// the grouped or flat layouts is showing.
+    private var trailingVariants: [RecordVariant] {
+        groupedByExecutionType.flatMap(\.variants)
+    }
+
+    /// Just the equipment (or Bodyweight), plus Follow Along when it applies — used
+    /// only for rows inside a grouped `Section`, where the tab and the section's own
+    /// header already say the tracking mode and execution type; repeating them in the
+    /// row too would say the same thing three times over.
+    private func equipmentOnlyLabel(_ variant: RecordVariant) -> String {
+        var base = variant.isBodyweight ? "Bodyweight" : (variant.equipment?.name ?? "No equipment")
+        if variant.isFollowAlong { base += " · Follow Along" }
+        return base
     }
 
     // MARK: - Rows
 
-    private func headerRow(_ variant: RecordVariant) -> some View {
-        let isAbsolute = absoluteRecordVariants.contains { $0.id == variant.id }
+    /// `label` is the promoted/flat variant's full `headerLabel`, or a grouped row's
+    /// own shorter `equipmentOnlyLabel` — the caller decides which, since only it knows
+    /// whether a `Section` header is already carrying the rest of the context.
+    private func headerRow(_ variant: RecordVariant, label: String) -> some View {
+        let isAbsolute = variant.id == promotedVariant?.id
         let isHistoryExpanded = expandedHistoryKey == variant.key
 
         return HStack(spacing: 8) {
@@ -207,7 +307,7 @@ struct PersonalRecordEditView: View {
                     .foregroundStyle(Color.appAccent)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(variant.headerLabel)
+                Text(label)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.appInk)
                 HStack(spacing: 4) {
@@ -357,7 +457,7 @@ private struct RecordEditPopup: View {
     @State private var contentSize: CGSize = .zero
 
     var body: some View {
-        SettingsPanelSheet(contentSize: $contentSize) {
+        SettingsPanelSheet(contentSize: $contentSize) { _ in
             VStack(alignment: .leading, spacing: 12) {
                 Text(variant.headerLabel)
                     .font(.subheadline.weight(.semibold))

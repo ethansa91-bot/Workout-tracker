@@ -1,19 +1,21 @@
 import Foundation
 import SwiftData
 
-/// Turns "this followed workout has a pending update" into either a merged-in-place
-/// workout or a fresh copy, the two outcomes `WorkoutUpdateReviewView` offers.
+/// Turns "this followed workout has a pending update" into one of three outcomes
+/// `WorkoutUpdateReviewView` offers: merged in place (unlocked only), saved as an
+/// independent copy (unlocked only), or versioned like a user's own locked-and-edited
+/// workout (locked only).
 ///
 /// Same shape as a fresh download (`FollowedUserDetailView.prepareDownload` →
 /// `SharedWorkoutImporter`) because it *is* that path up to a point — download, resolve
 /// the catalog — and only diverges once there's a `Workout` to compare against instead of
 /// only ever a `Workout` to create. The one rule that matters throughout: nothing before
-/// `applyInPlace`/`saveAsCopy` ever writes to the store. `preparePlan` only downloads and
-/// plans (`CatalogImportPlanner.plan`, itself read-only); `computeDiff` only reads. Commit
-/// — `CatalogMerge.apply`, which does write — happens exactly once, inside whichever of
-/// the two final actions the user actually picks, so backing out of the review (or the
-/// catalog sub-review `SharedImportReviewView` might show first) never leaves behind a
-/// catalog row nobody asked for.
+/// `applyInPlace`/`saveAsCopy`/`saveAsNewVersion` ever writes to the store. `preparePlan`
+/// only downloads and plans (`CatalogImportPlanner.plan`, itself read-only); `computeDiff`
+/// only reads. Commit — `CatalogMerge.apply`, which does write — happens exactly once,
+/// inside whichever of the final actions the user actually picks, so backing out of the
+/// review (or the catalog sub-review `SharedImportReviewView` might show first) never
+/// leaves behind a catalog row nobody asked for.
 @MainActor
 enum WorkoutUpdateService {
     struct UpdatePlan {
@@ -88,8 +90,11 @@ enum WorkoutUpdateService {
         try context.save()
     }
 
-    /// The locked path: today's "Save Again," building an independent copy the way a
-    /// fresh download would rather than touching the workout a session has already used.
+    /// The unlocked "keep both" path: an independent copy built the way a fresh
+    /// download would, rather than merging in place. Since only one local copy should
+    /// ever track a given publisher workout's future updates, the untouched original
+    /// gives up that tracking here — the new copy is the one `FollowService
+    /// .syncWorkoutUpdates` will match against from now on.
     static func saveAsCopy(_ plan: UpdatePlan, context: ModelContext) throws -> Workout {
         let resolved = try commitCatalog(plan, context: context)
         let workout = SharedWorkoutImporter.buildWorkout(
@@ -101,7 +106,39 @@ enum WorkoutUpdateService {
             executionTypes: resolved.executionTypes,
             context: context
         )
+        plan.workout.sourceOwnerRecordName = nil
+        plan.workout.clonedFromWorkoutId = nil
+        plan.workout.sourceUpdatedAt = nil
+        plan.workout.markDirty()
         try context.save()
         return workout
+    }
+
+    /// The locked path: the same versioning `WorkoutCloningService.createNewVersion`
+    /// gives a user's own edited workout, applied to an incoming publisher update
+    /// instead of the workout's own current content. The update becomes the new active
+    /// version; this copy becomes reachable from its version history instead of
+    /// drifting out of sync with the publisher forever.
+    static func saveAsNewVersion(_ plan: UpdatePlan, context: ModelContext) throws -> Workout {
+        let resolved = try commitCatalog(plan, context: context)
+        let original = plan.workout
+        let groupID = original.versionGroupID ?? UUID()
+        original.versionGroupID = groupID
+        original.isSupersededVersion = true
+        original.markDirty()
+
+        let newVersion = SharedWorkoutImporter.buildWorkout(
+            from: plan.bundle.payload.workout,
+            ownerRecordName: plan.bundle.ownerRecordName,
+            sourceUpdatedAt: plan.bundle.sourceUpdatedAt,
+            exercises: resolved.exercises,
+            equipment: resolved.equipment,
+            executionTypes: resolved.executionTypes,
+            context: context
+        )
+        newVersion.versionGroupID = groupID
+        ScheduledWorkoutService.repointFutureSchedules(from: original, to: newVersion, context: context)
+        try context.save()
+        return newVersion
     }
 }

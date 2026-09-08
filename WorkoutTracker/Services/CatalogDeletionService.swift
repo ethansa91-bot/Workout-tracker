@@ -105,6 +105,28 @@ enum CatalogDeletionService {
         try context.save()
     }
 
+    // MARK: - Execution types
+
+    /// `subjectID` is the exercise whose editor the delete was reached from — its own
+    /// attachment doesn't count, since that's the one use actively being edited right
+    /// now, the same reasoning `deletionBlockReason(for tag:excluding:)` uses. Unlike
+    /// that one, this names up to 3 of the exercises still using it, not just a count.
+    static func deletionBlockReason(for executionType: ExecutionType, excluding subjectID: UUID? = nil) -> String? {
+        let attached = executionType.exercises.filter { $0.deletedAt == nil && $0.id != subjectID }
+        guard !attached.isEmpty else { return nil }
+        let names = attached.prefix(3).map(\.displayName).joined(separator: ", ")
+        let suffix = attached.count > 3 ? " and \(attached.count - 3) more" : ""
+        return "Used by \(count(attached.count, "exercise")) (\(names)\(suffix)). Remove it there first."
+    }
+
+    static func delete(_ executionType: ExecutionType, excluding subjectID: UUID? = nil, context: ModelContext) throws {
+        if let reason = deletionBlockReason(for: executionType, excluding: subjectID) {
+            throw CatalogDeletionError.inUse(reason)
+        }
+        SyncDeletion.delete(executionType, context: context)
+        try context.save()
+    }
+
     // MARK: - Workout tags
 
     /// Why this tag can't be removed, or nil.

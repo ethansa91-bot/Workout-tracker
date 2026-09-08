@@ -141,12 +141,15 @@ struct ExerciseSettingsPanel: View {
 
     /// Measured by `SettingsPanelSheet`; the paired rows split the width.
     @State private var contentSize: CGSize = .zero
+    /// Toggled by the gray Info icon in `actionsRow` — `SettingInfoDisclosure` is just
+    /// the entry list now, so the panel owns showing/hiding it itself.
+    @State private var showingSettingInfo = false
 
     var body: some View {
-        SettingsPanelSheet(contentSize: $contentSize) { panelContent }
+        SettingsPanelSheet(contentSize: $contentSize) { proxy in panelContent(proxy: proxy) }
     }
 
-    private var panelContent: some View {
+    private func panelContent(proxy: ScrollViewProxy) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             titleRow
             Divider()
@@ -165,13 +168,29 @@ struct ExerciseSettingsPanel: View {
             }
             actionsRow
 
-            SettingInfoDisclosure(entries: infoEntries)
+            if showingSettingInfo {
+                SettingInfoDisclosure(entries: infoEntries)
+                    .id(Self.settingInfoID)
+            }
         }
         // A settings panel changes; it doesn't perform. Rows that come and go with a
         // tracking mode appear where they belong rather than sliding or fading into
         // place. (The section panel drops this: its rest row *should* be seen arriving.)
         .transaction { $0.animation = nil }
+        // Scrolled into view the moment it appears, rather than left for the user to
+        // find below the fold — the panel can already be near its max height before
+        // Setting Info even opens. Posted to the next runloop tick: the row has to
+        // exist (this `if` has to have already re-rendered) before `scrollTo` can find
+        // its id.
+        .onChange(of: showingSettingInfo) { _, isShowing in
+            guard isShowing else { return }
+            DispatchQueue.main.async {
+                withAnimation { proxy.scrollTo(Self.settingInfoID, anchor: .bottom) }
+            }
+        }
     }
+
+    private static let settingInfoID = "settingInfo"
 
     /// Mirrors exactly the conditions the row groups above use to decide what to show —
     /// including each picker's own `hasChoice`, so a setting this exercise has nothing to
@@ -191,34 +210,46 @@ struct ExerciseSettingsPanel: View {
                 if !(step.exercise?.sortedExecutionTypes.isEmpty ?? true) {
                     entries.append(SettingInfoEntry("Execution", "How the exercise is performed, when it has more than one style to choose from."))
                 }
+                if step.exercise?.weightedEquipmentOptions.isEmpty == false {
+                    entries.append(SettingInfoEntry("Weight", "What this prefills at afterward when there's no personal record yet to use instead."))
+                }
                 entries.append(SettingInfoEntry("Color", "The accent color this step's card shows during the workout."))
             }
             return entries
 
         case .repEntry(let entry):
+            // Ordered to match the rows themselves: Equipment/Weight read last here
+            // too, as the closing "what this loads with" group.
             var entries: [SettingInfoEntry] = [
                 SettingInfoEntry("Sets", "How many sets of this exercise the section calls for."),
-                SettingInfoEntry("Rest", "How long to rest between sets."),
+                SettingInfoEntry("Rest Timer", "How long to rest between sets."),
                 SettingInfoEntry("Track", "Whether sets are logged as reps and weight, or as how long you can hold it.")
             ]
             if entry.trackingMode == .maxHoldTime {
                 entries.append(SettingInfoEntry("Prep", "A head start before the hold timer starts counting."))
-            }
-            if entry.exercise?.hasEquipmentChoice == true {
-                entries.append(SettingInfoEntry("Equipment", "What this exercise is loaded with — a specific piece of equipment, or bodyweight."))
-            }
-            if entry.exercise?.allowsBodyweight == true {
-                entries.append(SettingInfoEntry("Bodyweight", "Lets this exercise's stepper offer an unloaded, bodyweight-only option."))
             }
             if entry.exercise?.isOneSided == true, entry.trackingMode == .repsWeight {
                 entries.append(SettingInfoEntry("Track L/R", "Logs the left and right sides as separate sets instead of one."))
             }
             if !(entry.exercise?.sortedExecutionTypes.isEmpty ?? true) {
                 entries.append(SettingInfoEntry("Execution", "How the exercise is performed, when it has more than one style to choose from."))
+                entries.append(SettingInfoEntry("Execution Editable", "Off fixes this entry's execution type for the whole workout — the runner can't change it mid-session."))
             }
             if entry.exercise?.progressionGroup != nil {
                 entries.append(SettingInfoEntry("Progression", "Steps this exercise up or down its difficulty ladder automatically."))
             }
+            if entry.exercise?.allowsBodyweight == true {
+                entries.append(SettingInfoEntry("Bodyweight", "Lets this exercise's stepper offer an unloaded, bodyweight-only option."))
+            }
+            // Always shown now — a fixed single source or "No Equipment" is still
+            // worth explaining, not just a real choice between several.
+            entries.append(SettingInfoEntry("Equipment", "What this exercise is loaded with — a specific piece of equipment, or bodyweight."))
+            if (entry.exercise?.weightedEquipmentOptions.count ?? 0) > 1 {
+                entries.append(SettingInfoEntry("Equipment Editable", "Off fixes this entry's equipment for the whole workout — the runner can't change it mid-session. Doesn't affect Bodyweight, which Bodyweight on/off governs on its own."))
+            }
+            // Always shown too — Starting Reps is still functional with no weighted
+            // equipment at all, even though Weight itself just reads "Bodyweight" then.
+            entries.append(SettingInfoEntry("Weight", "What a fresh set opens prefilled at — used only if no personal record is available yet."))
             return entries
 
         case .quickEntry(let entry):
@@ -271,6 +302,12 @@ struct ExerciseSettingsPanel: View {
             if let onAddRest {
                 actionButton("pause.circle", "Add Rest", tint: Color.appAccent, action: onAddRest)
                     .disabled(hasRestAfter)
+            }
+            // Gray, to the left of Clone — same icon+caption shape as Clone/Delete,
+            // just a quiet color rather than accent/danger, since it opens a glossary
+            // rather than acting on the exercise.
+            actionButton("info.circle", "Setting Info", tint: Color.appInkMuted) {
+                showingSettingInfo.toggle()
             }
             actionButton("doc.on.doc", "Clone", tint: Color.appAccent, action: onClone)
             actionButton("trash", "Delete", tint: Color.appDanger, action: onDelete)
@@ -377,6 +414,93 @@ struct SettingStepper: View {
         let main = Text(value).font(.subheadline).monospacedDigit()
         let combined = unit.map { main + Text($0).font(.caption2) } ?? main
         return combined.foregroundColor(Color.appRust)
+    }
+}
+
+/// `SettingStepper`'s weight counterpart — a starting-weight setting, stepped and
+/// entered exactly the way a live set's own weight is.
+///
+/// Reuses the same primitives `SetRowView`'s weight control does rather than
+/// reimplementing them: `steppedSetWeight` for the ± ladder, `WeightWheelPicker` for a
+/// manual value outside it, `formattedSetWeight`/`formattedSetOption` for display. This
+/// is not that control itself — `SetRowView`'s is entangled with live-session-only state
+/// (`isLogged`, prominent sizing) a build-time settings row has no use for — just the
+/// same interaction, so setting a starting weight here feels identical to adjusting one
+/// mid-set. Always steps as a plain load: `isBodyweight`/`allowsBodyweight` are never
+/// involved, since a starting weight has no bodyweight state of its own.
+struct SettingWeightStepper: View {
+    let title: String
+    var columnWidth: CGFloat = SettingMetrics.repStepperLabelColumn
+    @Binding var weight: Double
+    let equipment: Equipment?
+    let unit: String
+
+    @State private var showingWheel = false
+
+    private var options: [WeightCombo] { equipment?.sortedWeightCombos ?? [] }
+    private var usesOptions: Bool { equipment?.usesOptions ?? false }
+
+    var body: some View {
+        HStack(spacing: SettingMetrics.rowSpacing) {
+            Text("\(title):")
+                .font(.subheadline)
+                .foregroundStyle(Color.appInk)
+                .frame(width: columnWidth, alignment: .leading)
+                .minimumScaleFactor(0.75)
+
+            RepeatingStepButton(systemImage: "minus.circle", isDisabled: false) { step(-1) }
+
+            if usesOptions {
+                Text(formattedSetOption(weight, options: options))
+                    .font(.subheadline)
+                    .foregroundStyle(Color.appRust)
+                    .frame(minWidth: 40)
+                    .minimumScaleFactor(0.75)
+            } else {
+                Button {
+                    showingWheel = true
+                } label: {
+                    Text(formattedSetWeight(weight, unit: unit))
+                        .font(.subheadline)
+                        .foregroundStyle(Color.appRust)
+                }
+                .buttonStyle(.plain)
+                .frame(minWidth: 40)
+                .minimumScaleFactor(0.75)
+            }
+
+            RepeatingStepButton(systemImage: "plus.circle", isDisabled: false) { step(1) }
+
+            Spacer(minLength: 0)
+        }
+        .lineLimit(1)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .sheet(isPresented: $showingWheel) {
+            NavigationStack {
+                VStack {
+                    WeightWheelPicker(value: $weight, unit: unit).padding()
+                    Spacer()
+                }
+                .background(Color.appBackground)
+                .navigationTitle(title)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { showingWheel = false }
+                    }
+                }
+            }
+            .presentationDetents([.height(280)])
+        }
+    }
+
+    private func step(_ delta: Int) {
+        // `allowsBodyweight: false` means `.offerBodyweight` can never come back here.
+        guard case .weight(let value, _) = steppedSetWeight(
+            delta: delta, weight: weight, isBodyweight: false,
+            options: options, allowsBodyweight: false
+        ) else { return }
+        weight = value
     }
 }
 
@@ -497,6 +621,21 @@ struct SettingMenu<Content: View>: View {
     }
 }
 
+/// A hairline split by centered caption text — separates a settings row group (an
+/// exercise's own capabilities, say) from another (what it's actually loaded with).
+/// File-scoped rather than owned by one row type, since both `RepEntrySettingsRows`
+/// and `TimeStepSettingsRows` use it.
+private func labeledDivider(_ text: String) -> some View {
+    HStack(spacing: 8) {
+        Rectangle().fill(Color.appHairline).frame(height: 0.5)
+        Text(text)
+            .font(.caption2)
+            .foregroundStyle(Color.appInkMuted)
+            .fixedSize()
+        Rectangle().fill(Color.appHairline).frame(height: 0.5)
+    }
+}
+
 // MARK: - Time steps
 
 private struct TimeStepSettingsRows: View {
@@ -506,6 +645,20 @@ private struct TimeStepSettingsRows: View {
     /// Get Ready can be skipped entirely (0s); a real exercise or rest can't.
     private var durationRange: ClosedRange<Int> {
         step.stepType == .getReady ? 0...300 : 5...600
+    }
+
+    /// The step's own choice, else the exercise's default — mirrors
+    /// `RepEntrySettingsRows.resolvedEquipment`.
+    private var resolvedEquipment: Equipment? {
+        step.preferredEquipment ?? step.exercise?.defaultWeightedEquipment
+    }
+
+    /// Same nil-coalescing idiom `RepEntrySettingsRows.startingWeightBinding` uses.
+    private var startingWeightBinding: Binding<Double> {
+        Binding(
+            get: { step.startingWeight ?? (resolvedEquipment?.sortedWeightCombos.first?.value ?? 0) },
+            set: { step.startingWeight = $0; save() }
+        )
     }
 
     @ViewBuilder
@@ -524,11 +677,6 @@ private struct TimeStepSettingsRows: View {
 
         // Rest and Get Ready stay plain gray in the lists — no color to pick.
         if step.stepType == .exercise {
-            // What the step is loaded with. Same picker the rep entry uses, and the same
-            // reason it matters here: naming the equipment is what lets a held weight be
-            // recorded at the end of the workout.
-            EquipmentSourcePicker(step: step, context: context)
-
             // Set here and nowhere else: a Follow Along step's execution type is fixed
             // for the whole run, so the builder is the only place it can be chosen.
             SidePicker(
@@ -547,9 +695,10 @@ private struct TimeStepSettingsRows: View {
                 )
             )
 
-            // Last, because it's the only two-line row: the swatch strip needs 246pt and
-            // so can't sit beside the label column, and a full-bleed block reads better
-            // closing the panel than interrupting the middle of it.
+            // Not last anymore — the swatch strip still needs 246pt and so can't sit
+            // beside the label column, but what this step is loaded with now closes the
+            // panel out below it, the same "own capabilities, then what it loads with"
+            // split `RepEntrySettingsRows` uses.
             VStack(alignment: .leading, spacing: 8) {
                 // Spacer and full width like every other row here, not a bare
                 // `SettingRowLabel`: on its own the label hugged its content, and a
@@ -564,6 +713,26 @@ private struct TimeStepSettingsRows: View {
                     get: { step.color },
                     set: { step.color = $0; save() }
                 ), defaultSelection: step.resolvedColor)
+            }
+
+            labeledDivider("Equipment settings")
+
+            // What the step is loaded with. Same picker the rep entry uses, and the same
+            // reason it matters here: naming the equipment is what lets a held weight be
+            // recorded at the end of the workout.
+            EquipmentSourcePicker(step: step, context: context)
+
+            // What the post-session record card prefills at when there's no personal
+            // record yet — the Follow Along counterpart to a rep entry's own Weight,
+            // minus a reps column: a held step has no rep count to seed.
+            if step.exercise?.weightedEquipmentOptions.isEmpty == false {
+                SettingWeightStepper(
+                    title: "Weight",
+                    columnWidth: SettingMetrics.labelColumn,
+                    weight: startingWeightBinding,
+                    equipment: resolvedEquipment,
+                    unit: resolvedEquipment?.effectiveWeightUnit ?? AppSettings.weightUnit
+                )
             }
         }
     }
@@ -642,6 +811,65 @@ private struct RepEntrySettingsRows: View {
         )
     }
 
+    /// The entry's own choice, else the exercise's default — the same resolution
+    /// `EquipmentSourcePicker.resolvedSourceName` performs, so Starting Weight steps
+    /// through the exact ladder this entry will actually be loaded with.
+    private var resolvedEquipment: Equipment? {
+        entry.preferredEquipment ?? entry.exercise?.defaultWeightedEquipment
+    }
+
+    /// Same three-way resolution `RepSessionRunnerView.weightSource` performs, minus
+    /// its session-only override tier (there is no live session in the builder).
+    private var isBodyweightSource: Bool {
+        entry.prefersBodyweight || resolvedEquipment == nil
+    }
+
+    /// `resolvedEquipment` revalidated against this exercise's actual options — mirrors
+    /// `RepSessionRunnerView.chosenEquipment`'s own fallback, so a stale/detached
+    /// `preferredEquipment` still resolves to the record `chosenEquipment` would find.
+    private var recordEquipment: Equipment? {
+        guard !isBodyweightSource, let exercise = entry.exercise else { return nil }
+        let options = exercise.weightedEquipmentOptions
+        return options.first { $0.id == resolvedEquipment?.id } ?? options.first
+    }
+
+    /// The record this entry would seed from — `RepSessionRunnerView.recordSeed`'s own
+    /// lookup, minus its "last logged set" tier (`SetLogQueries.lastBestSet`), which
+    /// only makes sense mid-session. Reads `entry.trackingMode`/`.executionType` live,
+    /// so switching Rep/Max time or execution type immediately looks up the record
+    /// that actually matches the new combination, rather than always the reps/weight one.
+    private var matchingRecord: PersonalRecord? {
+        guard let exercise = entry.exercise else { return nil }
+        return PersonalRecordQueries.current(
+            for: exercise,
+            equipment: recordEquipment,
+            executionType: PersonalRecordQueries.resolvedExecutionType(entry.executionType, for: exercise),
+            trackingMode: entry.trackingMode,
+            isBodyweight: isBodyweightSource,
+            context: context
+        )
+    }
+
+    /// Nil-coalescing, like `restBinding`: touching it is what commits a real override.
+    /// Untouched, it prefers the matching personal record, then falls back to the
+    /// equipment's lightest preset exactly as before records were considered here.
+    private var startingWeightBinding: Binding<Double> {
+        Binding(
+            get: { entry.startingWeight ?? matchingRecord?.weight ?? (resolvedEquipment?.sortedWeightCombos.first?.value ?? 0) },
+            set: { entry.startingWeight = $0; save() }
+        )
+    }
+
+    /// Same preference order as `startingWeightBinding`; the `8` fallback matches
+    /// `recordSeed`'s own hardcoded guess in `RepSessionRunnerView`, so an untouched,
+    /// record-less Starting Reps behaves identically to today.
+    private var startingRepsBinding: Binding<Int> {
+        Binding(
+            get: { entry.startingReps ?? matchingRecord?.reps ?? 8 },
+            set: { entry.startingReps = $0; save() }
+        )
+    }
+
     @ViewBuilder
     var body: some View {
         // Sets and Rest pair off because they are the two numbers every rep entry has —
@@ -664,10 +892,10 @@ private struct RepEntrySettingsRows: View {
             .frame(width: halfColumn)
 
             SettingStepper(
-                title: "Rest",
+                title: "Rest Timer",
                 value: "\(restBinding.wrappedValue)",
                 unit: "s",
-                columnWidth: SettingMetrics.repStepperLabelColumn,
+                columnWidth: SettingMetrics.compactLabelColumn,
                 range: 0...600,
                 step: 15,
                 number: restBinding
@@ -706,23 +934,13 @@ private struct RepEntrySettingsRows: View {
                 .accessibilityHidden(entry.trackingMode != .maxHoldTime)
         }
 
-        // Offered in both tracking modes: a max-time hold can be loaded too (a weighted
-        // plank), and bodyweight is one of the choices rather than a separate toggle.
-        EquipmentSourcePicker(entry: entry, context: context)
-
-        // Distinct from the catalog's "Allow bodyweight", which lives on the exercise page:
-        // that one says the exercise *can* be done unloaded, this one says this workout
-        // offers the Body position on its stepper. The catalog flag is what unlocks it,
-        // which is why the row only appears once it's set.
-        if entry.exercise?.allowsBodyweight == true {
-            SettingCell(title: "Bodyweight", value: entry.allowsBodyweight ? "on" : "off") {
-                entry.allowsBodyweight.toggle()
-                save()
-            }
+        // Separates Sets/Rest Timer/track/Prep — this exercise's own timing — from its
+        // capabilities below (Track L/R, Execution, Progression). Omitted entirely
+        // when none of those three apply, rather than labeling an empty gap.
+        if hasExerciseDetailRows {
+            labeledDivider("Exercise detail")
         }
 
-        // Kept next to Bodyweight rather than further down: both are catalog capabilities
-        // this entry opts into, and neither row exists without its flag on the exercise.
         if entry.exercise?.isOneSided == true, entry.trackingMode == .repsWeight {
             SettingCell(title: "Track L/R", value: entry.tracksSides ? "on" : "off") {
                 entry.tracksSides.toggle()
@@ -731,14 +949,26 @@ private struct RepEntrySettingsRows: View {
         }
 
         // The workout's default. The runner can still override it in the moment, right up
-        // until the first set is logged.
-        ExecutionTypePicker(
-            options: entry.exercise?.sortedExecutionTypes ?? [],
-            selection: Binding(
-                get: { entry.executionType },
-                set: { entry.executionType = $0; save() }
-            )
-        )
+        // until the first set is logged — unless Editable is off, which fixes it there
+        // for the whole session instead.
+        if !(entry.exercise?.sortedExecutionTypes.isEmpty ?? true) {
+            HStack(spacing: SettingMetrics.pairSpacing) {
+                ExecutionTypePicker(
+                    options: entry.exercise?.sortedExecutionTypes ?? [],
+                    selection: Binding(
+                        get: { entry.executionType },
+                        set: { entry.executionType = $0; save() }
+                    )
+                )
+                .frame(width: halfColumn)
+
+                SettingCell(title: "Editable", value: entry.executionTypeEditable ? "on" : "off") {
+                    entry.executionTypeEditable.toggle()
+                    save()
+                }
+                .frame(width: halfColumn)
+            }
+        }
 
         if entry.exercise?.progressionGroup != nil {
             SettingCell(title: "Progression", value: entry.progressionEnabled ? "on" : "off") {
@@ -746,6 +976,142 @@ private struct RepEntrySettingsRows: View {
                 save()
             }
         }
+
+        // What this entry is loaded with, and where a fresh set starts from — closing
+        // the panel out as one group, separate from the exercise's own capabilities above.
+        labeledDivider("Equipment settings")
+
+        // Distinct from the catalog's "Allow bodyweight", which lives on the exercise
+        // page: that one says the exercise *can* be done unloaded, this one says this
+        // workout offers the Body position on its stepper. The catalog flag is what
+        // unlocks it, which is why the row only appears once it's set. Grouped with
+        // Equipment below rather than the exercise's own capabilities above it, since
+        // this is itself part of what the entry loads with.
+        if entry.exercise?.allowsBodyweight == true {
+            SettingCell(title: "Bodyweight", value: entry.allowsBodyweight ? "on" : "off") {
+                entry.allowsBodyweight.toggle()
+                // Bodyweight stops being offered below the moment this turns off —
+                // an active Bodyweight selection would otherwise sit on a source the
+                // Equipment menu no longer lists, so it falls back to the exercise's
+                // own default equipment instead, the same reset `EquipmentSourcePicker`
+                // itself performs in the opposite direction when Bodyweight is chosen.
+                if !entry.allowsBodyweight && entry.prefersBodyweight {
+                    entry.prefersBodyweight = false
+                    entry.preferredEquipment = nil
+                }
+                save()
+            }
+        }
+
+        // Always rendered now — `alwaysVisible` reads as a plain "No Equipment"/
+        // single-source label rather than vanishing when there's nothing to choose.
+        // Editable governs only the runner's own equipment menu, never Bodyweight
+        // itself — that's the toggle above's job alone. Only shown at all when there's
+        // more than one weighted option to actually lock — a single fixed piece of
+        // equipment (or none) has no real choice for Editable to restrict.
+        HStack(spacing: SettingMetrics.pairSpacing) {
+            EquipmentSourcePicker(entry: entry, context: context, alwaysVisible: true)
+                .frame(width: halfColumn)
+
+            if (entry.exercise?.weightedEquipmentOptions.count ?? 0) > 1 {
+                SettingCell(title: "Editable", value: entry.equipmentEditable ? "on" : "off") {
+                    entry.equipmentEditable.toggle()
+                    save()
+                }
+                .frame(width: halfColumn)
+            } else {
+                Color.clear.frame(width: halfColumn)
+            }
+        }
+
+        // What a fresh set of this exercise opens prefilled at: the matching personal
+        // record when there is one, else the same "nothing else to go on" guess as
+        // before records were considered here. Always shown, even with no weighted
+        // equipment at all — Weight reads as plain "Bodyweight" text then (the same
+        // non-interactive treatment `EquipmentSourcePicker`'s
+        // `alwaysVisible` fallback uses for "nothing to pick here"), but Starting Reps
+        // is exactly as functional as ever; an exercise with nothing to load is no
+        // reason to hide what a fresh set's rep count opens at. Reps holds its column
+        // rather than disappearing in max-hold mode, so switching equipment never
+        // shifts where it sits.
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: SettingMetrics.pairSpacing) {
+                // Left at `SettingWeightStepper`'s own default `repStepperLabelColumn`
+                // — the same narrow column Sets/Rest Timer/track/Prep all use for a
+                // stepper sharing a halfColumn row. Widening it to match "Equipment:"
+                // was tried, but unlike Equipment's row (whose value text can shrink to
+                // fit), a stepper's two ± buttons and its value button's own 40pt
+                // minimum can't shrink — the extra label width just overflowed the
+                // halfColumn instead, pushing "Reps:" out of line with "Editable:"
+                // above it.
+                Group {
+                    if isBodyweightSource {
+                        // `SettingRowLabel` doesn't expand on its own — without this,
+                        // the outer `.frame(width: halfColumn)` below centers its
+                        // (narrower) intrinsic width instead of left-aligning it,
+                        // unlike Equipment's own matching "nothing to pick" fallback
+                        // in `EquipmentSourcePicker`, which already carries this same
+                        // modifier for the same reason.
+                        SettingRowLabel(title: "Weight", value: "Bodyweight")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        SettingWeightStepper(
+                            title: "Weight",
+                            weight: startingWeightBinding,
+                            equipment: resolvedEquipment,
+                            unit: resolvedEquipment?.effectiveWeightUnit ?? AppSettings.weightUnit
+                        )
+                    }
+                }
+                .frame(width: halfColumn)
+
+                startingRepsStepper
+                    .frame(width: halfColumn)
+                    .opacity(entry.trackingMode == .repsWeight ? 1 : 0)
+                    .disabled(entry.trackingMode != .repsWeight)
+                    .accessibilityHidden(entry.trackingMode != .repsWeight)
+            }
+
+            Text("Used only if no record is available")
+                .font(.caption2)
+                .foregroundStyle(Color.appInkMuted)
+        }
+        // Re-seeds from whatever record matches the new combination the moment any
+        // of these four change — even overriding a manual value from before —
+        // whenever one actually exists to replace it with.
+        .onChange(of: entry.prefersBodyweight) { _, _ in resetStartingValuesToRecord() }
+        .onChange(of: entry.preferredEquipment?.id) { _, _ in resetStartingValuesToRecord() }
+        .onChange(of: entry.executionType?.id) { _, _ in resetStartingValuesToRecord() }
+        .onChange(of: entry.trackingMode) { _, _ in resetStartingValuesToRecord() }
+    }
+
+    private var hasExerciseDetailRows: Bool {
+        (entry.exercise?.isOneSided == true && entry.trackingMode == .repsWeight)
+            || !(entry.exercise?.sortedExecutionTypes.isEmpty ?? true)
+            || entry.exercise?.progressionGroup != nil
+    }
+
+    /// Only when a record actually exists for the new combination — otherwise a
+    /// manual override with nothing to replace it with is left exactly as the
+    /// builder set it.
+    private func resetStartingValuesToRecord() {
+        guard matchingRecord != nil else { return }
+        entry.startingWeight = nil
+        entry.startingReps = nil
+        save()
+    }
+
+    /// Pulled out of `body` for the same reason `prepStepper` is — rendered in both
+    /// tracking modes, visible in one and holding its space in the other.
+    private var startingRepsStepper: some View {
+        SettingStepper(
+            title: "Reps",
+            value: "\(startingRepsBinding.wrappedValue)",
+            columnWidth: SettingMetrics.repStepperLabelColumn,
+            range: 1...50,
+            step: 1,
+            number: startingRepsBinding
+        )
     }
 
     /// Pulled out of `body` because it is rendered in both tracking modes — visible in one
@@ -755,7 +1121,7 @@ private struct RepEntrySettingsRows: View {
             title: "Prep",
             value: "\(entry.headStartSeconds)",
             unit: "s",
-            columnWidth: SettingMetrics.repStepperLabelColumn,
+            columnWidth: SettingMetrics.compactLabelColumn,
             range: 0...30,
             step: 1,
             number: Binding(

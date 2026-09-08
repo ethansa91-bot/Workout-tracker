@@ -33,6 +33,16 @@ final class RepSectionExercise: SyncableModel, Orderable {
     /// while this is true. Non-optional with a `false` default so entries written
     /// before it existed decode correctly — every one of them was weighted.
     var prefersBodyweight: Bool = false
+    /// The weight a fresh set of this exercise prefills at when there's no personal
+    /// record and no prior logged set to seed from instead — see `recordSeed` in
+    /// `RepSessionRunnerView`. nil means no override: the runner falls back to its own
+    /// existing guess (the equipment's lightest preset) exactly as it did before this
+    /// existed. Never used once a record or a prior set exists, whatever this holds.
+    var startingWeight: Double?
+    /// The rep-count counterpart to `startingWeight`, for `.repsWeight` tracking only —
+    /// a max-hold set has no rep count to seed. nil falls back to the runner's own
+    /// hardcoded guess, unchanged.
+    var startingReps: Int?
     /// How this workout performs the exercise — explosive, slow, held. nil is a real
     /// value, not a missing one: "unspecified" stays a choice however many types the
     /// exercise carries, and it is what an entry created before this existed reads as.
@@ -44,6 +54,16 @@ final class RepSectionExercise: SyncableModel, Orderable {
     /// should follow it. Off pins the entry to exactly the exercise written: no Level
     /// line, and `resolvedExercise` stops substituting the reached rung.
     var progressionEnabled: Bool = true
+    /// Whether the live runner can change this entry's equipment mid-workout. Off fixes
+    /// it at whatever the builder set — a restriction on the *runner's* own menu only;
+    /// the builder itself is never affected. Unrelated to Bodyweight: switching to
+    /// Bodyweight from the stepper's own bottom-of-ladder prompt is gated solely by
+    /// `allowsBodyweight`, not this. Non-optional with a `true` default so every entry
+    /// written before this existed stays exactly as editable as it always was.
+    var equipmentEditable: Bool = true
+    /// The execution-type counterpart to `equipmentEditable` — off fixes this entry's
+    /// execution type at whatever the builder set, for the same runner-only reason.
+    var executionTypeEditable: Bool = true
     var updatedAt: Date = Date.now
     var deletedAt: Date?
     /// The publisher's `ArchiveRepExercise.id`, for the same reason `WorkoutSection`

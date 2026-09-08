@@ -88,7 +88,8 @@ struct ExerciseDetailView: View {
                 separateRecords: Binding(
                     get: { exercise.separateRecordsPerExecutionType },
                     set: { newValue in toggleFlag { exercise.separateRecordsPerExecutionType = newValue } }
-                )
+                ),
+                excludingExerciseID: exercise.id
             )
 
             ProgressionSection(exercise: exercise, context: context)

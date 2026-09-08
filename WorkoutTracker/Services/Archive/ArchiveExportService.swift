@@ -299,6 +299,8 @@ enum ArchiveExportService {
             sections: workout.sections
                 .sorted { $0.sortOrder < $1.sortOrder }
                 .map(sectionOut),
+            versionGroupID: workout.versionGroupID,
+            isSupersededVersion: workout.isSupersededVersion,
             updatedAt: workout.updatedAt,
             deletedAt: workout.deletedAt
         )
@@ -337,6 +339,7 @@ enum ArchiveExportService {
                         sideRaw: $0.sideRaw,
                         preferredEquipmentID: $0.preferredEquipment?.id,
                         prefersBodyweight: $0.prefersBodyweight,
+                        startingWeight: $0.startingWeight,
                         updatedAt: $0.updatedAt,
                         deletedAt: $0.deletedAt
                     )
@@ -358,6 +361,8 @@ enum ArchiveExportService {
                         prefersBodyweight: $0.prefersBodyweight,
                         executionTypeID: $0.executionType?.id,
                         progressionEnabled: $0.progressionEnabled,
+                        startingWeight: $0.startingWeight,
+                        startingReps: $0.startingReps,
                         updatedAt: $0.updatedAt,
                         deletedAt: $0.deletedAt
                     )
@@ -399,6 +404,7 @@ enum ArchiveExportService {
                 currentExerciseIndex: session.currentExerciseIndex,
                 currentSetIndex: session.currentSetIndex,
                 currentSectionRepeat: session.currentSectionRepeat,
+                isSectionResting: session.isSectionResting,
                 supersededBySessionId: session.supersededBySessionId,
                 setLogs: session.setLogs.map {
                     ArchiveSetLog(

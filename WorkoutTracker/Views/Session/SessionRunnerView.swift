@@ -25,7 +25,15 @@ struct SessionRunnerView: View {
                 Group {
                     switch currentSection.sectionType {
                     case .time:
-                        TimeSessionRunnerView(session: session, section: currentSection, cues: cues, upNext: upNextExerciseName, onSectionComplete: advanceSection)
+                        TimeSessionRunnerView(
+                            session: session,
+                            section: currentSection,
+                            cues: cues,
+                            stripItems: followAlongStripItems,
+                            upNext: upNextExerciseStep,
+                            onSectionComplete: advanceSection,
+                            onJumpAcrossSections: jumpAcrossSections
+                        )
                     case .rep:
                         RepSessionRunnerView(session: session, section: currentSection, cues: cues, onSectionComplete: advanceSection)
                     case .emom:
@@ -279,7 +287,11 @@ struct SessionRunnerView: View {
     /// when what follows actually continues: another pass of the same section, or another
     /// Follow Along. nil means the runner should announce the end of the section instead,
     /// which is the honest thing to say before a rep section or the end of the workout.
-    private func upNextExerciseName() -> String? {
+    ///
+    /// Returns the step itself, not a formatted name — `TimeSessionRunnerView` applies
+    /// its own same-exercise dedup (`spokenLabel(for:following:)`) against whatever's
+    /// currently running, the same as it already does for a transition within one pass.
+    private func upNextExerciseStep() -> TimeSectionStep? {
         guard let workout else { return nil }
         let next: WorkoutSection
         switch WorkoutSessionService.lookahead(session, workout: workout) {
@@ -296,7 +308,56 @@ struct SessionRunnerView: View {
         let pass = next.id == currentSection?.id ? (session.currentSectionRepeat ?? 0) + 1 : 0
         return next.runnableTimeSteps(pass: pass)
             .first { $0.stepType == .exercise }
-            .map { ExerciseNaming.title($0.exercise, side: $0.side, executionType: $0.executionType) }
+    }
+
+    /// The whole consecutive run of Follow Along sections this pass belongs to — every
+    /// round already done, the one in progress, and every one still ahead, across every
+    /// consecutive Follow Along section — not just what's ahead of the current
+    /// position. Empty whenever `currentSection` isn't itself a Follow Along section
+    /// (`FollowAlongStripPlan.build` reads that from `sections` directly, so this stays
+    /// consistent with `currentSection` without duplicating the check).
+    private var followAlongRunStartIndex: Int {
+        var index = session.currentSectionIndex
+        while index > 0, sections[index - 1].sectionType == .time { index -= 1 }
+        return index
+    }
+
+    private var followAlongStripItems: [FollowAlongStripItem] {
+        FollowAlongStripPlan.build(
+            sections: sections,
+            startSectionIndex: followAlongRunStartIndex,
+            startRepeatIndex: 0
+        )
+    }
+
+    /// Moves the session directly to a step or rest in a different Follow Along
+    /// section or pass than the one currently playing — `TimeSessionRunnerView`'s own
+    /// jump only mutates `session.currentStepIndex`/`isSectionResting`, which only
+    /// makes sense within the section+pass already playing. Changing which
+    /// section/pass is current has to happen here, the same level `advanceSection`
+    /// already does it from.
+    private func jumpAcrossSections(to item: FollowAlongStripItem) {
+        guard let sectionID = item.sectionID, let repeatIndex = item.repeatIndex,
+              let index = sections.firstIndex(where: { $0.id == sectionID })
+        else { return }
+        let targetSection = sections[index]
+        session.currentSectionIndex = index
+        session.currentSectionRepeat = repeatIndex
+
+        switch item {
+        case .step(let step, _, _):
+            session.currentStepIndex = targetSection.runnableTimeSteps(pass: repeatIndex).firstIndex(where: { $0.id == step.id }) ?? 0
+            session.isSectionResting = false
+        case .rest:
+            session.currentStepIndex = max(0, targetSection.runnableTimeSteps(pass: repeatIndex).count - 1)
+            session.isSectionResting = true
+        case .roundSeparator, .endMarker:
+            return
+        }
+        session.currentExerciseIndex = nil
+        session.currentSetIndex = nil
+        session.markDirty()
+        try? context.save()
     }
 
     private func advanceSection() {

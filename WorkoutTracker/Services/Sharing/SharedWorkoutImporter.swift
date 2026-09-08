@@ -231,6 +231,7 @@ enum SharedWorkoutImporter {
         }
         step.prefersBodyweight = (stepDTO.prefersBodyweight ?? false)
             && (step.exercise?.allowsBodyweightSource ?? false)
+        step.startingWeight = stepDTO.startingWeight
         context.insert(step)
         return step
     }
@@ -272,6 +273,8 @@ enum SharedWorkoutImporter {
             repDTO.executionTypeID, for: exercise, in: executionTypes
         )
         entry.progressionEnabled = repDTO.progressionEnabled
+        entry.startingWeight = repDTO.startingWeight
+        entry.startingReps = repDTO.startingReps
         context.insert(entry)
         return entry
     }

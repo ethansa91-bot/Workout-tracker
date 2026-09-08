@@ -353,7 +353,9 @@ struct SessionHistoryDetailView: View {
 
     private func setValue(for log: SetLog) -> String {
         if let holdSeconds = log.holdSeconds { return "\(holdSeconds)s" }
-        if log.isBodyweight == true { return "\(log.reps) × Bodyweight" }
+        // Bodyweight leads rather than trailing reps, matching the phrasing everywhere
+        // else in the app now names it.
+        if log.isBodyweight == true { return "Bodyweight × \(log.reps)" }
         return "\(log.reps) × \(formattedWeight(log.weight, unit: log.weightUnit, exercise: log.exercise))"
     }
 

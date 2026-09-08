@@ -36,6 +36,11 @@ enum SharedWorkoutBuilder {
             copy.tagIDs = []
             return copy
         }
+        // Version lineage is local bookkeeping too — a follower's download is never
+        // wired into the publisher's own version history, and carrying the id over
+        // would risk colliding with an unrelated lineage the follower already has.
+        dto.versionGroupID = nil
+        dto.isSupersededVersion = false
 
         let catalog = referencedCatalog(for: workout)
 

@@ -6,16 +6,17 @@ import SwiftData
 /// "Add a Section" menu. No session history of its own to protect — but a template copied
 /// out of a record-tracking EMOM or AMRAP carries that record's identity, and is locked by
 /// it the same way every other copy is.
-/// Shown as one pane of WorkoutListView's horizontal selector, so it owns no
-/// navigation title/toolbar of its own — creation is triggered from there.
+///
+/// Reached from the Resources tab, so it owns its own header, tag filter and creation
+/// flow — the same self-contained shape `ExerciseListView`/`EquipmentListView`/
+/// `MuscleListView` each already have as pushed destinations.
 struct SectionTemplatesView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \WorkoutSection.name) private var allSections: [WorkoutSection]
     @State private var templatePendingDeletion: WorkoutSection?
-
-    /// Owned by `WorkoutListView`, which draws the filter bar above the pane selector so
-    /// one strip serves both panes rather than each growing its own.
-    var tagFilter = WorkoutTagFilter()
+    @State private var tagFilter = WorkoutTagFilter()
+    @State private var showingNewTemplateSheet = false
+    @State private var newTemplateDestination: WorkoutSection?
 
     private var templates: [WorkoutSection] {
         allSections.filter {
@@ -62,6 +63,29 @@ struct SectionTemplatesView: View {
             }
         }
         .background(Color.appBackground)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            VStack(spacing: 0) {
+                PushedTitleBand(title: "Templates")
+                WorkoutTagFilterBar(filter: $tagFilter)
+            }
+        }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingNewTemplateSheet = true
+                } label: {
+                    Label("Add", systemImage: "plus")
+                }
+            }
+        }
+        .sheet(isPresented: $showingNewTemplateSheet) {
+            NewSectionTemplateSheet(onCreate: createTemplate)
+        }
+        .navigationDestination(item: $newTemplateDestination) { section in
+            SectionDetailView(section: section)
+        }
         .alert(
             "Delete \"\(templatePendingDeletion?.name ?? "")\"?",
             isPresented: Binding(
@@ -77,6 +101,11 @@ struct SectionTemplatesView: View {
             }
             Button("Cancel", role: .cancel) { templatePendingDeletion = nil }
         }
+    }
+
+    private func createTemplate(name: String, description: String?, type: WorkoutSectionType) {
+        let section = WorkoutEditingService.createTemplate(name: name, type: type, description: description, context: context)
+        newTemplateDestination = section
     }
 
     private func templateRow(_ section: WorkoutSection) -> some View {

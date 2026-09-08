@@ -71,6 +71,20 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    NavigationLink {
+                        SessionHistoryListView()
+                    } label: {
+                        Text("History")
+                            .settingsRowPadding()
+                    }
+                    .fullBleedRow()
+                } header: {
+                    sectionHeader("History")
+                } footer: {
+                    sectionFooter("Every workout session you've started, finished or not.")
+                }
+
+                Section {
                     Toggle("Autoplay exercise video", isOn: $workoutVideoAutoplay)
                         .tint(Color.appAccent)
                         .settingsRow()

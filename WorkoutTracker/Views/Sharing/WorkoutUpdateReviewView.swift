@@ -11,8 +11,10 @@ import SwiftData
 /// 2. Catalog review, only when the update references something new — reuses
 ///    `SharedImportReviewView` exactly as a fresh save does, since a new exercise or piece
 ///    of equipment needs the same decision either way.
-/// 3. The diff itself (`.diff`), where accepting applies in place for an unlocked workout
-///    or offers a fresh copy for a locked one — `Workout.isLocked`'s existing rule.
+/// 3. The diff itself (`.diff`) — an unlocked workout chooses between overriding in
+///    place or keeping both as a new, independent copy; a locked one only versions,
+///    the same way editing a locked workout of your own does — `Workout.isLocked`'s
+///    existing rule.
 struct WorkoutUpdateReviewView: View {
     let workout: Workout
     /// Called once the sheet has nothing further to show for this workout — applied,
@@ -99,12 +101,12 @@ struct WorkoutUpdateReviewView: View {
 
             if workout.isLocked {
                 Section {
-                    Text("This copy has already been used in a session, so it can't be changed in place. Save the update as a new copy instead.")
+                    Text("This copy has already been used in a session, so it can't be changed in place. Updating creates a new version — this one stays reachable from its version history, the same as editing a workout of your own that's already been used.")
                         .foregroundStyle(Color.appInkMuted)
                     Button {
-                        saveAsCopy()
+                        saveAsNewVersion()
                     } label: {
-                        if isWorking { ProgressView() } else { Text("Save as New Copy") }
+                        if isWorking { ProgressView() } else { Text("Update") }
                     }
                     .disabled(isWorking)
                 }
@@ -113,7 +115,13 @@ struct WorkoutUpdateReviewView: View {
                     Button {
                         applyInPlace(differences)
                     } label: {
-                        if isWorking { ProgressView() } else { Text("Apply Update") }
+                        if isWorking { ProgressView() } else { Text("Override") }
+                    }
+                    .disabled(isWorking)
+                    Button {
+                        saveAsCopy()
+                    } label: {
+                        if isWorking { ProgressView() } else { Text("Save as New") }
                     }
                     .disabled(isWorking)
                 }
@@ -216,6 +224,19 @@ struct WorkoutUpdateReviewView: View {
         do {
             let copy = try WorkoutUpdateService.saveAsCopy(plan, context: context)
             phase = .applied("“\(copy.name)” was added as a new copy with the update.")
+            onFinished()
+        } catch {
+            phase = .failed(error.localizedDescription)
+        }
+    }
+
+    private func saveAsNewVersion() {
+        guard let plan = updatePlan else { return }
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            let newVersion = try WorkoutUpdateService.saveAsNewVersion(plan, context: context)
+            phase = .applied("“\(newVersion.name)” was updated to a new version.")
             onFinished()
         } catch {
             phase = .failed(error.localizedDescription)

@@ -22,8 +22,9 @@ struct SetRowView: View {
     @Binding var reps: Int
     @Binding var weight: Double
     /// Whether this set is being performed unloaded. Stepping down past the lightest
-    /// weight lands here; stepping back up leaves it. Only reachable when
-    /// `allowsBodyweight` — otherwise it stays false and the stepper behaves as before.
+    /// weight offers this via `onOfferBodyweight` rather than landing here directly;
+    /// stepping back up leaves it. Only offered when `allowsBodyweight` — otherwise it
+    /// stays false and the stepper behaves as before.
     @Binding var isBodyweight: Bool
     let isLogged: Bool
     let isWorseThanLast: Bool
@@ -35,6 +36,10 @@ struct SetRowView: View {
     /// True for the moment after a save: Save is held disabled while the caller
     /// highlights what changed.
     var isSaving: Bool = false
+    /// Called instead of stepping when a step at the bottom of the ladder would cross
+    /// into Bodyweight — the caller asks first rather than switching silently. nil
+    /// (the default) means this row never offers it, whatever `allowsBodyweight` says.
+    var onOfferBodyweight: (() -> Void)? = nil
     let onLog: () -> Void
     let onCancel: () -> Void
 
@@ -344,18 +349,23 @@ struct SetRowView: View {
     }
 
     /// "Bodyweight" sits one position below the lightest weight, so the range is walked
-    /// with the same two buttons: stepping down off the bottom enters it, stepping up
-    /// leaves it for the lightest option.
+    /// with the same two buttons: stepping down off the bottom offers it (see
+    /// `onOfferBodyweight`) rather than entering it outright, and stepping up leaves it
+    /// for the lightest option.
     private func stepWeight(delta: Int) {
-        let stepped = steppedSetWeight(
+        switch steppedSetWeight(
             delta: delta,
             weight: weight,
             isBodyweight: isBodyweight,
             options: weightOptions,
             allowsBodyweight: allowsBodyweight
-        )
-        weight = stepped.weight
-        isBodyweight = stepped.isBodyweight
+        ) {
+        case .weight(let value, let isBodyweightValue):
+            weight = value
+            isBodyweight = isBodyweightValue
+        case .offerBodyweight:
+            onOfferBodyweight?()
+        }
     }
 
     /// Option-based equipment names its option, matching `weightDisplay` — without this

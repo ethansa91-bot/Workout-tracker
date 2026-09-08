@@ -17,6 +17,37 @@ enum WorkoutCloningService {
         // original was findable through.
         copy.tags = original.sortedTags
 
+        deepCopySections(from: original, into: copy, context: context)
+        try? context.save()
+        return copy
+    }
+
+    /// The "Edit" escape hatch for a locked workout, alongside `clone`'s "Clone & Edit".
+    /// Builds the same kind of independent structural copy, but keeps the original's
+    /// exact name — this isn't meant to read as a separate workout — and links the two
+    /// through `versionGroupID` so the original becomes a queryable past version instead
+    /// of an unrelated duplicate. Also repoints any not-yet-performed scheduled
+    /// occurrences onto the new version, so the next time this workout comes up it's
+    /// the updated one.
+    static func createNewVersion(of original: Workout, context: ModelContext) -> Workout {
+        let groupID = original.versionGroupID ?? UUID()
+        original.versionGroupID = groupID
+        original.isSupersededVersion = true
+        original.markDirty()
+
+        let copy = Workout(name: original.name, notes: original.notes, clonedFromWorkoutId: original.id)
+        context.insert(copy)
+        copy.createdAt = original.createdAt.addingTimeInterval(-0.001)
+        copy.tags = original.sortedTags
+        copy.versionGroupID = groupID
+
+        deepCopySections(from: original, into: copy, context: context)
+        ScheduledWorkoutService.repointFutureSchedules(from: original, to: copy, context: context)
+        try? context.save()
+        return copy
+    }
+
+    private static func deepCopySections(from original: Workout, into copy: Workout, context: ModelContext) {
         for section in original.sortedSections {
             let sectionCopy = WorkoutSection(workout: copy, sortOrder: section.sortOrder, sectionType: section.sectionType, name: section.name)
             sectionCopy.emomRoundCount = section.emomRoundCount
@@ -52,6 +83,7 @@ enum WorkoutCloningService {
                 stepCopy.color = step.color
                 stepCopy.executionType = step.executionType
                 stepCopy.sideRaw = step.sideRaw
+                stepCopy.startingWeight = step.startingWeight
                 context.insert(stepCopy)
             }
 
@@ -71,11 +103,10 @@ enum WorkoutCloningService {
                     executionType: entry.executionType,
                     progressionEnabled: entry.progressionEnabled
                 )
+                entryCopy.startingWeight = entry.startingWeight
+                entryCopy.startingReps = entry.startingReps
                 context.insert(entryCopy)
             }
         }
-
-        try? context.save()
-        return copy
     }
 }

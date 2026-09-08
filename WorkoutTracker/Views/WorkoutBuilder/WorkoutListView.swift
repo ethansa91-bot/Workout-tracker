@@ -24,29 +24,12 @@ enum WorkoutRoute: Hashable {
     case olderMissed(cutoff: Date)
 }
 
-private enum WorkoutsPane: String, CaseIterable, Identifiable {
-    case workouts, templates, library
-
-    var id: String { rawValue }
-
-    var label: String {
-        switch self {
-        case .workouts: return "Workouts"
-        case .templates: return "Templates"
-        case .library: return "Library"
-        }
-    }
-}
-
 struct WorkoutListView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \Workout.createdAt, order: .reverse) private var allWorkouts: [Workout]
 
-    @State private var selectedPane: WorkoutsPane = .workouts
     @State private var showingNewWorkoutAlert = false
     @State private var newWorkoutName = ""
-    @State private var showingNewTemplateSheet = false
-    @State private var newTemplateDestination: WorkoutSection?
     @State private var pendingDelete: Workout?
     /// The workout the schedule sheet is open for, if any.
     @State private var schedulingWorkout: Workout?
@@ -58,56 +41,32 @@ struct WorkoutListView: View {
 
     private var workouts: [Workout] {
         allWorkouts.filter {
-            $0.deletedAt == nil && !$0.isArchived && tagFilter.matches($0.sortedTags)
+            $0.deletedAt == nil && !$0.isArchived && !$0.isSupersededVersion && tagFilter.matches($0.sortedTags)
         }
     }
 
     var body: some View {
         NavigationStack(path: $path) {
             VStack(spacing: 0) {
-                // The Library pane has neither Archives nor +, so iOS shrinks the bar
-                // there — the band holds that row open instead.
-                PageAccessoryBand(reservesButtonRow: selectedPane == .library) { paneSelector }
-                    .animation(nil, value: selectedPane)
-                // Only over the two panes that list taggable things — the Library pane
-                // has its own filters and nothing here to narrow.
-                if selectedPane != .library {
-                    WorkoutTagFilterBar(filter: $tagFilter)
-                }
-                Group {
-                    switch selectedPane {
-                    case .workouts: workoutsContent
-                    case .templates: SectionTemplatesView(tagFilter: tagFilter)
-                    case .library: LibraryHomeView()
-                    }
-                }
-                .animation(nil, value: selectedPane)
+                PageTitleBand(title: "Workouts")
+                WorkoutTagFilterBar(filter: $tagFilter)
+                workoutsContent
             }
             .background(Color.appBackground)
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            // Header height comes from the band, not from the bar, so an absent button
-            // here costs nothing — the item simply isn't declared.
             .toolbar {
-                if selectedPane == .workouts {
-                    ToolbarItem(placement: .topBarLeading) {
-                        NavigationLink(value: WorkoutRoute.archives) {
-                            Label("Archives", systemImage: "archivebox")
-                        }
+                ToolbarItem(placement: .topBarLeading) {
+                    NavigationLink(value: WorkoutRoute.archives) {
+                        Label("Archives", systemImage: "archivebox")
                     }
                 }
-                if selectedPane != .library {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            if selectedPane == .workouts {
-                                newWorkoutName = ""
-                                showingNewWorkoutAlert = true
-                            } else {
-                                showingNewTemplateSheet = true
-                            }
-                        } label: {
-                            Label("Add", systemImage: "plus")
-                        }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        newWorkoutName = ""
+                        showingNewWorkoutAlert = true
+                    } label: {
+                        Label("Add", systemImage: "plus")
                     }
                 }
             }
@@ -120,18 +79,17 @@ struct WorkoutListView: View {
                     createWorkout(name: trimmed)
                 }
             }
-            .sheet(isPresented: $showingNewTemplateSheet) {
-                NewSectionTemplateSheet(onCreate: createTemplate)
-            }
             .navigationDestination(for: WorkoutRoute.self) { route in
                 switch route {
                 case .workout(let workout):
                     SessionRecapView(workout: workout) { clone in
-                        // Replace, not stack: backing out of the copy should reach the
-                        // list, not the locked workout the user was just told they can't
-                        // edit. The workout is always the last element, Archives or not.
-                        path.removeLast()
-                        path.append(.workout(clone))
+                        // Reset, not stack: backing out of the copy should reach this
+                        // list, not the locked workout the user was just told they
+                        // can't edit — nor, if this came from several pushes deep (a
+                        // past version opened from version history), any of the
+                        // screens in between. A full reset lands on the list however
+                        // deep the original workout was reached from.
+                        path = [.workout(clone)]
                     }
                 case .archives:
                     ArchivedWorkoutsView()
@@ -141,46 +99,7 @@ struct WorkoutListView: View {
                     MissedWorkoutsView(cutoff: cutoff)
                 }
             }
-            .navigationDestination(item: $newTemplateDestination) { section in
-                SectionDetailView(section: section)
-            }
         }
-    }
-
-    /// Hand-built rather than a segmented `Picker`: the app tints every
-    /// `UISegmentedControl`'s selected segment green through a global appearance proxy
-    /// (see `AppearanceConfiguration`), which is invisible against this band. Eight other
-    /// pickers depend on that proxy, so this one inverts the palette locally instead —
-    /// white pill, green label — without touching the global setting.
-    private var paneSelector: some View {
-        HStack(spacing: 4) {
-            ForEach(WorkoutsPane.allCases) { pane in
-                let isSelected = pane == selectedPane
-                Button {
-                    // Killed at the mutation, not just around it: `selectedPane` drives
-                    // the band's reserved button row and the whole pane swap, and a bare
-                    // assignment still inherits any ambient transaction from upstream.
-                    // Same reasoning as `withoutCollapseAnimation` in SessionRecapView.
-                    var transaction = Transaction()
-                    transaction.disablesAnimations = true
-                    withTransaction(transaction) { selectedPane = pane }
-                } label: {
-                    Text(pane.label)
-                        .font(.subheadline.weight(isSelected ? .semibold : .regular))
-                        .foregroundStyle(isSelected ? Color.appAccent : .white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 7)
-                        .background {
-                            if isSelected {
-                                Capsule().fill(.white)
-                            }
-                        }
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(3)
-        .background(Capsule().fill(.white.opacity(0.15)))
     }
 
     @ViewBuilder
@@ -354,10 +273,5 @@ struct WorkoutListView: View {
         // Onto the same path the list pushes with, so a workout opens the same way
         // however it was reached — and a clone can replace it later.
         path.append(.workout(workout))
-    }
-
-    private func createTemplate(name: String, description: String?, type: WorkoutSectionType) {
-        let section = WorkoutEditingService.createTemplate(name: name, type: type, description: description, context: context)
-        newTemplateDestination = section
     }
 }

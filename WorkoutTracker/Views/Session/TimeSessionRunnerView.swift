@@ -5,13 +5,23 @@ struct TimeSessionRunnerView: View {
     @Bindable var session: WorkoutSession
     let section: WorkoutSection
     let cues: TimerCueSettings
+    /// Everything ahead in this consecutive run of Follow Along sections — every
+    /// remaining round of `section`, then any Follow Along section that follows it.
+    /// Built by `SessionRunnerView`, the level that can see sibling sections, the
+    /// same way `upNext` already is.
+    let stripItems: [FollowAlongStripItem]
     let onSectionComplete: () -> Void
+    /// Moves the session to a step (or rest) in a different section or pass than the
+    /// one currently playing — only `SessionRunnerView` can safely do that, since it's
+    /// the level that owns the whole section list (the same reason `onSectionComplete`
+    /// is a closure rather than something this view does itself).
+    let onJumpAcrossSections: (FollowAlongStripItem) -> Void
 
     @Environment(\.modelContext) private var context
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var remainingSeconds: Int = 0
-    @State private var pendingJumpIndex: Int?
+    @State private var pendingJumpItem: FollowAlongStripItem?
     @State private var showingJumpConfirm = false
 
     /// Seeded from `WorkoutSessionService.autostartsRunning` — once true (whether from
@@ -30,18 +40,38 @@ struct TimeSessionRunnerView: View {
     /// it. Supplied by `SessionRunnerView`, which is the only level that can see sibling
     /// sections. Evaluated at the moment of the cue, not at init — a lookahead computed
     /// early would answer for the wrong pass.
-    let upNext: () -> String?
+    let upNext: () -> TimeSectionStep?
 
     /// Counting down the breather between two passes. The section's last step is finished
     /// and logged; only the clock is still running.
-    @State private var isSectionResting = false
+    ///
+    /// Backed by `session.isSectionResting` rather than local state: `currentStepIndex`
+    /// stays pinned to the pass's last real step throughout the rest (so `currentStep`
+    /// never goes nil and prematurely triggers `onSectionComplete`), so this flag is the
+    /// only thing that distinguishes "on that step" from "resting after it" — and it
+    /// needs to be persisted so a jump onto a rest chip can set it, and so it survives
+    /// this view being torn down and rebuilt on every pass/section change.
+    private var isSectionResting: Bool {
+        get { session.isSectionResting }
+        nonmutating set { session.isSectionResting = newValue }
+    }
 
-    init(session: WorkoutSession, section: WorkoutSection, cues: TimerCueSettings, upNext: @escaping () -> String? = { nil }, onSectionComplete: @escaping () -> Void) {
+    init(
+        session: WorkoutSession,
+        section: WorkoutSection,
+        cues: TimerCueSettings,
+        stripItems: [FollowAlongStripItem] = [],
+        upNext: @escaping () -> TimeSectionStep? = { nil },
+        onSectionComplete: @escaping () -> Void,
+        onJumpAcrossSections: @escaping (FollowAlongStripItem) -> Void = { _ in }
+    ) {
         self.session = session
         self.section = section
         self.cues = cues
+        self.stripItems = stripItems
         self.upNext = upNext
         self.onSectionComplete = onSectionComplete
+        self.onJumpAcrossSections = onJumpAcrossSections
         _isRunning = State(initialValue: WorkoutSessionService.autostartsRunning(session, section: section))
     }
 
@@ -94,10 +124,10 @@ struct TimeSessionRunnerView: View {
                 // opening word of a step name from being clipped; `SessionRunnerView`
                 // tears it back down on the way out of the workout.
                 SpeechAnnouncer.prepare()
-                beginStep(seconds: currentStep.durationSeconds)
+                beginStep(seconds: isSectionResting ? section.sectionRest(after: currentRepeat) : currentStep.durationSeconds)
             }
             .onChange(of: currentIndex) { _, _ in
-                beginStep(seconds: self.currentStep?.durationSeconds ?? 0)
+                beginStep(seconds: isSectionResting ? section.sectionRest(after: currentRepeat) : (self.currentStep?.durationSeconds ?? 0))
             }
             .onChange(of: isCountingDown) { _, _ in syncCountdown() }
             .onDisappear { SpeechAnnouncer.stop() }
@@ -156,9 +186,9 @@ struct TimeSessionRunnerView: View {
                     }
                 }
                 SessionScrubStripView(
-                    steps: steps,
-                    currentIndex: currentIndex,
-                    completedIndices: completedIndices,
+                    items: stripItems,
+                    currentItemID: currentItemID,
+                    completedItemIDs: completedItemIDs,
                     onSelect: requestJump,
                     fixedHeight: SessionScrubStripView.height(for: geometry.size.width)
                 )
@@ -204,9 +234,9 @@ struct TimeSessionRunnerView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             SessionScrubStripView(
-                steps: steps,
-                currentIndex: currentIndex,
-                completedIndices: completedIndices,
+                items: stripItems,
+                currentItemID: currentItemID,
+                completedItemIDs: completedItemIDs,
                 onSelect: requestJump
             )
             // Same surface as the bottom control bar, matching the phone layout.
@@ -252,35 +282,60 @@ struct TimeSessionRunnerView: View {
         }
     }
 
-    /// What you last held this at, when the step names weighted equipment and a record
-    /// exists. The Follow Along counterpart to the rep runner's `recordLine`, and the
-    /// whole point of recording the weight in the first place — a fixed-duration step
-    /// otherwise gives you nothing to aim at.
+    /// What this step is loaded with — equipment and weight, or Bodyweight — shown
+    /// unconditionally rather than only once a personal record happens to exist. A
+    /// trophy-badged best summary takes over when one does (the whole point of
+    /// recording the weight in the first place — a fixed-duration step otherwise gives
+    /// you nothing to aim at); otherwise a plainer line still names what's loaded, so a
+    /// first run of a new step doesn't go silent about it. Never both for the same step.
     ///
     /// Under the name rather than in `timerArea`: that block is one tap target for
     /// pause/resume, and hanging a second thing off it is the trap `RestTimerView` hit.
     @ViewBuilder
-    private func recordLine(_ step: TimeSectionStep, exercise: Exercise) -> some View {
-        if let equipment = recordEquipment(for: step, exercise: exercise),
-           let record = PersonalRecordQueries.current(
-               for: exercise,
-               equipment: equipment,
-               executionType: PersonalRecordQueries.resolvedExecutionType(step.executionType, for: exercise),
-               trackingMode: .maxHoldTime,
-               isBodyweight: false,
-               isFollowAlong: true,
-               context: context
-           ),
-           record.weight != nil {
+    private func equipmentLine(_ step: TimeSectionStep, exercise: Exercise) -> some View {
+        if let equipment = recordEquipment(for: step, exercise: exercise) {
+            let record = PersonalRecordQueries.current(
+                for: exercise,
+                equipment: equipment,
+                executionType: PersonalRecordQueries.resolvedExecutionType(step.executionType, for: exercise),
+                trackingMode: .maxHoldTime,
+                isBodyweight: false,
+                isFollowAlong: true,
+                context: context
+            )
+            if let record, record.weight != nil {
+                HStack(spacing: 6) {
+                    Image(systemName: "trophy.fill")
+                        .font(.caption)
+                        .foregroundStyle(Color.appAccent)
+                    Text("\(PersonalRecordFormatting.summary(record)) · \(equipment.name)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+            } else {
+                HStack(spacing: 6) {
+                    Image(systemName: "dumbbell.fill")
+                        .font(.caption)
+                        .foregroundStyle(Color.appAccent)
+                    Text(step.startingWeight.map {
+                        "\(equipment.name) · \(PersonalRecordFormatting.weight($0, unit: equipment.effectiveWeightUnit, equipment: equipment))"
+                    } ?? equipment.name)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+            }
+        } else if step.prefersBodyweight {
             HStack(spacing: 6) {
-                Image(systemName: "trophy.fill")
+                Image(systemName: "figure.strengthtraining.functional")
                     .font(.caption)
                     .foregroundStyle(Color.appAccent)
-                Text("\(PersonalRecordFormatting.summary(record)) · \(equipment.name)")
+                Text("Bodyweight")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
             }
         }
     }
@@ -338,7 +393,7 @@ struct TimeSessionRunnerView: View {
                             Text(step.displayTitle)
                                 .font(.title.bold())
                                 .multilineTextAlignment(.center)
-                            recordLine(step, exercise: exercise)
+                            equipmentLine(step, exercise: exercise)
                         } else {
                             // Nothing to show, so the placeholder box is dropped entirely
                             // and the name takes the freed space.
@@ -347,7 +402,7 @@ struct TimeSessionRunnerView: View {
                                 .minimumScaleFactor(0.4)
                                 .multilineTextAlignment(.center)
                                 .padding(.vertical, 24)
-                            recordLine(step, exercise: exercise)
+                            equipmentLine(step, exercise: exercise)
                         }
                         ExerciseVideoButton(exercise: exercise)
                             .id(exercise.id)
@@ -397,30 +452,73 @@ struct TimeSessionRunnerView: View {
         )
     }
 
-    /// Scoped to the current pass — on a repeated section the earlier passes' logs are
-    /// still present, and without this filter the strip would show every step already
-    /// completed from the first frame of round 2.
-    private var completedIndices: Set<Int> {
-        Set(session.stepLogs.compactMap { log -> Int? in
-            guard log.repeatIndex == currentRepeat, let step = log.timeSectionStep else { return nil }
-            return steps.firstIndex(where: { $0.id == step.id })
+    /// Spans the whole run now that `stripItems` does — derived straight from each
+    /// log's own step/section/repeat rather than filtered to the current pass, so
+    /// earlier rounds and sections still read as completed once passed.
+    private var completedItemIDs: Set<String> {
+        Set(session.stepLogs.compactMap { log -> String? in
+            guard let step = log.timeSectionStep, let sectionID = step.section?.id else { return nil }
+            return FollowAlongStripItem.step(step, sectionID: sectionID, repeatIndex: log.repeatIndex).id
         })
+    }
+
+    /// `stripItems`' own id for whichever step — or, during the breather between two
+    /// passes, rest — is playing right now. Resolving to the rest item while resting is
+    /// what makes it "act exactly like any other rest": the strip highlights it, and
+    /// `requestJump`'s `item.id != currentItemID` guard correctly excludes re-tapping it.
+    private var currentItemID: String? {
+        if isSectionResting {
+            return FollowAlongStripItem.rest(sectionID: section.id, afterRepeatIndex: currentRepeat, seconds: section.sectionRest(after: currentRepeat)).id
+        }
+        guard let currentStep else { return nil }
+        return FollowAlongStripItem.step(currentStep, sectionID: section.id, repeatIndex: currentRepeat).id
     }
 
     private var currentRepeat: Int { session.currentSectionRepeat ?? 0 }
 
+    /// Whether an item belongs to the section+pass already playing — the only case with
+    /// a real index to compare against `currentIndex`. Anything else needs
+    /// `onJumpAcrossSections`, which can go either direction now that the strip shows
+    /// the whole run rather than only what's ahead.
+    private func isSamePass(_ item: FollowAlongStripItem) -> Bool {
+        item.sectionID == section.id && item.repeatIndex == currentRepeat
+    }
+
+    /// Position-based rather than assumed: with the whole run visible, a cross-section
+    /// target can be behind `currentItemID` just as easily as ahead of it.
+    private func isPendingJumpAhead(_ item: FollowAlongStripItem) -> Bool {
+        guard let targetPos = stripItems.firstIndex(where: { $0.id == item.id }),
+              let currentPos = stripItems.firstIndex(where: { $0.id == currentItemID })
+        else { return true }
+        return targetPos > currentPos
+    }
+
     private var jumpConfirmMessage: String {
-        guard let pendingJumpIndex else { return "" }
-        if pendingJumpIndex > currentIndex {
-            return "Skip ahead to this step? Everything in between will be marked skipped."
-        } else {
-            return "Redo this step? Progress on it and everything after will be cleared."
+        guard let pendingJumpItem else { return "" }
+        if isSamePass(pendingJumpItem) {
+            if case .step(let step, _, _) = pendingJumpItem,
+               let targetIndex = steps.firstIndex(where: { $0.id == step.id }) {
+                return targetIndex > currentIndex
+                    ? "Skip ahead to this step? Everything in between will be marked skipped."
+                    : "Redo this step? Progress on it and everything after will be cleared."
+            }
+            return "Skip ahead to the rest? Everything remaining in this round will be marked skipped."
         }
+        return isPendingJumpAhead(pendingJumpItem)
+            ? "Jump ahead to this step? Nothing between here and there will be logged."
+            : "Jump back to this step? Progress on it and everything after will be cleared."
     }
 
     private var jumpConfirmActionTitle: String {
-        guard let pendingJumpIndex else { return "Jump" }
-        return pendingJumpIndex > currentIndex ? "Skip Ahead" : "Redo"
+        guard let pendingJumpItem else { return "Jump" }
+        if isSamePass(pendingJumpItem) {
+            if case .step(let step, _, _) = pendingJumpItem,
+               let targetIndex = steps.firstIndex(where: { $0.id == step.id }) {
+                return targetIndex > currentIndex ? "Skip Ahead" : "Redo"
+            }
+            return "Skip Ahead"
+        }
+        return isPendingJumpAhead(pendingJumpItem) ? "Jump Ahead" : "Jump Back"
     }
 
     // MARK: - Spoken cues
@@ -467,11 +565,37 @@ struct TimeSessionRunnerView: View {
         return ExerciseNaming.title(name, side: step.side, executionType: step.executionType)
     }
 
-    /// "Next: Push Up", optionally followed by "Ten seconds left", at the configured mark.
+    /// Whatever "Next: …" would say for the phase right after the one currently
+    /// playing — reused both by the mark-based cue below and, when a phase is too short
+    /// for that mark to ever land, by the start-of-phase cue in `announceCurrentStep`.
+    private func nextCuePhrase() -> String {
+        let nextIndex = currentIndex + 1
+        if nextIndex < steps.count, !isSectionResting, let currentStep {
+            return spokenLabel(for: steps[nextIndex], following: currentStep)
+        } else if !isSectionResting, section.sectionRest(after: currentRepeat) > 0 {
+            // The pass is over but the next thing is the breather, not the exercise
+            // after it. Naming the exercise here would announce something two phases
+            // away — the rest's own cue names it, once it actually starts.
+            return "Rest"
+        } else if let nextStep = upNext() {
+            // Nothing left in this pass, but something continues past it — another pass
+            // of this section, or another Follow Along. Naming it keeps the countdown
+            // reading as one motion rather than stopping dead at the section boundary.
+            return spokenLabel(for: nextStep, following: currentStep)
+        } else {
+            return endOfSectionPhrase
+        }
+    }
+
+    /// "Next: Push Up", optionally preceded by "Ten seconds left", at the configured
+    /// mark.
     ///
-    /// Skipped on steps barely longer than the cue itself, where it would land almost on
-    /// top of the step-start announcement — the old rule, now derived from the configured
-    /// seconds instead of a hardcoded 12 against a hardcoded 10.
+    /// Skipped on phases barely longer than the cue itself, where it would land almost
+    /// on top of the step-start announcement — the old rule, now derived from the
+    /// configured seconds instead of a hardcoded 12 against a hardcoded 10. A phase at
+    /// or under the mark never reaches this at all: `remainingSeconds` starts there or
+    /// below, so the ticker's normal per-second cadence never observes it equal to the
+    /// mark — `announceCurrentStep` folds the same cue into that phase's start instead.
     private func announceNextIfNeeded() {
         guard AppSettings.speechEnabled, AppSettings.voiceAnnounceNextEnabled else { return }
         let mark = AppSettings.voiceAnnounceNextSeconds
@@ -492,38 +616,25 @@ struct TimeSessionRunnerView: View {
         if AppSettings.voiceTimeLeftEnabled {
             parts.append("\(mark) second\(mark == 1 ? "" : "s") left")
         }
-        let nextIndex = currentIndex + 1
-        if nextIndex < steps.count, !isSectionResting, let currentStep {
-            parts.append("Next: \(spokenLabel(for: steps[nextIndex], following: currentStep))")
-        } else if !isSectionResting, section.sectionRest(after: currentRepeat) > 0 {
-            // The pass is over but the next thing is the breather, not the exercise after
-            // it. Naming the exercise here would announce something two phases away — the
-            // rest's own cue names it, ten seconds before the rest ends.
-            parts.append("Next: Rest")
-        } else if let name = upNext() {
-            // Nothing left in this pass, but something continues past it — another pass of
-            // this section, or another Follow Along. Naming it keeps the countdown reading
-            // as one motion rather than stopping dead at the section boundary.
-            parts.append("Next: \(name)")
-        } else {
-            parts.append(endOfSectionPhrase)
-        }
-        guard !parts.isEmpty else { return }
+        parts.append("Next: \(nextCuePhrase())")
         SpeechAnnouncer.speak(parts.joined(separator: ". "))
     }
 
     /// The last few seconds, one number per tick.
     ///
     /// Independent of the announcement above rather than part of it: the two answer
-    /// different questions ("what's coming" vs "how long now"), and pinning the countdown
-    /// to whatever time happened to be left after an utterance finished would make its
-    /// length depend on the speed of the chosen voice.
+    /// different questions ("what's coming" vs "how long now"). Deferred rather than
+    /// interrupting when a longer cue is still being spoken — a stale number cutting it
+    /// off mid-word is worse than a silent tick, and the next tick where nothing's
+    /// speaking just picks the count back up from whatever's actually left by then,
+    /// rather than racing to catch up to where it "should" be.
     private func announceCountdownIfNeeded() {
         guard AppSettings.speechEnabled, AppSettings.voiceCountdownEnabled else { return }
         guard remainingSeconds > 0, remainingSeconds <= AppSettings.voiceCountdownFromSeconds else { return }
         // Not on the same tick as the announcement — a number cutting off "Next: Push Up"
         // mid-word is worse than skipping one count.
         guard !(AppSettings.voiceAnnounceNextEnabled && remainingSeconds == AppSettings.voiceAnnounceNextSeconds) else { return }
+        guard !SpeechAnnouncer.isSpeaking else { return }
         SpeechAnnouncer.speak("\(remainingSeconds)")
     }
 
@@ -536,15 +647,40 @@ struct TimeSessionRunnerView: View {
         return "End section, \(name)"
     }
 
+    /// Whether the phase now starting is short enough that `announceNextIfNeeded`'s
+    /// mark-based cue could never land during it, so its "Next" cue needs folding into
+    /// the start-of-phase announcement instead.
+    private func foldsInNextCue(phaseSeconds: Int) -> Bool {
+        AppSettings.voiceAnnounceNextEnabled && phaseSeconds > 0 && phaseSeconds <= AppSettings.voiceAnnounceNextSeconds
+    }
+
     private func announceCurrentStep() {
-        guard AppSettings.speechEnabled, AppSettings.voiceAnnounceStartEnabled else { return }
+        guard AppSettings.speechEnabled else { return }
+        let phaseSeconds = isSectionResting ? section.sectionRest(after: currentRepeat) : (currentStep?.durationSeconds ?? 0)
+        let foldsInNext = foldsInNextCue(phaseSeconds: phaseSeconds)
+
+        var parts: [String] = []
         if isSectionResting {
-            SpeechAnnouncer.speak("Rest")
-            return
+            if foldsInNext, let nextStep = upNext() {
+                // The rest's own cue never gets a separate mark-based moment, so it
+                // names its own length up front rather than leaving it unspoken.
+                let restPhrase = "\(phaseSeconds) second\(phaseSeconds == 1 ? "" : "s") rest"
+                parts.append("Next: \(restPhrase), then \(spokenLabel(for: nextStep, following: currentStep))")
+            } else if AppSettings.voiceAnnounceStartEnabled {
+                parts.append("Rest")
+            }
+        } else if let currentStep {
+            if AppSettings.voiceAnnounceStartEnabled {
+                let previous = currentIndex > 0 ? steps[currentIndex - 1] : nil
+                parts.append(spokenLabel(for: currentStep, following: previous))
+            }
+            if foldsInNext {
+                parts.append("Next: \(nextCuePhrase())")
+            }
         }
-        guard let currentStep else { return }
-        let previous = currentIndex > 0 ? steps[currentIndex - 1] : nil
-        SpeechAnnouncer.speak(spokenLabel(for: currentStep, following: previous))
+
+        guard !parts.isEmpty else { return }
+        SpeechAnnouncer.speak(parts.joined(separator: ". "))
     }
 
     // MARK: - Step clock
@@ -655,28 +791,63 @@ struct TimeSessionRunnerView: View {
         beginStep(seconds: rest)
     }
 
-    private func requestJump(to index: Int) {
-        guard index != currentIndex else { return }
-        pendingJumpIndex = index
+    private func requestJump(to item: FollowAlongStripItem) {
+        switch item {
+        case .roundSeparator, .endMarker: return
+        case .step, .rest: break
+        }
+        // Excludes re-tapping whichever chip — step or rest — is current right now.
+        guard item.id != currentItemID else { return }
+        pendingJumpItem = item
         showingJumpConfirm = true
     }
 
     private func confirmJump() {
-        guard let pendingJumpIndex else { return }
-        if pendingJumpIndex > currentIndex {
-            for i in currentIndex..<pendingJumpIndex {
+        guard let pendingJumpItem else { return }
+        if isSamePass(pendingJumpItem) {
+            confirmSamePassJump(pendingJumpItem)
+        } else {
+            onJumpAcrossSections(pendingJumpItem)
+        }
+        self.pendingJumpItem = nil
+    }
+
+    private func confirmSamePassJump(_ item: FollowAlongStripItem) {
+        let previousIndex = currentIndex
+        let wasResting = isSectionResting
+        switch item {
+        case .step(let targetStep, _, _):
+            guard let targetIndex = steps.firstIndex(where: { $0.id == targetStep.id }) else { return }
+            if targetIndex > previousIndex {
+                for i in previousIndex..<targetIndex {
+                    logStep(steps[i], outcome: .skipped, actualDuration: 0)
+                }
+            } else {
+                let idsToClear = Set(steps[targetIndex...].map(\.id))
+                for log in session.stepLogs where log.timeSectionStep.map({ idsToClear.contains($0.id) }) ?? false {
+                    context.delete(log)
+                }
+            }
+            session.currentStepIndex = targetIndex
+            session.isSectionResting = false
+        case .rest:
+            // The only in-pass rest is the one after this pass's last step.
+            for i in previousIndex..<steps.count {
                 logStep(steps[i], outcome: .skipped, actualDuration: 0)
             }
-        } else {
-            let idsToClear = Set(steps[pendingJumpIndex...].map(\.id))
-            for log in session.stepLogs where log.timeSectionStep.map({ idsToClear.contains($0.id) }) ?? false {
-                context.delete(log)
-            }
+            session.currentStepIndex = max(0, steps.count - 1)
+            session.isSectionResting = true
+        case .roundSeparator, .endMarker:
+            return
         }
-        session.currentStepIndex = pendingJumpIndex
         session.markDirty()
         try? context.save()
-        self.pendingJumpIndex = nil
+        // `.onChange(of: currentIndex)` in `body` won't fire when the index doesn't
+        // actually move — redoing the pinned last step from its own rest, or skipping
+        // straight to that rest from the same step, are both exactly that case.
+        if currentIndex == previousIndex, wasResting != isSectionResting {
+            beginStep(seconds: isSectionResting ? section.sectionRest(after: currentRepeat) : (currentStep?.durationSeconds ?? 0))
+        }
     }
 
     private func timeString(_ seconds: Int) -> String {

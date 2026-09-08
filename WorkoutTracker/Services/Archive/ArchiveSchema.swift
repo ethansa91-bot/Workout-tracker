@@ -253,6 +253,11 @@ struct ArchiveWorkout: Codable {
     var isArchived: Bool
     var tagIDs: [UUID] = []
     var sections: [ArchiveSection]
+    /// Optional for the same reason `progressionEnabled`-adjacent fields elsewhere are
+    /// — an archive written before version history existed would otherwise fail to
+    /// open entirely.
+    var versionGroupID: UUID? = nil
+    var isSupersededVersion: Bool? = nil
     var updatedAt: Date
     var deletedAt: Date?
 }
@@ -306,6 +311,9 @@ struct ArchiveTimeStep: Codable {
     /// throws `keyNotFound` for a missing non-optional key, so an archive written before
     /// this field existed would fail to open.
     var prefersBodyweight: Bool? = nil
+    /// Optional for the same reason `prefersBodyweight` is — an archive written before
+    /// this existed would otherwise fail to open entirely.
+    var startingWeight: Double? = nil
     var updatedAt: Date
     var deletedAt: Date?
 }
@@ -324,6 +332,10 @@ struct ArchiveRepExercise: Codable {
     var prefersBodyweight: Bool
     var executionTypeID: UUID? = nil
     var progressionEnabled: Bool = true
+    /// Optional for the same reason `executionTypeID` is — an archive written before
+    /// these existed would otherwise fail to open entirely.
+    var startingWeight: Double? = nil
+    var startingReps: Int? = nil
     var updatedAt: Date
     var deletedAt: Date?
 }
@@ -376,6 +388,9 @@ struct ArchiveSession: Codable {
     var currentExerciseIndex: Int?
     var currentSetIndex: Int?
     var currentSectionRepeat: Int?
+    /// Optional: sessions archived before this existed simply decode as "not resting,"
+    /// which is what `WorkoutSession.isSectionResting`'s own stored default means too.
+    var isSectionResting: Bool?
     var supersededBySessionId: UUID?
     var setLogs: [ArchiveSetLog]
     var stepLogs: [ArchiveStepLog]

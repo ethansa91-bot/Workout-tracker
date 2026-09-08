@@ -8,7 +8,7 @@ import Foundation
 /// "20 kg × 60s". Weight leads everywhere now, so a record reads in the same order as the
 /// set row that earns it.
 enum PersonalRecordFormatting {
-    /// "100 kg × 5" · "12 × Bodyweight" · "60s" · "20 kg × 60s"
+    /// "100 kg × 5 reps" · "Bodyweight × 12 reps" · "60s" · "20 kg × 60s"
     static func summary(
         isBodyweight: Bool,
         trackingMode: RepExerciseTrackingMode,
@@ -31,9 +31,10 @@ enum PersonalRecordFormatting {
             guard !isBodyweight, let weight, weight > 0 else { return hold }
             return "\(self.weight(weight, unit: weightUnit, equipment: equipment)) × \(hold)"
         case .repsWeight:
-            // No load to state — the achievement is the rep count.
-            if isBodyweight { return "\(reps ?? 0) × Bodyweight" }
-            return "\(self.weight(weight ?? 0, unit: weightUnit, equipment: equipment)) × \(reps ?? 0)"
+            // No load to state — the achievement is the rep count. Bodyweight leads,
+            // matching the normal "value × reps" order below rather than trailing it.
+            if isBodyweight { return "Bodyweight × \(reps ?? 0) reps" }
+            return "\(self.weight(weight ?? 0, unit: weightUnit, equipment: equipment)) × \(reps ?? 0) reps"
         }
     }
 

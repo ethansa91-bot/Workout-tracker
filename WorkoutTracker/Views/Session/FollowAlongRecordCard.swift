@@ -32,6 +32,9 @@ struct FollowAlongRecordCard: View {
         let equipment: Equipment
         let executionType: ExecutionType?
         let title: String
+        /// `TimeSectionStep.startingWeight` — nil unless the workout's builder set one.
+        /// Only ever used by `prefill` when there's no personal record yet to use instead.
+        let startingWeight: Double?
     }
 
     var body: some View {
@@ -147,7 +150,8 @@ struct FollowAlongRecordCard: View {
                     exercise: exercise,
                     equipment: equipment,
                     executionType: executionType,
-                    title: ExerciseNaming.title(exercise, side: step.side, executionType: step.executionType)
+                    title: ExerciseNaming.title(exercise, side: step.side, executionType: step.executionType),
+                    startingWeight: step.startingWeight
                 )
             )
         }
@@ -178,25 +182,28 @@ struct FollowAlongRecordCard: View {
     }
 
     /// Where the stepper starts: what you last recorded, so an unchanged week is one tap
-    /// on the plus and a Save. Failing that, the lightest thing the equipment offers.
+    /// on the plus and a Save. Failing that, the step's own configured starting weight
+    /// (`TimeSectionStep.startingWeight`, set in the workout's settings panel), and only
+    /// then the lightest thing the equipment offers.
     private func prefill(for candidate: Candidate, existing: PersonalRecord?) -> Double {
         if let weight = existing?.weight { return weight }
-        return candidate.equipment.sortedWeightCombos.first?.value ?? 0
+        return candidate.startingWeight ?? candidate.equipment.sortedWeightCombos.first?.value ?? 0
     }
 
     // MARK: - Editing
 
     private func step(_ candidate: Candidate, delta: Int, from current: Double, options: [WeightCombo]) {
         // Bodyweight is not a landing place here: a step with no load has no record to
-        // set, so it never becomes a candidate in the first place.
-        let stepped = steppedSetWeight(
+        // set, so it never becomes a candidate in the first place. `.offerBodyweight`
+        // can never come back with `allowsBodyweight: false`.
+        guard case .weight(let value, _) = steppedSetWeight(
             delta: delta,
             weight: current,
             isBodyweight: false,
             options: options,
             allowsBodyweight: false
-        )
-        drafts[candidate.id] = stepped.weight
+        ) else { return }
+        drafts[candidate.id] = value
         saved.remove(candidate.id)
     }
 

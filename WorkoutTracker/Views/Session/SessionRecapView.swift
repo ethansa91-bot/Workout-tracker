@@ -13,21 +13,24 @@ struct SessionRecapView: View {
     /// Set only when this session's sounds have been muted from the control below. nil
     /// means "follow Settings", so a later change there still applies.
     @State private var isSessionMuted = false
-    /// Supplied by the parent that pushed this screen, which owns the navigation path —
-    /// cloning a locked workout puts the copy in this screen's place rather than
-    /// stacking it on top of a workout the user was just told they can't edit.
+    /// Supplied by the root list that ultimately opened this screen (`WorkoutListView`
+    /// or `ScheduleListView`), which resets its own `path` to just the new workout —
+    /// Edit, Clone & Edit, and Open Latest Version all hand off to this rather than
+    /// stacking their result on top of a workout the user was just told they can't
+    /// edit. Passed straight through unchanged to `WorkoutVersionHistoryView`, which
+    /// calls it too when a past version is picked — since that screen is a sheet, not
+    /// a push, this always resets the one true root path rather than fighting with
+    /// anything stacked on top of it.
     var onReplaceWithClone: ((Workout) -> Void)?
 
     @State private var showingLockedNotice = false
+    @State private var showingVersionHistory = false
     @State private var showingScheduleSheet = false
     @State private var showingClonePrompt = false
     @State private var cloneWorkoutNameText = ""
-    @State private var showingRenamePrompt = false
-    @State private var renameText = ""
+    @State private var showingIdentityEditor = false
     @State private var errorMessage: String?
     @State private var sectionPendingDeletion: WorkoutSection?
-    @State private var showingDescriptionEditor = false
-    @State private var descriptionText = ""
     @State private var sectionPendingSaveAsTemplate: WorkoutSection?
     @State private var templateNameText = ""
     @State private var showingImportTemplateSheet = false
@@ -121,6 +124,9 @@ struct SessionRecapView: View {
         .sheet(isPresented: $showingScheduleSheet) {
             AddScheduledWorkoutView(preselectedWorkout: workout)
         }
+        .sheet(isPresented: $showingVersionHistory) {
+            WorkoutVersionHistoryView(workout: workout, onReplaceWithClone: onReplaceWithClone)
+        }
         .alert(
             "Delete \(selectedSectionIDs.count) section\(selectedSectionIDs.count == 1 ? "" : "s")?",
             isPresented: $showingSectionBatchDeleteConfirm
@@ -149,24 +155,34 @@ struct SessionRecapView: View {
             Button("Delete", role: .destructive) { confirmDeleteSection() }
             Button("Cancel", role: .cancel) { }
         }
-        .alert("Workout Already Used", isPresented: $showingLockedNotice) {
+        .alert(
+            workout.isSupersededVersion ? "Older Version" : "Workout Already Used",
+            isPresented: $showingLockedNotice
+        ) {
+            if workout.isSupersededVersion {
+                // No "Edit" here — this workout is already superseded, and letting it
+                // spin off *another* "current" version would leave two un-superseded
+                // heads in the same lineage. Jumping to the actual current one instead.
+                Button("Open Latest Version") { openLatestVersion() }
+            } else {
+                Button("Edit") { createNewVersion() }
+            }
             Button("Clone & Edit") {
                 cloneWorkoutNameText = "\(workout.name) Copy"
                 showingClonePrompt = true
             }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("This workout has already been used in a session, so its sections can't be changed — that would alter what the history means. Its name, description and tags can still be edited. Clone it to get a fully editable copy.")
+            if workout.isSupersededVersion {
+                Text("This is an older version of this workout — a newer one has replaced it. Clone it to edit an independent copy, or open the latest version instead.")
+            } else {
+                Text("This workout has already been used in a session, so its sections can't be changed directly. Edit to update it in place, keeping its history in the version list. Clone & Edit for a fully independent copy instead.")
+            }
         }
         .alert("Clone & Edit", isPresented: $showingClonePrompt) {
             TextField("Name", text: $cloneWorkoutNameText)
             Button("Cancel", role: .cancel) { }
             Button("Clone") { cloneAndEdit() }
-        }
-        .alert("Rename Workout", isPresented: $showingRenamePrompt) {
-            TextField("Name", text: $renameText)
-            Button("Cancel", role: .cancel) {}
-            Button("Save") { renameWorkout() }
         }
         .alert("Clone Section", isPresented: Binding(
             get: { sectionPendingClone != nil },
@@ -188,8 +204,8 @@ struct SessionRecapView: View {
         } message: {
             Text("A copy of this section's exercises will be saved to Section Templates.")
         }
-        .sheet(isPresented: $showingDescriptionEditor) {
-            descriptionEditorSheet
+        .sheet(isPresented: $showingIdentityEditor) {
+            WorkoutIdentityEditView(workout: workout)
         }
         .sheet(isPresented: $showingImportTemplateSheet) {
             TemplatePickerSheet { template in
@@ -260,15 +276,18 @@ struct SessionRecapView: View {
         if let pausedSession {
             VStack(spacing: 8) {
                 soundToggle
-                Button {
-                    resumeSession(pausedSession)
-                } label: {
-                    Text("Resume Workout").frame(maxWidth: .infinity)
+                HStack(spacing: 8) {
+                    if !workout.isArchived { scheduleButton }
+                    Button {
+                        resumeSession(pausedSession)
+                    } label: {
+                        Text("Resume Workout").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.roundedRectangle(radius: 12))
+                    .controlSize(.large)
+                    .tint(Color.appAccent)
                 }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle(radius: 12))
-                .controlSize(.large)
-                .tint(Color.appAccent)
 
                 Button("Start New Instead", role: .destructive) {
                     showingSupersedeConfirm = true
@@ -281,16 +300,19 @@ struct SessionRecapView: View {
         } else if allSectionsReady {
             VStack(spacing: 8) {
                 soundToggle
-                Button {
-                    startNewSession()
-                } label: {
-                    Text("Start Workout")
-                        .frame(maxWidth: .infinity)
+                HStack(spacing: 8) {
+                    if !workout.isArchived { scheduleButton }
+                    Button {
+                        startNewSession()
+                    } label: {
+                        Text("Start Workout")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.roundedRectangle(radius: 12))
+                    .controlSize(.large)
+                    .tint(Color.appAccent)
                 }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle(radius: 12))
-                .controlSize(.large)
-                .tint(Color.appAccent)
             }
             .padding()
             .background(.thickMaterial)
@@ -298,6 +320,21 @@ struct SessionRecapView: View {
                 Rectangle().fill(Color.appHairline).frame(height: 1)
             }
         }
+    }
+
+    /// A square companion to Start/Resume Workout, sized to match its height — moved
+    /// down here from a small icon in the hero band, where it read as a minor setting
+    /// rather than the primary "when will I do this" action it actually is.
+    private var scheduleButton: some View {
+        Button {
+            showingScheduleSheet = true
+        } label: {
+            Image(systemName: "calendar.badge.plus")
+        }
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.roundedRectangle(radius: 12))
+        .controlSize(.large)
+        .tint(Color.appRust)
     }
 
     /// Mute this one workout, without touching the settings.
@@ -346,10 +383,9 @@ struct SessionRecapView: View {
                     .font(.appSerif(.title2))
                     .foregroundStyle(.white)
                 // Always: the lock protects the structure a past session ran, not what
-                // the workout is called.
+                // the workout is called or how it's described — one editor for both.
                 Button {
-                    renameText = workout.name
-                    showingRenamePrompt = true
+                    showingIdentityEditor = true
                 } label: {
                     Image(systemName: "pencil")
                 }
@@ -366,14 +402,20 @@ struct SessionRecapView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.white.opacity(0.85))
                 }
-                // Shown in both states: scheduling is lock-agnostic, the same reason
-                // `WorkoutPickerView` lists locked workouts. An archived one is put away
-                // though, and the picker won't list it either.
-                if !workout.isArchived {
+                // Pushes the version-history icon to the trailing edge, on its own —
+                // scheduling moved down to a proper button beside Start Workout, so
+                // this row is just the workout's own identity (tag/name/pencil/lock).
+                Spacer(minLength: 8)
+                // Only once this lineage actually has a past version to show — most
+                // workouts never go through "Edit" and never gain this icon at all. A
+                // sheet, not a push: picking a version resets the root list's path
+                // rather than stacking, so back always leads straight there in one
+                // step, however many times this has been opened along the way.
+                if workout.versionGroupID != nil {
                     Button {
-                        showingScheduleSheet = true
+                        showingVersionHistory = true
                     } label: {
-                        Image(systemName: "calendar.badge.plus")
+                        Image(systemName: "clock.arrow.circlepath")
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.white.opacity(0.85))
@@ -393,27 +435,14 @@ struct SessionRecapView: View {
     @ViewBuilder
     private var descriptionRow: some View {
         if let notes = workout.notes, !notes.isEmpty {
-            HStack(alignment: .top, spacing: 8) {
-                // One line until tapped — the band is pinned above the section list, so a
-                // long description would cost that height on every screenful.
-                ExpandableBandText(text: notes)
-                // Outside the expander, not inside it: a nested button never gets the tap.
-                // Lock-agnostic, like the name: a description is commentary on the
-                // workout, not part of what a past session ran.
-                Button {
-                    descriptionText = notes
-                    showingDescriptionEditor = true
-                } label: {
-                    Image(systemName: "pencil")
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.white.opacity(0.85))
-            }
-            .padding(.top, 2)
+            // One line until tapped — the band is pinned above the section list, so a
+            // long description would cost that height on every screenful. Editing it
+            // now goes through the name's own pencil above, not a second one here.
+            ExpandableBandText(text: notes)
+                .padding(.top, 2)
         } else {
             Button("Add Description") {
-                descriptionText = ""
-                showingDescriptionEditor = true
+                showingIdentityEditor = true
             }
             .font(.footnote)
             // On the accent fill the accent itself is invisible — underlined white
@@ -898,51 +927,31 @@ struct SessionRecapView: View {
         onReplaceWithClone?(copy)
     }
 
-    private func renameWorkout() {
-        let trimmed = renameText.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        do {
-            try WorkoutEditingService.rename(workout, to: trimmed, context: context)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+    /// The "Edit" option in the locked-workout alert — hands off to the same
+    /// replace-in-place mechanism "Clone & Edit" already uses, so backing out lands on
+    /// the list rather than on the now-superseded original.
+    private func createNewVersion() {
+        let newVersion = WorkoutCloningService.createNewVersion(of: workout, context: context)
+        onReplaceWithClone?(newVersion)
     }
 
-
-
-
-
-    private var descriptionEditorSheet: some View {
-        NavigationStack {
-            Form {
-                TextEditor(text: $descriptionText)
-                    .frame(minHeight: 160)
-            }
-            .themedListBackground()
-            .navigationTitle("Description")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { showingDescriptionEditor = false }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { saveDescription() }
-                }
-            }
-        }
+    /// The "Open Latest Version" option shown when this workout is itself an old,
+    /// superseded one — finds the one un-superseded workout left in the same lineage
+    /// and hands it to the same replace mechanism Edit/Clone & Edit use.
+    ///
+    /// Fetch-all plus an in-memory filter, not a `#Predicate` comparing
+    /// `versionGroupID` (`UUID?`) against a plain captured `UUID` — that shape of
+    /// optional-vs-non-optional comparison doesn't reliably translate, and silently
+    /// matched nothing. `WorkoutVersionHistoryView.pastVersions` already does the
+    /// equivalent lookup this same way for the same reason.
+    private func openLatestVersion() {
+        guard let groupID = workout.versionGroupID else { return }
+        let allWorkouts = (try? context.fetch(FetchDescriptor<Workout>())) ?? []
+        guard let latest = allWorkouts.first(where: {
+            $0.versionGroupID == groupID && $0.deletedAt == nil && !$0.isSupersededVersion
+        }) else { return }
+        onReplaceWithClone?(latest)
     }
-
-    private func saveDescription() {
-        let trimmed = descriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
-        do {
-            try WorkoutEditingService.updateNotes(workout, to: trimmed.isEmpty ? nil : trimmed, context: context)
-            showingDescriptionEditor = false
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-
 
 
 

@@ -190,7 +190,14 @@ enum FollowService {
     @discardableResult
     static func syncWorkoutUpdates(context: ModelContext) async -> WorkoutUpdateResult {
         let downloaded = ((try? context.fetch(FetchDescriptor<Workout>())) ?? [])
-            .filter { $0.deletedAt == nil && $0.sourceOwnerRecordName != nil && $0.clonedFromWorkoutId != nil }
+            .filter {
+                $0.deletedAt == nil && $0.sourceOwnerRecordName != nil && $0.clonedFromWorkoutId != nil
+                    // Excludes a copy `WorkoutUpdateService.saveAsNewVersion` just
+                    // superseded — it still carries the same publisher lineage as the
+                    // new version that replaced it, and would otherwise keep matching
+                    // right alongside it forever.
+                    && !$0.isSupersededVersion
+            }
         guard !downloaded.isEmpty else { return WorkoutUpdateResult() }
 
         var result = WorkoutUpdateResult()

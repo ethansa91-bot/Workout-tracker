@@ -314,6 +314,12 @@ enum WorkoutDifferenceCalculator {
                     localStep.executionType = type
                 })
             }
+            if localStep.startingWeight != incomingStep.startingWeight {
+                let newValue = incomingStep.startingWeight
+                diffs.append(WorkoutDifference(kind: .setting, field: prefix + "Starting weight", mine: localStep.startingWeight.map { "\($0)" } ?? "—", theirs: newValue.map { "\($0)" } ?? "—") { _ in
+                    localStep.startingWeight = newValue
+                })
+            }
         }
 
         return diffs
@@ -409,6 +415,18 @@ enum WorkoutDifferenceCalculator {
                         return
                     }
                     localEntry.executionType = type
+                })
+            }
+            if localEntry.startingWeight != incomingEntry.startingWeight {
+                let newValue = incomingEntry.startingWeight
+                diffs.append(WorkoutDifference(kind: .setting, field: prefix + "Starting weight", mine: localEntry.startingWeight.map { "\($0)" } ?? "—", theirs: newValue.map { "\($0)" } ?? "—") { _ in
+                    localEntry.startingWeight = newValue
+                })
+            }
+            if localEntry.startingReps != incomingEntry.startingReps {
+                let newValue = incomingEntry.startingReps
+                diffs.append(WorkoutDifference(kind: .setting, field: prefix + "Starting reps", mine: localEntry.startingReps.map { "\($0)" } ?? "—", theirs: newValue.map { "\($0)" } ?? "—") { _ in
+                    localEntry.startingReps = newValue
                 })
             }
         }

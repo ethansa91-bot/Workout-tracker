@@ -15,17 +15,28 @@ struct EquipmentSourcePicker: View {
     @Binding var prefersBodyweight: Bool
     /// Persistence belongs to the caller: each one already knows what to mark dirty.
     var onChange: () -> Void
+    /// Renders a plain, non-interactive readout instead of disappearing when there's
+    /// nothing to choose between — the rep-entry panel wants Equipment to always hold
+    /// its place in the layout; a Follow Along step's row can still vanish entirely.
+    var alwaysVisible: Bool = false
+    /// Whether "Bodyweight" should be offered inside the menu, overriding the
+    /// catalog's blanket `allowsBodyweightSource`. nil (default) keeps the catalog-only
+    /// behavior — used by the Follow Along step, which has no per-entry toggle of its
+    /// own; the rep-entry convenience init below forwards its entry's own toggle here.
+    var offersBodyweight: Bool? = nil
 
     /// Distinguishes "bodyweight" from any equipment id without a second binding.
     private static let bodyweightTag = UUID()
 
     private var options: [Equipment] { exercise?.weightedEquipmentOptions ?? [] }
-    private var allowsBodyweight: Bool { exercise?.allowsBodyweightSource ?? false }
+    private var allowsBodyweight: Bool { offersBodyweight ?? (exercise?.allowsBodyweightSource ?? false) }
 
-    /// Deferred to the catalog so the exercise page's "Default equipment" row and this
-    /// picker are offered under exactly the same condition.
+    /// No longer deferred to `exercise?.hasEquipmentChoice` — that reads the catalog
+    /// flag alone and can't react to `offersBodyweight`'s per-entry override. Computed
+    /// the same way the catalog property is, just off the resolved `allowsBodyweight`
+    /// above instead of the exercise's own blanket permission.
     var hasChoice: Bool {
-        exercise?.hasEquipmentChoice ?? false
+        options.count > 1 || (allowsBodyweight && !options.isEmpty)
     }
 
     private var selectedName: String {
@@ -64,6 +75,11 @@ struct EquipmentSourcePicker: View {
                     Button("Bodyweight") { select(Self.bodyweightTag) }
                 }
             }
+        } else if alwaysVisible {
+            // Nothing to pick between — a single fixed source, or none at all — so this
+            // reads rather than opens.
+            SettingRowLabel(title: "Equipment", value: options.isEmpty ? "No Equipment" : selectedName)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -81,7 +97,7 @@ struct EquipmentSourcePicker: View {
 
 extension EquipmentSourcePicker {
     /// The original call shape, kept so the rep popover reads as it did.
-    init(entry: RepSectionExercise, context: ModelContext) {
+    init(entry: RepSectionExercise, context: ModelContext, alwaysVisible: Bool = false) {
         self.init(
             exercise: entry.exercise,
             preferredEquipment: Binding(
@@ -95,7 +111,13 @@ extension EquipmentSourcePicker {
             onChange: {
                 entry.markDirty()
                 try? context.save()
-            }
+            },
+            alwaysVisible: alwaysVisible,
+            // Re-validated against the catalog flag the same defensive way
+            // `ArchiveImportService`/`SharedWorkoutImporter` re-check it on import: the
+            // entry's own toggle can only be turned on while the catalog allows it, but
+            // nothing clears it live if the catalog permission is revoked afterward.
+            offersBodyweight: entry.allowsBodyweight && (entry.exercise?.allowsBodyweight ?? false)
         )
     }
 

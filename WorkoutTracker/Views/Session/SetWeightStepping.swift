@@ -12,36 +12,58 @@ enum SetWeightMode {
     case bodyweight
 }
 
+/// What one step up or down the weight ladder produced.
+enum SteppedWeightResult {
+    /// A real weight to step to, and whether it's the bodyweight position.
+    case weight(Double, isBodyweight: Bool)
+    /// The step would cross below the lightest available value/option. Offered rather
+    /// than applied — the caller asks before switching, instead of dropping into
+    /// bodyweight silently.
+    case offerBodyweight
+}
+
 /// One step up or down the weight ladder, shared so both set rows behave identically.
 ///
-/// Stepping below the lightest preset lands on bodyweight when the exercise allows it,
-/// and stepping back up leaves it again. With no presets attached it falls back to 5-unit
-/// increments, and a weight that matches no preset snaps to one end of the ladder.
+/// Stepping below the lightest preset offers bodyweight when the exercise allows it,
+/// rather than switching to it outright, and stepping back up leaves it again. With no
+/// presets attached it falls back to 5-unit increments, and a weight that matches no
+/// preset snaps onto the nearest rung in the stepped direction.
 func steppedSetWeight(
     delta: Int,
     weight: Double,
     isBodyweight: Bool,
     options: [WeightCombo],
     allowsBodyweight: Bool
-) -> (weight: Double, isBodyweight: Bool) {
+) -> SteppedWeightResult {
     if isBodyweight {
-        guard delta > 0 else { return (weight, true) }
-        return (options.first?.value ?? 0, false)
+        guard delta > 0 else { return .weight(weight, isBodyweight: true) }
+        return .weight(options.first?.value ?? 0, isBodyweight: false)
     }
 
     guard !options.isEmpty else {
         let stepped = weight + Double(delta) * 5
-        if allowsBodyweight && stepped < 0 { return (0, true) }
-        return (max(0, stepped), false)
+        if allowsBodyweight && stepped < 0 { return .offerBodyweight }
+        return .weight(max(0, stepped), isBodyweight: false)
     }
 
     guard let currentIndex = options.firstIndex(where: { $0.value == weight }) else {
-        return (options[delta > 0 ? 0 : options.count - 1].value, false)
+        // Off the ladder entirely — a manually entered weight, say — so there's no
+        // index to step from. Walk to the nearest rung in the requested direction from
+        // wherever this value actually sits, the same clamp-to-end/offer-bodyweight
+        // behavior the matched-index branch below uses once truly at an edge.
+        if delta > 0 {
+            return .weight(options.first(where: { $0.value > weight })?.value ?? options[options.count - 1].value, isBodyweight: false)
+        }
+        if let lower = options.last(where: { $0.value < weight }) {
+            return .weight(lower.value, isBodyweight: false)
+        }
+        if allowsBodyweight { return .offerBodyweight }
+        return .weight(options[0].value, isBodyweight: false)
     }
 
     let newIndex = currentIndex + delta
-    if allowsBodyweight && newIndex < 0 { return (0, true) }
-    return (options[min(max(newIndex, 0), options.count - 1)].value, false)
+    if allowsBodyweight && newIndex < 0 { return .offerBodyweight }
+    return .weight(options[min(max(newIndex, 0), options.count - 1)].value, isBodyweight: false)
 }
 
 /// "20 lb" / "22.5 kg" — trailing `.0` trimmed, since preset weights are usually whole.

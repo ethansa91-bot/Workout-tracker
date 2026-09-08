@@ -29,6 +29,13 @@ final class WorkoutSession: SyncableModel {
     /// above are each already spoken for by a section type, so a repeated section
     /// needs its own counter. nil is treated as 0 (the first pass).
     var currentSectionRepeat: Int?
+    /// Counting down the breather between two passes of a Follow Along section —
+    /// `currentStepIndex` stays pinned to the pass's last real step throughout, so this
+    /// is what actually distinguishes "on that step" from "resting after it." Needs to
+    /// be persisted (not local view state) so a jump onto a rest chip can set it, and so
+    /// it survives the runner view being torn down and rebuilt on every pass/section
+    /// change.
+    var isSectionResting: Bool = false
 
     /// Set when a new session is started for the same workout while this one was still
     /// `.paused` — permanently disqualifies this session from ever being finished.

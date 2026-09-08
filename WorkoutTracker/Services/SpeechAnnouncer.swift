@@ -270,6 +270,12 @@ enum SpeechAnnouncer {
         engine.synthesizer.speak(utterance)
     }
 
+    /// Whether an utterance is currently being spoken — checked by the countdown cue,
+    /// which defers to a longer one in progress rather than talking over it.
+    static var isSpeaking: Bool {
+        engine?.synthesizer.isSpeaking ?? false
+    }
+
     static func stop() {
         guard let engine, engine.synthesizer.isSpeaking else { return }
         // `didCancel` releases the audio session claim.

@@ -11,7 +11,7 @@ struct ArchivedWorkoutsView: View {
 
     private var archivedWorkouts: [Workout] {
         allWorkouts.filter {
-            $0.deletedAt == nil && $0.isArchived && tagFilter.matches($0.sortedTags)
+            $0.deletedAt == nil && $0.isArchived && !$0.isSupersededVersion && tagFilter.matches($0.sortedTags)
         }
     }
 

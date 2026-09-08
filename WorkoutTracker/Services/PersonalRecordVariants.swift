@@ -146,13 +146,14 @@ struct RecordVariant: Identifiable {
             return "\(derivedHold)s"
         case .repsWeight:
             // No load to state — the achievement is the rep count. Same phrasing the rep
-            // runner uses for a logged bodyweight set.
+            // runner uses for a logged bodyweight set, Bodyweight leading like a normal
+            // "value × reps" line would.
             if isBodyweight {
                 guard let derivedBodyweightReps else { return "" }
-                return "\(derivedBodyweightReps) × Bodyweight"
+                return "Bodyweight × \(derivedBodyweightReps) reps"
             }
             guard let derivedBestSet else { return "" }
-            return "\(formattedWeight(derivedBestSet.weight)) × \(derivedBestSet.reps)"
+            return "\(formattedWeight(derivedBestSet.weight)) × \(derivedBestSet.reps) reps"
         }
     }
 

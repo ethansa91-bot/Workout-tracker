@@ -15,6 +15,7 @@ enum WorkoutSectionCloningService {
             clone.color = original.color
             clone.executionType = original.executionType
             clone.sideRaw = original.sideRaw
+            clone.startingWeight = original.startingWeight
             return clone
         }
         clones.forEach { context.insert($0) }
@@ -30,8 +31,11 @@ enum WorkoutSectionCloningService {
         var entries = section.sortedRepExercises
         guard range.lowerBound >= 0, range.upperBound <= entries.count, !range.isEmpty else { return }
 
-        let clones = entries[range].map { original in
-            RepSectionExercise(section: section, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds, allowsBodyweight: original.allowsBodyweight, tracksSides: original.tracksSides, preferredEquipment: original.preferredEquipment, prefersBodyweight: original.prefersBodyweight, executionType: original.executionType, progressionEnabled: original.progressionEnabled)
+        let clones = entries[range].map { original -> RepSectionExercise in
+            let clone = RepSectionExercise(section: section, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds, allowsBodyweight: original.allowsBodyweight, tracksSides: original.tracksSides, preferredEquipment: original.preferredEquipment, prefersBodyweight: original.prefersBodyweight, executionType: original.executionType, progressionEnabled: original.progressionEnabled)
+            clone.startingWeight = original.startingWeight
+            clone.startingReps = original.startingReps
+            return clone
         }
         clones.forEach { context.insert($0) }
         entries.insert(contentsOf: clones, at: entries.count)
@@ -64,6 +68,7 @@ enum WorkoutSectionCloningService {
             clone.color = original.color
             clone.executionType = original.executionType
             clone.sideRaw = original.sideRaw
+            clone.startingWeight = original.startingWeight
             return clone
         }
         guard !clones.isEmpty else { return }
@@ -82,8 +87,11 @@ enum WorkoutSectionCloningService {
     static func cloneRepExercises(in section: WorkoutSection, ids: Set<UUID>, context: ModelContext) throws {
         let workout = try requireUnlockedParent(of: section, context: context)
         var entries = section.sortedRepExercises
-        let clones = entries.filter { ids.contains($0.id) }.map { original in
-            RepSectionExercise(section: section, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds, allowsBodyweight: original.allowsBodyweight, tracksSides: original.tracksSides, preferredEquipment: original.preferredEquipment, prefersBodyweight: original.prefersBodyweight, executionType: original.executionType, progressionEnabled: original.progressionEnabled)
+        let clones = entries.filter { ids.contains($0.id) }.map { original -> RepSectionExercise in
+            let clone = RepSectionExercise(section: section, sortOrder: 0, exercise: original.exercise, targetSets: original.targetSets, customRestSeconds: original.customRestSeconds, trackingMode: original.trackingMode, headStartSeconds: original.headStartSeconds, allowsBodyweight: original.allowsBodyweight, tracksSides: original.tracksSides, preferredEquipment: original.preferredEquipment, prefersBodyweight: original.prefersBodyweight, executionType: original.executionType, progressionEnabled: original.progressionEnabled)
+            clone.startingWeight = original.startingWeight
+            clone.startingReps = original.startingReps
+            return clone
         }
         guard !clones.isEmpty else { return }
 
@@ -210,6 +218,7 @@ enum WorkoutSectionCloningService {
             stepCopy.color = step.color
             stepCopy.executionType = step.executionType
             stepCopy.sideRaw = step.sideRaw
+            stepCopy.startingWeight = step.startingWeight
             context.insert(stepCopy)
         }
         for entry in source.sortedRepExercises {
@@ -228,6 +237,8 @@ enum WorkoutSectionCloningService {
                 executionType: entry.executionType,
                     progressionEnabled: entry.progressionEnabled
             )
+            entryCopy.startingWeight = entry.startingWeight
+            entryCopy.startingReps = entry.startingReps
             context.insert(entryCopy)
         }
         for entry in source.sortedQuickExercises {

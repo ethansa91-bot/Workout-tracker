@@ -68,6 +68,24 @@ enum ScheduledWorkoutService {
         Calendar.current.startOfDay(for: date)
     }
 
+    /// Called when a locked workout is replaced by a new version
+    /// (`WorkoutCloningService.createNewVersion`): every recurring schedule now points
+    /// at the new version (so all its future occurrences do too), and every
+    /// already-materialized occurrence today or later moves with it. Anything earlier
+    /// than today is left alone — it's history, on the old version where it belongs,
+    /// the same as any `WorkoutSession` already run against it.
+    static func repointFutureSchedules(from oldWorkout: Workout, to newWorkout: Workout, context: ModelContext) {
+        let today = startOfDay(.now)
+        for schedule in (oldWorkout.recurringSchedules ?? []) where schedule.deletedAt == nil {
+            schedule.workout = newWorkout
+            schedule.markDirty()
+        }
+        for occurrence in (oldWorkout.scheduledWorkouts ?? []) where occurrence.deletedAt == nil && occurrence.date >= today {
+            occurrence.workout = newWorkout
+            occurrence.markDirty()
+        }
+    }
+
     /// Whether a scheduled workout was actually done: its workout has a finished
     /// session on the same day.
     ///

@@ -61,6 +61,17 @@ final class Workout: SyncableModel {
     /// to know who to ask. Set once at download/merge time; nil for anything not
     /// downloaded, same as `sourceUpdatedAt`.
     var sourceOwnerRecordName: String?
+    /// Shared by every workout in one version lineage — minted the first time
+    /// `WorkoutCloningService.createNewVersion` is used on a locked workout, carried
+    /// forward by each new version after that. nil means this workout has never been
+    /// through a version edit. Deliberately separate from `clonedFromWorkoutId`, which
+    /// already means "downloaded from a shared workout" for the follow/publish feature.
+    var versionGroupID: UUID?
+    /// True for a version `createNewVersion` has since superseded — hidden from both
+    /// the main Workouts list and Archive, visible only from the current version's own
+    /// version history. Distinct from `isArchived`: this isn't something the user put
+    /// away, it's history that stays reachable but shouldn't clutter either list.
+    var isSupersededVersion: Bool = false
 
     @Relationship(deleteRule: .cascade, inverse: \WorkoutSection.workout)
     var sectionsStorage: [WorkoutSection]?

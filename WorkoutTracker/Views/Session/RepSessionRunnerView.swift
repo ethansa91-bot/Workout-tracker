@@ -29,6 +29,11 @@ struct RepSessionRunnerView: View {
     @State private var isSaving = false
     /// Bumped the moment the forward nav button unlocks, to fire its one-shot pulse.
     @State private var nextPulseTrigger = 0
+    /// Set the moment a set's stepper hits the bottom of the ladder with Bodyweight
+    /// allowed — holds the entry so the confirmation dialog knows which one to switch
+    /// (the same session-wide `select(.bodyweight, for:)` the equipment menu's own
+    /// "Bodyweight" button already calls) if the user says yes.
+    @State private var bodyweightOfferEntry: RepSectionExercise?
 
     /// What an exercise's weight is being loaded with for this session. Session-local
     /// rather than persisted: the workout's own `preferredEquipment` is the default,
@@ -102,6 +107,22 @@ struct RepSessionRunnerView: View {
             // on read, so re-entering the view (the wide/compact swap on rotation, for
             // one) can't wipe what's been carried forward.
             .onChange(of: entry.id) { _, _ in clearDrafts() }
+            .confirmationDialog(
+                "There's nothing lighter to step down to. Switch to Bodyweight?",
+                isPresented: Binding(
+                    get: { bodyweightOfferEntry != nil },
+                    set: { if !$0 { bodyweightOfferEntry = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Switch to Bodyweight") {
+                    if let offerEntry = bodyweightOfferEntry {
+                        select(.bodyweight, for: offerEntry)
+                    }
+                    bodyweightOfferEntry = nil
+                }
+                Button("Cancel", role: .cancel) { bodyweightOfferEntry = nil }
+            }
         } else {
             Color.clear.onAppear { onSectionComplete() }
         }
@@ -292,9 +313,10 @@ struct RepSessionRunnerView: View {
     }
 
     /// Equipment name with a glass pencil menu — the same treatment "New Section" uses.
-    /// Locked once a set is logged; cancelling them all unlocks it.
+    /// Not locked by a logged set — see `canOpenEquipmentMenu` — only by Equipment
+    /// Editable, which Bodyweight on its own stays exempt from.
     private func equipmentLine(entry: RepSectionExercise, exercise: Exercise) -> some View {
-        let canEdit = canChangeEquipment(for: entry)
+        let canEdit = canOpenEquipmentMenu(for: entry, exercise: exercise)
         return HStack(spacing: 8) {
             Image(systemName: isBodyweightSource(for: entry, exercise: exercise)
                   ? "figure.strengthtraining.functional"
@@ -310,6 +332,11 @@ struct RepSessionRunnerView: View {
                 Menu {
                     ForEach(weightedOptions(for: exercise)) { item in
                         Button(item.name) { select(.equipment(item.id), for: entry) }
+                            // Locked out individually when Editable is off, except the
+                            // one equipment already fixed as this entry's own default —
+                            // reselecting it is how "back from Bodyweight" works
+                            // without opening up the full list.
+                            .disabled(!entry.equipmentEditable && item.id != fixedDefaultEquipmentID(for: entry, exercise: exercise))
                     }
                     if allowsBodyweightSource(for: entry, exercise: exercise) {
                         Button("Bodyweight") { select(.bodyweight, for: entry) }
@@ -325,17 +352,21 @@ struct RepSessionRunnerView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// How the exercise is being performed, with the same glass pencil menu the equipment
-    /// line uses — and the same lock, since the sets already logged belong to the type
-    /// that was selected when they were made.
+    /// How the exercise is being performed, with the same glass pencil menu the
+    /// equipment line uses — not locked by a logged set for the same reason
+    /// (`canChangeExecutionType`), but its own independent Editable flag, unrelated to
+    /// equipment's own: a builder can fix equipment and leave execution type open, or
+    /// the other way around.
     ///
     /// Hidden entirely for an exercise carrying no types: unlike equipment, there is no
-    /// implicit fallback worth naming when the catalog offers nothing.
+    /// implicit fallback worth naming when the catalog offers nothing. Also hidden —
+    /// rather than shown with a dead pencil — when nothing is selected and Editable is
+    /// off: there's neither a value worth naming nor anything the row could ever do.
     @ViewBuilder
     private func executionLine(entry: RepSectionExercise, exercise: Exercise) -> some View {
         let options = exercise.sortedExecutionTypes
-        if !options.isEmpty {
-            let canEdit = canChangeEquipment(for: entry)
+        if !options.isEmpty, !(entry.executionType == nil && !entry.executionTypeEditable) {
+            let canEdit = canChangeExecutionType(for: entry)
             HStack(spacing: 8) {
                 Image(systemName: "bolt.fill")
                     .font(.caption)
@@ -402,10 +433,10 @@ struct RepSessionRunnerView: View {
         }
     }
 
-    /// "Level 3 of 5" — the rung's *name* is already the card's heading, so repeating it
-    /// here would say the same thing twice in adjacent lines.
+    /// "Progression Level 3 of 5" — the rung's *name* is already the card's heading, so
+    /// repeating it here would say the same thing twice in adjacent lines.
     private func progressionLabel(exercise: Exercise, group: ProgressionGroup) -> String {
-        "Level \(exercise.progressionLevel ?? 1) of \(group.maxLevel)"
+        "Progression Level \(exercise.progressionLevel ?? 1) of \(group.maxLevel)"
     }
 
     /// The record for the equipment in use, with "last" appended only when there is one.
@@ -525,15 +556,27 @@ struct RepSessionRunnerView: View {
         let splits = exercise.splitsRecordsByExecutionType
         switch entry.trackingMode {
         case .repsWeight:
-            let best: SetLogQueries.BestSet? = record.map { SetLogQueries.BestSet(weight: $0.weight ?? 0, reps: $0.reps ?? 0) }
-                ?? SetLogQueries.bestSetEver(exercise: exercise, equipment: equipment, executionType: executionType, scopesByExecutionType: splits, context: context)
             let last = SetLogQueries.lastBestSet(exercise: exercise, equipment: equipment, executionType: executionType, scopesByExecutionType: splits, excluding: session, context: context)
-            guard let best else { return "No record set yet" }
-            var text = "\(best.reps) × \(formattedWeight(best.weight, exercise: exercise))"
-            if let last {
-                text += " · last \(last.reps) × \(formattedWeight(last.weight, exercise: exercise))"
+            // Weight (or Bodyweight) leads, reps trails named as "reps" — the same
+            // format `PersonalRecordFormatting.summary` uses for `record` below, so
+            // "record" and "last" never disagree on how to say the same thing. Formatted
+            // against `equipment` — the specific piece this record/best/last all share,
+            // already resolved by the caller — not re-derived from the exercise, which
+            // is what let "last" show a different unit than "record" for an exercise
+            // carrying equipment in more than one.
+            let lastSuffix = last.map { " · last \(formattedWeight($0.weight, equipment: equipment, exercise: exercise)) × \($0.reps) reps" } ?? ""
+            // Through the shared formatter when a record exists, rather than reading
+            // `record.weight` directly here: `setRecord` always nils it for a bodyweight
+            // record, and coalescing that back to a fake `0` is what used to render
+            // "8 × 0 kg" instead of naming Bodyweight. `bestSetEver`'s own fallback needs
+            // no such check — its query already excludes bodyweight sets entirely.
+            if let record {
+                return PersonalRecordFormatting.summary(record) + lastSuffix
             }
-            return text
+            guard let best = SetLogQueries.bestSetEver(exercise: exercise, equipment: equipment, executionType: executionType, scopesByExecutionType: splits, context: context) else {
+                return "No record set yet"
+            }
+            return "\(formattedWeight(best.weight, equipment: equipment, exercise: exercise)) × \(best.reps) reps" + lastSuffix
         case .maxHoldTime:
             // `record` is already resolved for this equipment by the caller, and the
             // history fallbacks are scoped to match — a loaded hold is its own record.
@@ -763,7 +806,7 @@ struct RepSessionRunnerView: View {
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.secondary)
                             .frame(width: 14, alignment: .leading)
-                        Text(loggedSetSummary(log, exercise: exercise))
+                        Text(loggedSetSummary(log))
                             .font(.subheadline.monospacedDigit())
                             .lineLimit(1)
                     }
@@ -791,10 +834,18 @@ struct RepSessionRunnerView: View {
         .opacity(0.7)
     }
 
-    private func loggedSetSummary(_ log: SetLog, exercise: Exercise) -> String {
-        let weightText = log.isBodyweight == true
-            ? "Bodyweight"
-            : formattedWeight(log.weight, exercise: exercise)
+    /// Formatted against the log's own stamped `equipment`/`weightUnit`, not
+    /// `exercise.weightedEquipment` — a set already logged keeps the unit it was
+    /// actually recorded in, which can differ from whatever the exercise's generic
+    /// equipment resolves to today for an exercise carrying more than one.
+    private func loggedSetSummary(_ log: SetLog) -> String {
+        if log.isBodyweight == true { return "Bodyweight × \(log.reps)" }
+        let weightText: String
+        if let equipment = log.equipment, equipment.usesOptions {
+            weightText = WeightCombo.optionDisplayName(for: log.weight, in: equipment.sortedWeightCombos)
+        } else {
+            weightText = formattedSetWeight(log.weight, unit: log.weightUnit)
+        }
         return "\(weightText) × \(log.reps)"
     }
 
@@ -856,6 +907,7 @@ struct RepSessionRunnerView: View {
                                     allowsBodyweight: allowsBodyweightSource(for: entry, exercise: exercise),
                                     showsSaveButton: false,
                                     isSaving: isSaving,
+                                    onOfferBodyweight: { bodyweightOfferEntry = entry },
                                     onLog: {},
                                     onCancel: {}
                                 )
@@ -889,6 +941,7 @@ struct RepSessionRunnerView: View {
                         isProminent: true,
                         allowsBodyweight: allowsBodyweightSource(for: entry, exercise: exercise),
                         isSaving: isSaving,
+                        onOfferBodyweight: { bodyweightOfferEntry = entry },
                         onLog: { logSet(entry: entry, key: key) },
                         onCancel: {}
                     )
@@ -906,6 +959,7 @@ struct RepSessionRunnerView: View {
                     weight: bindingWeight(key, entry: entry, exercise: exercise),
                     isBodyweight: bindingBodyweight(key, entry: entry, exercise: exercise),
                     allowsBodyweight: allowsBodyweightSource(for: entry, exercise: exercise),
+                    onOfferBodyweight: { bodyweightOfferEntry = entry },
                     isLogged: false,
                     isProminent: true,
                     isSaving: isSaving,
@@ -1217,11 +1271,13 @@ struct RepSessionRunnerView: View {
         weightSource(for: entry, exercise: exercise) == .bodyweight
     }
 
-    /// Whether bodyweight is a legitimate choice for this exercise. Defers to the
-    /// catalog predicate so the menu, the builder's picker and the set row's Body
-    /// position can't disagree about it.
+    /// Whether bodyweight is a legitimate choice for this exercise: the catalog has to
+    /// allow it (or offer no weighted equipment at all) *and* this entry's own
+    /// Bodyweight on/off toggle has to be on — the builder's row that actually exposes
+    /// the choice. Unaffected by `equipmentEditable`: switching to Bodyweight from the
+    /// stepper's own bottom-of-ladder prompt is deliberately exempt from that lock.
     private func allowsBodyweightSource(for entry: RepSectionExercise, exercise: Exercise) -> Bool {
-        exercise.allowsBodyweightSource
+        entry.allowsBodyweight && exercise.allowsBodyweightSource
     }
 
     /// How each set's weight control should render, given the exercise's source.
@@ -1244,11 +1300,35 @@ struct RepSessionRunnerView: View {
         }
     }
 
-    /// Locked once anything is logged for this exercise in this pass — the sets already
-    /// recorded belong to the equipment that was chosen when they were made. Cancelling
-    /// every set unlocks it again.
-    private func canChangeEquipment(for entry: RepSectionExercise) -> Bool {
-        loggedSets(for: entry).isEmpty
+    /// The equipment this entry resolves to with no session override in play — the
+    /// fixed point Equipment Editable off pins the runner to, and the "go back" target
+    /// once Bodyweight (independently allowed regardless of Editable) has been picked
+    /// instead.
+    private func fixedDefaultEquipmentID(for entry: RepSectionExercise, exercise: Exercise) -> UUID? {
+        if entry.prefersBodyweight { return nil }
+        if let preferred = entry.preferredEquipment { return preferred.id }
+        return exercise.defaultWeightedEquipment?.id
+    }
+
+    /// Whether the equipment menu opens at all. Not locked by a logged set the way it
+    /// once was — a set already logged keeps its own recorded equipment regardless of
+    /// what this changes to (baked into the `SetLog` at the moment it was logged, the
+    /// same way `progressionLine` was already never locked by one either — see its own
+    /// note), so changing course only ever affects sets still to come: the choice
+    /// carries forward as the default for the next set, editable again for it and every
+    /// set after, same as it would be for the very first. Open as long as either full
+    /// editing is allowed or Bodyweight is — the exemption "Equipment Editable off,
+    /// Bodyweight on" needs, since without it the whole menu, including the
+    /// always-legal Bodyweight choice, would go inert together.
+    private func canOpenEquipmentMenu(for entry: RepSectionExercise, exercise: Exercise) -> Bool {
+        entry.equipmentEditable || allowsBodyweightSource(for: entry, exercise: exercise)
+    }
+
+    /// The execution-type counterpart to `canOpenEquipmentMenu` — not locked by a
+    /// logged set for the same reason, and against `executionTypeEditable` instead of
+    /// `equipmentEditable`, since the two fields lock independently.
+    private func canChangeExecutionType(for entry: RepSectionExercise) -> Bool {
+        entry.executionTypeEditable
     }
 
     /// What the entry either side of this one will be called when you reach it.
@@ -1432,10 +1512,17 @@ struct RepSessionRunnerView: View {
     /// What a pending set should start from, in priority order:
     ///  1. this slot's own cancelled log — reopening a set you just cancelled should let
     ///     you correct it, not retype it from scratch;
-    ///  2. the nearest logged set before it — each set starts where the last one landed,
-    ///     so a heavier or lighter working set carries forward instead of snapping back
-    ///     to the all-time record;
-    ///  3. `nil`, leaving `recordSeed` to supply the value (set 1's usual case).
+    ///  2. the nearest logged set before it, *if* it was logged under the same
+    ///     exercise/equipment/execution type this set currently resolves to — each set
+    ///     starts where the last one landed, so a heavier or lighter working set
+    ///     carries forward instead of snapping back to the all-time record. But once
+    ///     any of those three changes for this set — editing equipment, execution
+    ///     type, or progression level is no longer locked out after the first set logs
+    ///     — the earlier set's numbers belong to a different combination entirely, so
+    ///     carrying them forward would keep showing the old combination's last value
+    ///     instead of the new one's own record;
+    ///  3. `nil`, leaving `recordSeed` to supply the value (set 1's usual case, and now
+    ///     also whichever later set first changes what it's loaded with).
     ///
     /// Reads `session.setLogs` directly rather than `SetLogQueries` — those exclude the
     /// current session by design, so they can't see the sets just logged.
@@ -1444,7 +1531,7 @@ struct RepSessionRunnerView: View {
     /// from the right leg's set 1, falling back to the other side only when this one has
     /// no history yet (so set 1 Right still starts from set 1 Left rather than the
     /// all-time record).
-    private func carryoverValues(for entry: RepSectionExercise, key: SetKey) -> (reps: Int, weight: Double, isBodyweight: Bool)? {
+    private func carryoverValues(for entry: RepSectionExercise, exercise: Exercise, key: SetKey) -> (reps: Int, weight: Double, isBodyweight: Bool)? {
         guard entry.trackingMode == .repsWeight else { return nil }
         // Scoped to this pass like `loggedSets` — a repeated section should start each
         // round from the record, not silently inherit the previous round's last set.
@@ -1459,10 +1546,15 @@ struct RepSessionRunnerView: View {
         }
 
         let live = logs.filter { !$0.isCancelled }
+        let currentEquipmentID = chosenEquipment(for: entry, exercise: exercise)?.id
+        let currentExecutionTypeID = recordExecutionType(for: entry, exercise: exercise)?.id
 
         if let previousSameSide = live
             .filter({ $0.side == key.side && $0.setIndex < key.index })
-            .max(by: { $0.setIndex < $1.setIndex }) {
+            .max(by: { $0.setIndex < $1.setIndex }),
+           previousSameSide.exercise?.id == exercise.id,
+           previousSameSide.equipment?.id == currentEquipmentID,
+           previousSameSide.executionType?.id == currentExecutionTypeID {
             return (previousSameSide.reps, previousSameSide.weight, previousSameSide.isBodyweight == true)
         }
 
@@ -1490,8 +1582,13 @@ struct RepSessionRunnerView: View {
         return false
     }
 
-    private func formattedWeight(_ value: Double, exercise: Exercise) -> String {
-        guard let equipment = exercise.weightedEquipment else {
+    /// `equipment` should be the specific one this value was actually measured on, when
+    /// it's known — falling back to `exercise.weightedEquipment` re-derives *an*
+    /// equipment for the exercise, not necessarily the one in play, which is what let
+    /// "last" disagree with "record" on unit for an exercise carrying equipment in more
+    /// than one unit.
+    private func formattedWeight(_ value: Double, equipment: Equipment? = nil, exercise: Exercise) -> String {
+        guard let equipment = equipment ?? exercise.weightedEquipment else {
             let unit = AppSettings.weightUnit
             return value.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(value)) \(unit)" : "\(value) \(unit)"
         }
@@ -1503,8 +1600,10 @@ struct RepSessionRunnerView: View {
     }
 
     /// The starting point for an exercise's first set: the personal record, then the
-    /// best set from the last time this exercise was trained, then the lightest weight
-    /// the equipment offers.
+    /// best set from the last time this exercise was trained, then the entry's own
+    /// configured starting point (`RepSectionExercise.startingWeight`/`startingReps`,
+    /// set in the exercise's settings panel — nil unless the workout's builder actually
+    /// set one), then the lightest weight the equipment offers.
     private func recordSeed(for exercise: Exercise, entry: RepSectionExercise? = nil) -> (reps: Int, weight: Double) {
         // Seeded from the same equipment the set will be logged on, so switching
         // equipment re-seeds from that equipment's own history.
@@ -1525,8 +1624,8 @@ struct RepSessionRunnerView: View {
         let best = SetLogQueries.lastBestSet(exercise: exercise, equipment: equipment, executionType: executionType, scopesByExecutionType: splits, excluding: session, context: context)
         let weightOptions = (equipment ?? exercise.weightedEquipment)?.sortedWeightCombos.map(\.value) ?? []
         return (
-            reps: record?.reps ?? best?.reps ?? 8,
-            weight: record?.weight ?? best?.weight ?? weightOptions.first ?? 0
+            reps: record?.reps ?? best?.reps ?? entry?.startingReps ?? 8,
+            weight: record?.weight ?? best?.weight ?? entry?.startingWeight ?? weightOptions.first ?? 0
         )
     }
 
@@ -1544,7 +1643,7 @@ struct RepSessionRunnerView: View {
     /// (or the record for set 1), so the displayed value never depends on whether some
     /// `.onAppear` has run yet.
     private func draftValues(entry: RepSectionExercise, exercise: Exercise, key: SetKey) -> (reps: Int, weight: Double, isBodyweight: Bool) {
-        let carry = carryoverValues(for: entry, key: key)
+        let carry = carryoverValues(for: entry, exercise: exercise, key: key)
         let seed = recordSeed(for: exercise, entry: entry)
         let fallbackReps = carry?.reps ?? seed.reps
         let fallbackWeight = carry?.weight ?? seed.weight
